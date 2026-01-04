@@ -1,0 +1,754 @@
+/**
+ * Modular Observation Form Component (Menüeingabe)
+ * Reusable observation form for add and modify operations
+ */
+
+class ObservationForm {
+    constructor() {
+        this.modalElement = null;
+        this.modal = null;
+        this.i18n = null;
+        this.observers = [];
+        this.fixedObserver = '';
+        this.fields = {};
+        this.onSave = null;
+        this.onCancel = null;
+        this.mode = 'add'; // 'add' or 'edit'
+        this.originalObservation = null;
+        this.saved = false;
+        this.skipped = false;
+    }
+    
+    async initialize() {
+        await this.loadI18n();
+        await this.loadObservers();
+        await this.loadFixedObserver();
+    }
+    
+    async loadI18n() {
+        if (window.i18nStrings) {
+            this.i18n = window.i18nStrings;
+        } else {
+            try {
+                const response = await fetch(`/api/i18n/${window.currentLanguage || 'de'}`);
+                this.i18n = await response.json();
+            } catch (error) {
+                console.error('Error loading i18n:', error);
+            }
+        }
+    }
+    
+    async loadObservers() {
+        try {
+            const data = await loadObserverCodes();
+            this.observers = data.observers;
+        } catch (e) {
+            console.error('Error loading observers:', e);
+        }
+    }
+    
+    async loadFixedObserver() {
+        try {
+            const response = await fetch('/api/config/fixed_observer');
+            const config = await response.json();
+            this.fixedObserver = config.observer || '';
+        } catch (e) {
+            console.error('Error loading fixed observer:', e);
+        }
+    }
+    
+    /**
+     * Show the observation form
+     * @param {string} mode - 'add', 'edit', 'delete', or 'view'
+     * @param {object|null} observation - Existing observation data for edit/delete/view mode
+     * @param {function} onSaveCallback - Called when observation is saved (add/edit) or null for delete/view
+     * @param {function} onCancelCallback - Called when form is cancelled/skipped or null for delete/view
+     * @param {number} currentNum - Current observation number (for edit/delete/view mode)
+     * @param {number} totalNum - Total observations (for edit/delete/view mode)
+     * @param {string} customTitle - Custom title for delete mode
+     * @param {function} onYes - Called when Yes is clicked (delete mode) or Next (view mode)
+     * @param {function} onNo - Called when No is clicked (delete mode) or Previous (view mode)
+     * @param {function} onCancelBtn - Called when Cancel is clicked (delete/view mode)
+     */
+    show(mode, observation, onSaveCallback, onCancelCallback, currentNum = null, totalNum = null, customTitle = null, onYes = null, onNo = null, onCancelBtn = null) {
+        this.mode = mode;
+        this.originalObservation = observation;
+        this.onSave = onSaveCallback;
+        this.onCancel = onCancelCallback;
+        this.currentNum = currentNum;
+        this.totalNum = totalNum;
+        this.customTitle = customTitle;
+        this.onYes = onYes;
+        this.onNo = onNo;
+        this.onCancelBtn = onCancelBtn;
+        this.isEditingMode = false; // Track if user has entered editing mode
+        this.navigating = false; // Track if user is navigating (Next/Prev in view mode)
+        
+        this.createModalHTML();
+        this.setupEventListeners();
+        
+        if ((mode === 'edit' || mode === 'delete' || mode === 'view') && observation) {
+            this.populateFields(observation);
+            // Disable all fields in edit/delete/view mode - user must click "Yes" to edit
+            setTimeout(() => {
+                this.disableAllFields();
+            }, 0);
+        }
+        
+        this.modal = new bootstrap.Modal(this.modalElement);
+        this.modal.show();
+    }
+    
+    createModalHTML() {
+        // Remove existing modal if any
+        const existing = document.getElementById('observation-form-modal');
+        if (existing) {
+            existing.remove();
+        }
+        
+        let title;
+        if (this.customTitle) {
+            title = this.customTitle;
+        } else if (this.mode === 'edit') {
+            title = this.i18n?.menus?.observations?.modify_observation || 'Beobachtung verändern';
+        } else if (this.mode === 'delete') {
+            title = this.i18n?.menus?.observations?.delete_question || 'Beobachtung löschen';
+        } else if (this.mode === 'view') {
+            title = this.i18n?.menus?.observations?.display || 'Beobachtung anzeigen';
+        } else {
+            title = this.i18n?.menus?.observations?.add_observation || 'Beobachtung hinzufügen';
+        }
+        
+        const titleWithCounter = (this.mode === 'edit' || this.mode === 'delete' || this.mode === 'view') && this.currentNum && this.totalNum
+            ? `${title} (${this.currentNum}/${this.totalNum})`
+            : title;
+        
+        // Build observer options
+        const observerOptions = this.observers.map(obs => {
+            const selected = obs.KK === this.fixedObserver ? 'selected' : '';
+            return `<option value="${obs.KK}" ${selected}>${obs.KK} - ${obs.VName || ''} ${obs.NName || ''}</option>`;
+        }).join('');
+        
+        // Build year options (1950-2049)
+        const yearOptions = Array.from({length: 100}, (_, i) => {
+            const year = 50 + i;
+            const displayYear = year < 50 ? 2000 + year : 1900 + year;
+            return `<option value="${year}">${displayYear}</option>`;
+        }).join('');
+        
+        const modalHtml = `
+            <div class="modal fade" id="observation-form-modal" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header py-1">
+                            <h6 class="modal-title">${titleWithCounter}</h6>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body py-2">
+                            <div class="row g-2">
+                                ${this.buildFormFields(observerOptions, yearOptions)}
+                            </div>
+                            <div class="alert alert-danger mt-2" id="obs-form-error" style="display:none;"></div>
+                        </div>
+                        <div class="modal-footer py-1">
+                            ${this.mode === 'view' ? `<button type="button" class="btn btn-secondary btn-sm" id="btn-obs-form-prev" ${this.currentNum === 1 ? 'disabled' : ''}>${this.i18n?.common?.previous || 'Zurück'}</button>` : ''}
+                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${this.mode === 'view' ? (this.i18n?.common?.close || 'Schließen') : (this.i18n?.common?.cancel || 'Cancel')}</button>
+                            ${this.mode === 'view' ? `<button type="button" class="btn btn-primary btn-sm" id="btn-obs-form-next">${this.i18n?.common?.next || 'Weiter'}</button>` : ''}
+                            ${(this.mode === 'edit' || this.mode === 'delete') ? `<button type="button" class="btn btn-outline-primary btn-sm" id="btn-obs-form-no">${this.i18n?.observers?.no || 'Nein'}</button>` : ''}
+                            ${(this.mode === 'edit' || this.mode === 'delete') ? `<button type="button" class="btn btn-primary btn-sm" id="btn-obs-form-yes">${this.i18n?.observers?.yes || 'Ja'}</button>` : ''}
+                            ${this.mode === 'add' ? `<button type="button" class="btn btn-primary btn-sm" id="btn-obs-form-ok" disabled>${this.i18n?.common?.ok || 'OK'}</button>` : ''}
+                            ${(this.mode === 'edit' || this.mode === 'delete') ? `<button type="button" class="btn btn-primary btn-sm" id="btn-obs-form-ok" style="display:none;">${this.i18n?.common?.ok || 'OK'}</button>` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        this.modalElement = document.getElementById('observation-form-modal');
+    }
+    
+    buildFormFields(observerOptions, yearOptions) {
+        return `
+            <div class="col-md-6">
+                <label class="form-label">KK - ${this.i18n?.fields?.observer || 'Beobachter'} <span class="text-danger">*</span></label>
+                <select class="form-select form-select-sm" id="form-kk" required>
+                    <option value="">-- ${this.i18n?.fields?.select || 'Auswählen'} --</option>
+                    ${observerOptions}
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">O - ${this.i18n?.fields?.object || 'Objekt'} <span class="text-danger">*</span></label>
+                <select class="form-select form-select-sm" id="form-o" required>
+                    <option value="">-- ${this.i18n?.fields?.select || 'Auswählen'} --</option>
+                    <option value="1">1 - ${this.i18n?.object_types?.['1'] || 'Sonnenhalo'}</option>
+                    <option value="2">2 - ${this.i18n?.object_types?.['2'] || 'Mondhalo'}</option>
+                    <option value="3">3 - ${this.i18n?.object_types?.['3'] || 'Planetenhalo'}</option>
+                    <option value="4">4 - ${this.i18n?.object_types?.['4'] || 'Sternhalo'}</option>
+                    <option value="5">5 - ${this.i18n?.object_types?.['5'] || 'Halo um irdische Lichtquelle'}</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">JJ - ${this.i18n?.fields?.year || 'Jahr'} <span class="text-danger">*</span></label>
+                <select class="form-select form-select-sm" id="form-jj" required>
+                    <option value="">-- ${this.i18n?.fields?.select || 'Auswählen'} --</option>
+                    ${yearOptions}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">MM - ${this.i18n?.fields?.month || 'Monat'} <span class="text-danger">*</span></label>
+                <select class="form-select form-select-sm" id="form-mm" required>
+                    <option value="">-- ${this.i18n?.fields?.select || 'Auswählen'} --</option>
+                    ${Array.from({length: 12}, (_, i) => {
+                        const monthNum = i + 1;
+                        const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+                        const monthName = monthNames[i] || '';
+                        return `<option value="${monthNum}">${String(monthNum).padStart(2, '0')} - ${monthName}</option>`;
+                    }).join('')}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">TT - ${this.i18n?.fields?.day || 'Tag'} <span class="text-danger">*</span></label>
+                <select class="form-select form-select-sm" id="form-tt" required>
+                    <option value="">-- ${this.i18n?.fields?.select || 'Auswählen'} --</option>
+                    ${Array.from({length: 31}, (_, i) => `<option value="${i+1}">${String(i+1).padStart(2, '0')}</option>`).join('')}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">g - ${this.i18n?.fields?.observing_area || 'Beobachtungsort'} <span class="text-danger">*</span></label>
+                <select class="form-select form-select-sm" id="form-g" required>
+                    <option value="">-- ${this.i18n?.fields?.select || 'Auswählen'} --</option>
+                    <option value="0">0 - ${this.i18n?.location_types?.['0'] || 'Hauptbeobachtungsort'}</option>
+                    <option value="1">1 - ${this.i18n?.location_types?.['1'] || 'Anderer Ort'}</option>
+                    <option value="2">2 - ${this.i18n?.location_types?.['2'] || 'Nebenbeobachtungsort'}</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">ZS - ${this.i18n?.fields?.hour || 'Stunde'}</label>
+                <select class="form-select form-select-sm" id="form-zs">
+                    <option value="">--</option>
+                    ${Array.from({length: 24}, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')}</option>`).join('')}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">ZM - ${this.i18n?.fields?.minute || 'Minute'}</label>
+                <select class="form-select form-select-sm" id="form-zm">
+                    <option value="">--</option>
+                    ${Array.from({length: 60}, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')}</option>`).join('')}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">d - ${this.i18n?.fields?.cirrus_density || 'Dichte'}</label>
+                <select class="form-select form-select-sm" id="form-d">
+                    <option value="-1">-- ${this.i18n?.fields?.not_specified || 'keine Angabe'} --</option>
+                    <option value="0">0 - ${this.i18n?.cirrus_density?.['0'] || 'dünner Cirrus'}</option>
+                    <option value="1">1 - ${this.i18n?.cirrus_density?.['1'] || 'normaler Cirrus'}</option>
+                    <option value="2">2 - ${this.i18n?.cirrus_density?.['2'] || 'dichter Cirrus'}</option>
+                    <option value="4">4 - ${this.i18n?.cirrus_density?.['4'] || 'Reif'}</option>
+                    <option value="5">5 - ${this.i18n?.cirrus_density?.['5'] || 'Schneedecke'}</option>
+                    <option value="6">6 - ${this.i18n?.cirrus_density?.['6'] || 'Eisnebel'}</option>
+                    <option value="7">7 - ${this.i18n?.cirrus_density?.['7'] || 'Fallstreifen'}</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">DD - ${this.i18n?.fields?.duration || 'Dauer'}</label>
+                <select class="form-select form-select-sm" id="form-dd">
+                    <option value="-1">--</option>
+                    ${Array.from({length: 100}, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')}</option>`).join('')}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">N - ${this.i18n?.fields?.cloud_cover || 'Bedeckung'}</label>
+                <select class="form-select form-select-sm" id="form-n">
+                    <option value="-1">--</option>
+                    ${Array.from({length: 10}, (_, i) => {
+                        const label = this.i18n?.cloud_cover?.[i.toString()] || `${i}/8`;
+                        return `<option value="${i}">${i} - ${label}</option>`;
+                    }).join('')}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">C - ${this.i18n?.fields?.cirrus_type || 'Cirrustyp'}</label>
+                <select class="form-select form-select-sm" id="form-C">
+                    <option value="-1">--</option>
+                    ${Array.from({length: 8}, (_, i) => {
+                        const label = this.i18n?.cirrus_types?.[i.toString()] || i.toString();
+                        return `<option value="${i}">${i} - ${label}</option>`;
+                    }).join('')}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">c - ${this.i18n?.fields?.low_clouds || 'tiefe Bewölkung'}</label>
+                <select class="form-select form-select-sm" id="form-c">
+                    <option value="-1">--</option>
+                    ${Array.from({length: 10}, (_, i) => {
+                        const label = this.i18n?.low_clouds?.[i.toString()] || i.toString();
+                        return `<option value="${i}">${i} - ${label}</option>`;
+                    }).join('')}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">EE - ${this.i18n?.fields?.phenomenon || 'Haloart'} <span class="text-danger">*</span></label>
+                <select class="form-select form-select-sm" id="form-ee" required>
+                    <option value="">-- ${this.i18n?.fields?.select || 'Auswählen'} --</option>
+                    ${this.buildHaloTypeOptions()}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">H - ${this.i18n?.fields?.brightness || 'Helligkeit'}</label>
+                <select class="form-select form-select-sm" id="form-h">
+                    <option value="-1">--</option>
+                    ${Array.from({length: 4}, (_, i) => {
+                        const label = this.i18n?.brightness?.[i.toString()] || i.toString();
+                        return `<option value="${i}">${i} - ${label}</option>`;
+                    }).join('')}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">F - ${this.i18n?.fields?.color || 'Farbe'}</label>
+                <select class="form-select form-select-sm" id="form-F">
+                    <option value="-1">--</option>
+                    ${Array.from({length: 6}, (_, i) => {
+                        const label = this.i18n?.color?.[i.toString()] || i.toString();
+                        return `<option value="${i}">${i} - ${label}</option>`;
+                    }).join('')}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">V - ${this.i18n?.fields?.completeness || 'Vollständigkeit'}</label>
+                <select class="form-select form-select-sm" id="form-v">
+                    <option value="-1">--</option>
+                    <option value="1">1 - ${this.i18n?.completeness?.['1'] || 'unvollständig'}</option>
+                    <option value="2">2 - ${this.i18n?.completeness?.['2'] || 'vollständig'}</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">f - ${this.i18n?.fields?.weather_front || 'Witterungsfront'}</label>
+                <select class="form-select form-select-sm" id="form-weather_front">
+                    <option value="-1">--</option>
+                    ${Array.from({length: 9}, (_, i) => {
+                        const label = this.i18n?.weather_front?.[i.toString()] || i.toString();
+                        return `<option value="${i}">${i} - ${label}</option>`;
+                    }).join('')}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">zz - ${this.i18n?.fields?.precipitation || 'Niederschlag'}</label>
+                <select class="form-select form-select-sm" id="form-zz">
+                    <option value="-1">--</option>
+                    ${Array.from({length: 99}, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')}</option>`).join('')}
+                    <option value="99">99</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">GG - ${this.i18n?.fields?.region || 'Gebiet'} <span class="text-danger">*</span></label>
+                <select class="form-select form-select-sm" id="form-gg" required>
+                    <option value="">-- ${this.i18n?.fields?.select || 'Auswählen'} --</option>
+                    ${this.buildRegionOptions()}
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">8HHHH</label>
+                <div class="row g-1">
+                    <div class="col-6">
+                        <label class="form-label small">HO (ober)</label>
+                        <select class="form-select form-select-sm" id="form-ho">
+                            <option value="-1">--</option>
+                            ${Array.from({length: 90}, (_, i) => `<option value="${i+1}">${String(i+1).padStart(2, '0')}°</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small">HU (unter)</label>
+                        <select class="form-select form-select-sm" id="form-hu">
+                            <option value="-1">--</option>
+                            ${Array.from({length: 90}, (_, i) => `<option value="${i+1}">${String(i+1).padStart(2, '0')}°</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12">
+                <label class="form-label">${this.i18n?.fields?.sectors || 'Sektoren'}</label>
+                <input type="text" class="form-control form-control-sm" id="form-sectors" maxlength="15">
+            </div>
+            <div class="col-12">
+                <label class="form-label">${this.i18n?.fields?.remarks || 'Bemerkungen'}</label>
+                <input type="text" class="form-control form-control-sm" id="form-remarks" maxlength="60">
+            </div>
+        `;
+    }
+    
+    buildHaloTypeOptions() {
+        let html = '';
+        for (let i = 1; i <= 77; i++) {
+            const label = this.i18n?.halo_types?.[i.toString()] || '';
+            html += `<option value="${i}">${String(i).padStart(2, '0')} - ${label}</option>`;
+        }
+        html += `<option value="99">99 - ${this.i18n?.halo_types?.['99'] || 'unbekannt'}</option>`;
+        return html;
+    }
+    
+    buildRegionOptions() {
+        const regions = [1,2,3,4,5,6,7,8,9,10,11,16,17,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39];
+        return regions.map(gg => {
+            const label = this.i18n?.geographic_regions?.[gg.toString()] || '';
+            return `<option value="${gg}">${String(gg).padStart(2, '0')} - ${label}</option>`;
+        }).join('');
+    }
+    
+    setupEventListeners() {
+        // Get all field references
+        this.fields = {
+            kk: document.getElementById('form-kk'),
+            o: document.getElementById('form-o'),
+            jj: document.getElementById('form-jj'),
+            mm: document.getElementById('form-mm'),
+            tt: document.getElementById('form-tt'),
+            g: document.getElementById('form-g'),
+            zs: document.getElementById('form-zs'),
+            zm: document.getElementById('form-zm'),
+            d: document.getElementById('form-d'),
+            dd: document.getElementById('form-dd'),
+            n: document.getElementById('form-n'),
+            C: document.getElementById('form-C'),
+            c: document.getElementById('form-c'),
+            ee: document.getElementById('form-ee'),
+            h: document.getElementById('form-h'),
+            F: document.getElementById('form-F'),
+            v: document.getElementById('form-v'),
+            f: document.getElementById('form-weather_front'),
+            zz: document.getElementById('form-zz'),
+            gg: document.getElementById('form-gg'),
+            ho: document.getElementById('form-ho'),
+            hu: document.getElementById('form-hu'),
+            sectors: document.getElementById('form-sectors'),
+            remarks: document.getElementById('form-remarks')
+        };
+        
+        const errEl = document.getElementById('obs-form-error');
+        const okBtn = document.getElementById('btn-obs-form-ok');
+        
+        // Check required fields
+        const checkRequired = () => {
+            const required = ['kk', 'o', 'jj', 'mm', 'tt', 'g', 'ee', 'gg'];
+            const allFilled = required.every(key => this.fields[key].value !== '');
+            if (okBtn) {
+                okBtn.disabled = !allFilled;
+            }
+        };
+        
+        // Auto-fill GG based on g, kk, jj, mm
+        const autoFillGG = async () => {
+            const g = parseInt(this.fields.g.value);
+            if (g === 0 || g === 2) {
+                const kk = this.fields.kk.value;
+                const jj = parseInt(this.fields.jj.value) % 100;
+                const mm = this.fields.mm.value;
+                if (kk && jj && mm) {
+                    try {
+                        const resp = await fetch(`/api/observers?kk=${kk}&jj=${jj}&mm=${mm}`);
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            if (data.observer) {
+                                const gg = g === 0 ? data.observer.GH : data.observer.GN;
+                                this.fields.gg.value = gg;
+                                this.fields.gg.disabled = true;
+                                checkRequired();
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error fetching GG:', e);
+                    }
+                }
+            } else {
+                this.fields.gg.disabled = false;
+                if (!this.originalObservation) {
+                    this.fields.gg.value = '';
+                }
+            }
+            checkRequired();
+        };
+        
+        this.fields.g.addEventListener('change', autoFillGG);
+        this.fields.kk.addEventListener('change', autoFillGG);
+        this.fields.jj.addEventListener('change', autoFillGG);
+        this.fields.mm.addEventListener('change', autoFillGG);
+        
+        // Auto-manage 8HHHH fields based on EE
+        this.fields.ee.addEventListener('change', () => {
+            const ee = parseInt(this.fields.ee.value);
+            if (ee && ![8, 9, 10].includes(ee)) {
+                this.fields.ho.value = '-1';
+                this.fields.hu.value = '-1';
+                this.fields.ho.disabled = true;
+                this.fields.hu.disabled = true;
+            } else {
+                this.fields.ho.disabled = false;
+                this.fields.hu.disabled = false;
+                if (ee === 8) {
+                    this.fields.ho.disabled = false;
+                    this.fields.hu.value = '-1';
+                    this.fields.hu.disabled = true;
+                } else if (ee === 9) {
+                    this.fields.ho.value = '-1';
+                    this.fields.ho.disabled = true;
+                    this.fields.hu.disabled = false;
+                } else if (ee === 10) {
+                    this.fields.ho.disabled = false;
+                    this.fields.hu.disabled = false;
+                }
+            }
+        });
+        
+        // Auto-manage sectors based on EE and V
+        const checkSectorsAutoFill = () => {
+            const ee = parseInt(this.fields.ee.value);
+            const v = parseInt(this.fields.v.value);
+            const circularHalos = [1, 7, 12, 31, 32, 33, 34, 35, 36, 40];
+            
+            if (ee && circularHalos.includes(ee)) {
+                if (v === 1) {
+                    this.fields.sectors.disabled = false;
+                } else if (v === 2) {
+                    this.fields.sectors.value = '';
+                    this.fields.sectors.disabled = true;
+                } else {
+                    this.fields.sectors.disabled = false;
+                }
+            } else {
+                this.fields.sectors.value = '';
+                this.fields.sectors.disabled = true;
+            }
+        };
+        
+        this.fields.ee.addEventListener('change', checkSectorsAutoFill);
+        this.fields.v.addEventListener('change', checkSectorsAutoFill);
+        
+        // Required field listeners
+        ['kk', 'o', 'jj', 'mm', 'tt', 'g', 'ee', 'gg'].forEach(key => {
+            this.fields[key].addEventListener('change', checkRequired);
+        });
+        
+        // Yes button handler - enable editing (edit mode) or trigger delete (delete mode)
+        const yesBtn = document.getElementById('btn-obs-form-yes');
+        if (yesBtn) {
+            yesBtn.addEventListener('click', async () => {
+                if (this.mode === 'delete') {
+                    // In delete mode, Yes means confirm deletion
+                    // Don't hide modal yet - let the callback handle it after async operation
+                    if (this.onYes) {
+                        await this.onYes();
+                    }
+                    this.modal.hide();
+                } else {
+                    // In edit mode, Yes means enable editing
+                    this.isEditingMode = true;
+                    this.enableAllFields();
+                    
+                    // Hide Yes/No buttons, show OK button
+                    yesBtn.style.display = 'none';
+                    const noBtn = document.getElementById('btn-obs-form-no');
+                    if (noBtn) noBtn.style.display = 'none';
+                    
+                    if (okBtn) {
+                        okBtn.style.display = 'block';
+                        okBtn.textContent = this.i18n?.common?.ok || 'OK';
+                        okBtn.className = 'btn btn-primary btn-sm';
+                        checkRequired();
+                    }
+                }
+            });
+        }
+        
+        // No button handler - skip this observation (both edit and delete modes)
+        const noBtn = document.getElementById('btn-obs-form-no');
+        if (noBtn) {
+            noBtn.addEventListener('click', () => {
+                if (this.mode === 'delete') {
+                    // In delete mode, No means skip to next
+                    this.modal.hide();
+                    if (this.onNo) {
+                        this.onNo();
+                    }
+                } else {
+                    // In edit mode, No means skip this observation
+                    this.skipped = true;
+                    this.modal.hide();
+                    if (this.onCancel) {
+                        this.onCancel();
+                    }
+                }
+            });
+            
+            // Bind Enter key to No button when in view mode (default action)
+            this.modalElement.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !this.isEditingMode) {
+                    e.preventDefault();
+                    noBtn.click();
+                }
+            });
+        }
+        
+        // View mode navigation buttons
+        const nextBtn = document.getElementById('btn-obs-form-next');
+        const prevBtn = document.getElementById('btn-obs-form-prev');
+        
+        if (nextBtn && this.mode === 'view') {
+            nextBtn.addEventListener('click', () => {
+                this.navigating = true;
+                this.modal.hide();
+                if (this.onYes) {
+                    this.onYes(); // Next
+                }
+            });
+            
+            // Bind Enter key to Next button in view mode
+            this.modalElement.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    nextBtn.click();
+                }
+            });
+        }
+        
+        if (prevBtn && this.mode === 'view') {
+            prevBtn.addEventListener('click', () => {
+                this.navigating = true;
+                this.modal.hide();
+                if (this.onNo) {
+                    this.onNo(); // Previous
+                }
+            });
+        }
+        
+        // OK button handler (only exists in add mode initially)
+        if (okBtn) {
+            okBtn.addEventListener('click', async () => {
+                try {
+                    const obs = this.getFormData();
+                    
+                    if (this.onSave) {
+                        await this.onSave(obs);
+                    }
+                    
+                    // Sync haloData to sessionStorage after save
+                    if (window.saveHaloDataToSession) {
+                        window.saveHaloDataToSession();
+                    }
+                    
+                    this.saved = true;
+                    this.modal.hide();
+                } catch (e) {
+                    errEl.textContent = e.message;
+                    errEl.style.display = 'block';
+                }
+            });
+        }
+        
+        // Clean up on modal hidden
+        this.modalElement.addEventListener('hidden.bs.modal', () => {
+            if (!this.saved && !this.skipped && !this.navigating) {
+                // User cancelled (ESC or Cancel button)
+                if (this.mode === 'delete' && this.onCancelBtn) {
+                    // Delete mode with custom cancel handler
+                    this.onCancelBtn();
+                } else if (this.mode === 'view' && this.onCancelBtn) {
+                    // View mode with custom cancel handler
+                    this.onCancelBtn();
+                } else {
+                    // Edit/Add mode - return to main page
+                    // But preserve file state in sessionStorage first
+                    if (window.haloData && window.haloData.isLoaded) {
+                        // Reset isDirty since user didn't save any changes in the form
+                        window.haloData.isDirty = false;
+                        sessionStorage.setItem('haloData', JSON.stringify(window.haloData));
+                    }
+                    window.location.href = '/';
+                }
+            }
+            this.modalElement.remove();
+        });
+    }
+    
+    disableAllFields() {
+        Object.values(this.fields).forEach(field => {
+            if (field) field.disabled = true;
+        });
+    }
+    
+    enableAllFields() {
+        console.log('[FORM DEBUG] enableAllFields called, fields:', Object.keys(this.fields));
+        Object.values(this.fields).forEach(field => {
+            if (field && field.id !== 'form-gg') {
+                console.log(`[FORM DEBUG] Enabling field: ${field.id}`);
+                field.disabled = false;
+            } else if (field) {
+                console.log(`[FORM DEBUG] Skipping GG field: ${field.id}`);
+            }
+        });
+        // GG field auto-filled based on g value
+        const g = parseInt(this.fields.g.value);
+        console.log(`[FORM DEBUG] g value: ${g}, GG will be ${g !== 0 && g !== 2 ? 'enabled' : 'disabled'}`);
+        if (g !== 0 && g !== 2) {
+            this.fields.gg.disabled = false;
+        }
+    }
+    
+    populateFields(obs) {
+        // Populate all fields with observation data
+        this.fields.kk.value = obs.KK || '';
+        this.fields.o.value = obs.O || '';
+        this.fields.jj.value = obs.JJ || '';
+        this.fields.mm.value = obs.MM || '';
+        this.fields.tt.value = obs.TT || '';
+        this.fields.g.value = obs.g !== undefined && obs.g !== null ? obs.g : (obs.G || '');
+        this.fields.zs.value = obs.ZS !== -1 && obs.ZS !== null ? obs.ZS : '';
+        this.fields.zm.value = obs.ZM !== -1 && obs.ZM !== null ? obs.ZM : '';
+        this.fields.d.value = obs.d !== -1 && obs.d !== null ? obs.d : '-1';
+        this.fields.dd.value = obs.DD !== -1 && obs.DD !== null ? obs.DD : '-1';
+        this.fields.n.value = obs.N !== -1 && obs.N !== null ? obs.N : '-1';
+        this.fields.C.value = obs.C !== -1 && obs.C !== null ? obs.C : '-1';
+        this.fields.c.value = obs.c !== -1 && obs.c !== null ? obs.c : '-1';
+        this.fields.ee.value = obs.EE || '';
+        this.fields.h.value = obs.H !== -1 && obs.H !== null ? obs.H : '-1';
+        this.fields.F.value = obs.F !== -1 && obs.F !== null ? obs.F : '-1';
+        this.fields.v.value = obs.V !== -1 && obs.V !== null ? obs.V : '-1';
+        this.fields.f.value = obs.f !== -1 && obs.f !== null ? obs.f : '-1';
+        this.fields.zz.value = obs.zz !== -1 && obs.zz !== 99 && obs.zz !== null ? obs.zz : (obs.zz === 99 ? '99' : '-1');
+        this.fields.gg.value = obs.GG || '';
+        this.fields.ho.value = obs.HO !== -1 && obs.HO !== null ? obs.HO : '-1';
+        this.fields.hu.value = obs.HU !== -1 && obs.HU !== null ? obs.HU : '-1';
+        this.fields.sectors.value = obs.sectors || '';
+        this.fields.remarks.value = obs.remarks || '';
+    }
+    
+    getFormData() {
+        return {
+            KK: parseInt(this.fields.kk.value),
+            O: parseInt(this.fields.o.value),
+            JJ: parseInt(this.fields.jj.value),
+            MM: parseInt(this.fields.mm.value),
+            TT: parseInt(this.fields.tt.value),
+            g: parseInt(this.fields.g.value),
+            GG: parseInt(this.fields.gg.value),
+            ZS: this.fields.zs.value ? parseInt(this.fields.zs.value) : 99,
+            ZM: this.fields.zm.value ? parseInt(this.fields.zm.value) : 99,
+            DD: this.fields.d.value && this.fields.d.value !== '-1' ? parseInt(this.fields.d.value) : -1,
+            d: this.fields.dd.value && this.fields.dd.value !== '-1' ? parseInt(this.fields.dd.value) : -1,
+            N: this.fields.n.value && this.fields.n.value !== '-1' ? parseInt(this.fields.n.value) : -1,
+            C: this.fields.C.value && this.fields.C.value !== '-1' ? parseInt(this.fields.C.value) : -1,
+            c: this.fields.c.value && this.fields.c.value !== '-1' ? parseInt(this.fields.c.value) : -1,
+            EE: parseInt(this.fields.ee.value),
+            H: this.fields.h.value && this.fields.h.value !== '-1' ? parseInt(this.fields.h.value) : -1,
+            F: this.fields.F.value && this.fields.F.value !== '-1' ? parseInt(this.fields.F.value) : -1,
+            V: this.fields.v.value && this.fields.v.value !== '-1' ? parseInt(this.fields.v.value) : -1,
+            f: this.fields.f.value && this.fields.f.value !== '-1' ? parseInt(this.fields.f.value) : -1,
+            zz: this.fields.zz.value && this.fields.zz.value !== '-1' ? parseInt(this.fields.zz.value) : -1,
+            HO: this.fields.ho.value && this.fields.ho.value !== '-1' ? parseInt(this.fields.ho.value) : -1,
+            HU: this.fields.hu.value && this.fields.hu.value !== '-1' ? parseInt(this.fields.hu.value) : -1,
+            sectors: this.fields.sectors.value || '',
+            remarks: this.fields.remarks.value || ''
+        };
+    }
+}
+
+// Make it globally available
+window.ObservationForm = ObservationForm;

@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "../HALO"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"powershell.cwd": "HALOpy"
+	}
+}

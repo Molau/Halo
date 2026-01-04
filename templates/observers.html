@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="{{ lang() }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HALO - {{ g.i18n.get('observers.title') }}</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="d-flex flex-column min-vh-100">
+    {% include 'header.html' %}
+
+    <script>
+        // Mark observers menu as active
+        document.addEventListener('DOMContentLoaded', () => {
+            const menus = document.querySelectorAll('.menu-title');
+            // Find Beobachter/Observers menu (2nd menu item, index 1)
+            if (menus[1]) menus[1].classList.add('active');
+        });
+    </script>
+
+    <main class="container mt-4">
+        <!-- Filter Selection Dialog Modal -->
+        <div class="modal fade" id="filter-dialog" tabindex="-1" aria-labelledby="filterDialogLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="filterDialogLabel">
+                            {{ g.i18n.get('observers.filter_title') }}
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="filter-form">
+                            <div class="filter-group mb-3">
+                                <label class="form-label">
+                                    {{ g.i18n.get('observers.filter_question') }}
+                                </label>
+                                <select id="filter-type" class="form-select">
+                                    <option value="none">{{ g.i18n.get('observers.filter_none') }}</option>
+                                    <option value="kk">{{ g.i18n.get('observers.filter_kk') }}</option>
+                                    <option value="site">{{ g.i18n.get('observers.filter_site') }}</option>
+                                    <option value="region">{{ g.i18n.get('observers.filter_region') }}</option>
+                                </select>
+                                <div id="filter-input" style="display:none;" class="mt-2">
+                                    <!-- Dropdown for KK/Name -->
+                                    <select id="filter-select-kk" class="form-select" style="display:none;"></select>
+                                    <!-- Text input for site -->
+                                    <input type="text" id="filter-input-site" class="form-control" placeholder="{{ g.i18n.get('observers.placeholder_site') }}" style="display:none;">
+                                    <!-- Dropdown for region -->
+                                    <select id="filter-select-region" class="form-select" style="display:none;"></select>
+                                </div>
+                            </div>
+                            <div class="filter-group mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="show-latest-only" checked>
+                                    <label class="form-check-label" for="show-latest-only">
+                                        {{ g.i18n.get('observers.show_latest_only') }}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="cancel-filter">
+                            {{ g.i18n.get('ui.buttons.cancel') }}
+                        </button>
+                        <button type="button" class="btn btn-primary" id="apply-filter">
+                            {{ g.i18n.get('ui.buttons.apply') }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Container -->
+        <div id="results-container" style="display:none;">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="bg-primary text-white">
+                        <tr>
+                            <th>{{ g.i18n.get('observers.table_kk') }}</th>
+                            <th>{{ g.i18n.get('observers.table_name') }}</th>
+                            <th>{{ g.i18n.get('observers.table_since') }}</th>
+                            <th>{{ g.i18n.get('observers.table_active') }}</th>
+                            <th>{{ g.i18n.get('observers.table_primary_site') }}</th>
+                            <th>{{ g.i18n.get('observers.table_region') }}</th>
+                            <th>{{ g.i18n.get('observers.table_coordinates') }}</th>
+                            <th>{{ g.i18n.get('observers.table_secondary_site') }}</th>
+                            <th>{{ g.i18n.get('observers.table_region') }}</th>
+                            <th>{{ g.i18n.get('observers.table_coordinates') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="observers-table-body">
+                        <!-- Filled by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="compact-navigation mt-3 d-flex justify-content-center align-items-center gap-2">
+                <button id="btn-first-page" class="btn btn-secondary btn-sm" title="{{ g.i18n.get('observers.pagination_first') }}">
+                    <i class="bi bi-chevron-bar-left"></i>
+                </button>
+                <button id="btn-prev-page" class="btn btn-secondary btn-sm" title="{{ g.i18n.get('observers.pagination_prev') }}">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+                <span id="compact-page-info" class="mx-3 text-muted"></span>
+                <button id="btn-next-page" class="btn btn-secondary btn-sm" title="{{ g.i18n.get('observers.pagination_next') }}">
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+                <button id="btn-last-page" class="btn btn-secondary btn-sm" title="{{ g.i18n.get('observers.pagination_last') }}">
+                    <i class="bi bi-chevron-bar-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <button id="btn-exit-observers" class="btn btn-secondary px-4" style="display:none;">
+                <i class="bi bi-arrow-left me-2"></i>{{ g.i18n.get('ui.buttons.exit') }}
+            </button>
+            <div class="ms-auto">
+                <span id="record-count" class="text-muted me-3"></span>
+                <span id="page-info" class="text-muted"></span>
+            </div>
+        </div>
+    </main>
+
+    {% include 'footer.html' %}
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}?v={{ static_version }}"></script>
+    <script src="{{ url_for('static', filename='js/observers.js') }}"></script>
+</body>
+</html>

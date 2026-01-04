@@ -1,0 +1,115 @@
+<!-- Header with Logo and Language Switcher -->
+<nav class="navbar navbar-dark bg-primary">
+    <div class="container-fluid">
+        <span class="navbar-brand mb-0 h1">
+            <i class="bi bi-cloud-sun"></i> HALO 3.0
+        </span>
+        <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn {% if lang() == 'de' %}btn-light{% else %}btn-outline-light{% endif %}" id="lang-de">DE</button>
+            <button type="button" class="btn {% if lang() == 'en' %}btn-light{% else %}btn-outline-light{% endif %}" id="lang-en">EN</button>
+        </div>
+    </div>
+</nav>
+
+<!-- Menu Bar -->
+<nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
+    <div class="container-fluid">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="mainMenu">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <!-- Version/Info Menu -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle menu-title" href="#" data-bs-toggle="dropdown">≡</a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" data-action="help-version">{{ g.i18n.get('menus.help.version') }}</a></li>
+                        <li><a class="dropdown-item" href="#" data-action="help-new">{{ g.i18n.get('menus.help.whats_new') }}</a></li>
+                    </ul>
+                </li>
+                <!-- File Menu -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle menu-title" href="#" data-bs-toggle="dropdown">{{ g.i18n.get('menu_titles.file') }}</a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" data-action="new-file">{{ g.i18n.get('menus.file.new_file') }}</a></li>
+                        <li><a class="dropdown-item" href="#" data-action="adjust">{{ g.i18n.get('menus.file.adjust') }}</a></li>
+                        <li><a class="dropdown-item" href="#" data-action="load">{{ g.i18n.get('menus.file.load') }}</a></li>
+                        <li><a class="dropdown-item" href="#" data-action="select">{{ g.i18n.get('menus.file.select') }}</a></li>
+                        <li><a class="dropdown-item" href="#" data-action="merge">{{ g.i18n.get('menus.file.merge') }}</a></li>
+                        <li><a class="dropdown-item" href="#" data-action="save">{{ g.i18n.get('menus.file.save') }}</a></li>
+                        <li><a class="dropdown-item" href="#" data-action="save-as">{{ g.i18n.get('menus.file.save_as') }}</a></li>
+                        <li><a class="dropdown-item" href="#" data-action="export">{{ g.i18n.get('menus.file.export') }}</a></li>
+                        <li><a class="dropdown-item" href="#" data-action="import">{{ g.i18n.get('menus.file.import') }}</a></li>
+                    </ul>
+                </li>
+                <!-- Observations Menu -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle menu-title" href="#" data-bs-toggle="dropdown">{{ g.i18n.get('menu_titles.observations') }}</a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" data-action="obs-display">{{ g.i18n.get('observations.display') }}</a></li>
+                        <li><a class="dropdown-item" href="#" data-action="obs-add">{{ g.i18n.get('observations.add') }}</a></li>
+                        <li><a class="dropdown-item" href="#" data-action="obs-modify">{{ g.i18n.get('observations.modify') }}</a></li>
+                        <li><a class="dropdown-item" href="#" data-action="obs-delete">{{ g.i18n.get('observations.delete') }}</a></li>
+                    </ul>
+                </li>
+                <!-- Observers Menu -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle menu-title" href="#" data-bs-toggle="dropdown">{{ g.i18n.get('menu_titles.observers') }}</a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/observers">{{ g.i18n.get('observations.display') }}</a></li>
+                        <li><a class="dropdown-item" href="#" data-action="observer-add">{{ g.i18n.get('observations.add') }}</a></li>
+                        <li><a class="dropdown-item" href="#" data-action="observer-modify">{{ g.i18n.get('observations.modify') }}</a></li>
+                        <li><a class="dropdown-item" href="#" data-action="observer-delete">{{ g.i18n.get('observations.delete') }}</a></li>
+                    </ul>
+                </li>
+                <!-- Analysis Menu -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle menu-title" href="#" data-bs-toggle="dropdown">{{ g.i18n.get('menu_titles.analysis') }}</a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" data-action="analysis-one">{{ g.i18n.get('menus.analysis.one_param') }}</a></li>
+                        <li><a class="dropdown-item" href="#" data-action="analysis-two">{{ g.i18n.get('menus.analysis.two_params') }}</a></li>
+                        <li><a class="dropdown-item" href="#" data-action="analysis-load">{{ g.i18n.get('menus.analysis.load') }}</a></li>
+                    </ul>
+                </li>
+                <!-- Output Menu -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle menu-title" href="#" data-bs-toggle="dropdown">{{ g.i18n.get('menu_titles.output') }}</a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" data-action="output-monthly-report">{{ g.i18n.get('output.monthly_report') }}</a></li>
+                        <li><a class="dropdown-item" href="#" data-action="output-monthly-stats">{{ g.i18n.get('output.monthly_stats') }}</a></li>
+                        <li><a class="dropdown-item" href="#" data-action="output-yearly-stats">{{ g.i18n.get('output.yearly_stats') }}</a></li>
+                    </ul>
+                </li>
+                <!-- Settings Menu -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle menu-title" href="#" data-bs-toggle="dropdown">{{ g.i18n.get('menu_titles.settings') }}</a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" data-action="settings-fixed-observer">{{ g.i18n.get('menus.settings.fixed_observer') }}</a></li>
+                        <li><a class="dropdown-item" href="#" data-action="settings-active-observers">{{ g.i18n.get('menus.settings.active_observers') }}</a></li>
+                        <li><a class="dropdown-item" href="#" data-action="settings-eingabeart">{{ g.i18n.get('menus.settings.input_type') }}</a></li>
+
+                    </ul>
+                </li>
+                <!-- Help Menu -->
+                <li class="nav-item">
+                    <a class="nav-link menu-title" href="#" onclick="handleMenuAction('help-text'); return false;">{{ g.i18n.get('menu_titles.help') }}</a>
+                </li>
+                <!-- Exit Menu -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle menu-title" href="#" data-bs-toggle="dropdown">{{ g.i18n.get('menu_titles.exit') }}</a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/">{{ g.i18n.get('common.back_to_main') }}</a></li>
+                    </ul>
+                </li>
+            </ul>
+            <div class="ms-auto d-flex align-items-center">
+                <small id="file-info" class="text-muted" style="display:none;">
+                    <i class="bi bi-file-earmark-text me-1"></i>
+                    <span id="file-name"></span>
+                    <span class="mx-2">|</span>
+                    <span id="obs-count"></span>
+                </small>
+            </div>
+        </div>
+    </div>
+</nav>

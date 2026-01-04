@@ -1,0 +1,112 @@
+/* HALO Web Application Styles - Bootstrap Enhanced */
+
+:root {
+    --primary-color: #0d6efd;
+    --secondary-color: #6c757d;
+}
+
+/* Custom additions to Bootstrap */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* Remove dropdown caret/triangle */
+.dropdown-toggle::after {
+    display: none !important;
+}
+
+/* Language switcher active state */
+#lang-de.btn-light,
+#lang-en.btn-light {
+    font-weight: bold;
+}
+
+/* Language switcher focus state - prevent white on white */
+#lang-de.btn-light:focus,
+#lang-en.btn-light:focus {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+    color: #212529;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Active menu item */
+.nav-link.active {
+    font-weight: bold;
+    color: #0d6efd !important;
+    background-color: rgba(13, 110, 253, 0.1) !important;
+    border-radius: 0.25rem;
+}
+
+/* Increase spacing between menu items */
+.navbar-nav .nav-item {
+    margin-left: 1rem;
+    margin-right: 1rem;
+}
+
+/* Blue border on hover for all menu items */
+.navbar-nav .nav-link.menu-title:hover,
+.navbar-nav .dropdown-toggle.menu-title:hover {
+    border: 2px solid #0d6efd;
+    border-radius: 0.25rem;
+}
+
+/* Remove Bootstrap default dropdown and nav-link styling */
+.navbar-nav .nav-link.menu-title,
+.navbar-nav .dropdown-toggle.menu-title {
+    background-color: transparent !important;
+}
+
+.navbar-nav .nav-link.menu-title:hover,
+.navbar-nav .nav-link.menu-title:focus,
+.navbar-nav .dropdown-toggle.menu-title:hover,
+.navbar-nav .dropdown-toggle.menu-title:focus,
+.navbar-nav .dropdown-toggle.menu-title.show {
+    background-color: transparent !important;
+    color: inherit !important;
+}
+
+/* Stat cards hover effect */
+.card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+}
+
+
+/* Main Content */
+main {
+    padding: 2rem 0;
+}
+
+/* Footer */
+footer {
+    background-color: var(--primary-color);
+    color: white;
+    text-align: center;
+    padding: 2rem 0;
+    margin-top: 4rem;
+}
+
+/* Table header color alignment for observers/observations */
+.table thead.bg-primary th,
+.table thead.bg-primary td {
+    background-color: var(--primary-color) !important;
+    color: #fff !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    main {
+        padding: 1rem 0;
+    }
+}
