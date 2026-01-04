@@ -1,4 +1,5 @@
 # HALOpy - Modern HALO Observation Database
+*Programm zur Erfassung von Halobeobachtungen*
 
 Python web application for atmospheric halo observations, modernized from the original Borland Pascal software (early 1990s).
 
@@ -62,4 +63,4 @@ TBD
 
 ## Original Software
 
-Original DOS software by [Author TBD], translated to Python in 2025.
+Original DOS software by Sirko Molau, translated to Python in 2025-2026.
