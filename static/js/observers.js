@@ -239,75 +239,100 @@ function goToPage(page) {
 }
 
 /**
- * Display observers in table
+ * Display observers in modal table
  */
 function displayObservers() {
-    const tbody = document.getElementById('observers-table-body');
-    const resultsContainer = document.getElementById('results-container');
-    const recordCount = document.getElementById('record-count');
-    const pageInfo = document.getElementById('page-info');
-    const compactPageInfo = document.getElementById('compact-page-info');
-    const btnExitObservers = document.getElementById('btn-exit-observers');
+    if (filteredObservers.length === 0) {
+        showWarningModal((i18n && i18n.messages && i18n.messages.no_observers) || 'Keine Beobachter gefunden');
+        return;
+    }
     
-    tbody.innerHTML = '';
+    const yesText = (i18n && i18n.observers && i18n.observers.yes) ? i18n.observers.yes : 'Ja';
+    const noText = (i18n && i18n.observers && i18n.observers.no) ? i18n.observers.no : 'Nein';
+    const recordsLabel = i18n && i18n.observers ? i18n.observers.records_label : 'Datensätze';
     
-        if (filteredObservers.length === 0) {
-            const noData = (i18n && i18n.messages && i18n.messages.no_observers) || 'Keine Beobachter gefunden';
-            tbody.innerHTML = `<tr><td colspan="10" class="text-center">${noData}</td></tr>`;
-            compactPageInfo.textContent = '';
-            pageInfo.textContent = '';
-        } else {
-        // Calculate pagination
-        const startIndex = (currentPage - 1) * pageSize;
-        const endIndex = Math.min(startIndex + pageSize, filteredObservers.length);
-        const pageObservers = filteredObservers.slice(startIndex, endIndex);
-            const yesText = (i18n && i18n.observers && i18n.observers.yes) ? i18n.observers.yes : '';
-            const noText = (i18n && i18n.observers && i18n.observers.no) ? i18n.observers.no : '';
+    // Build table rows
+    let rows = '';
+    filteredObservers.forEach(obs => {
+        // Format coordinates
+        const hCoords = `${obs.HLG}° ${obs.HLM}' ${obs.HOW} / ${obs.HBG}° ${obs.HBM}' ${obs.HNS}`;
+        const nCoords = `${obs.NLG}° ${obs.NLM}' ${obs.NOW} / ${obs.NBG}° ${obs.NBM}' ${obs.NNS}`;
         
-        pageObservers.forEach(obs => {
-            const row = document.createElement('tr');
-            
-            // Format coordinates
-            const hCoords = `${obs.HLG}° ${obs.HLM}' ${obs.HOW} / ${obs.HBG}° ${obs.HBM}' ${obs.HNS}`;
-            const nCoords = `${obs.NLG}° ${obs.NLM}' ${obs.NOW} / ${obs.NBG}° ${obs.NBM}' ${obs.NNS}`;
-            
-            row.innerHTML = `
+        // Format GG with two digits
+        const ghFormatted = String(obs.GH).padStart(2, '0');
+        const gnFormatted = String(obs.GN).padStart(2, '0');
+        
+        rows += `
+            <tr>
                 <td>${obs.KK}</td>
                 <td>${obs.VName} ${obs.NName}</td>
                 <td>${obs.seit}</td>
-                    <td>${obs.aktiv === '1' ? yesText : noText}</td>
+                <td>${obs.aktiv === '1' ? yesText : noText}</td>
                 <td>${obs.HbOrt}</td>
-                <td>${obs.GH}</td>
+                <td>${ghFormatted}</td>
                 <td style="font-size: 0.9em;">${hCoords}</td>
                 <td>${obs.NbOrt}</td>
-                <td>${obs.GN}</td>
+                <td>${gnFormatted}</td>
                 <td style="font-size: 0.9em;">${nCoords}</td>
-            `;
-            
-            tbody.appendChild(row);
-        });
-        
-        // Update pagination info (compact style in center)
-        const maxPage = Math.ceil(filteredObservers.length / pageSize);
-            const rowPrefix = i18n && i18n.observers && i18n.observers.row_range_prefix ? i18n.observers.row_range_prefix : 'Zeile';
-            const rowOf = i18n && i18n.observers && i18n.observers.row_range_of ? i18n.observers.row_range_of : 'von';
-            compactPageInfo.textContent = `${rowPrefix} ${startIndex + 1}-${endIndex} ${rowOf} ${filteredObservers.length}`;
-        
-        // Update button states
-        document.getElementById('btn-first-page').disabled = currentPage === 1;
-        document.getElementById('btn-prev-page').disabled = currentPage === 1;
-        document.getElementById('btn-next-page').disabled = currentPage === maxPage;
-        document.getElementById('btn-last-page').disabled = currentPage === maxPage;
+            </tr>
+        `;
+    });
+    
+    const modalHtml = `
+        <div class="modal fade" id="observers-modal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header py-1">
+                        <h6 class="modal-title mb-0">${(i18n && i18n.observers && i18n.observers.title) || 'Beobachter'} (${filteredObservers.length} ${recordsLabel})</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body py-2" style="max-height: 70vh; overflow-y: auto;">
+                        <table class="table table-sm table-hover table-striped">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>KK</th>
+                                    <th>${(i18n && i18n.observers && i18n.observers.name) || 'Name'}</th>
+                                    <th>${(i18n && i18n.observers && i18n.observers.since) || 'Seit'}</th>
+                                    <th>${(i18n && i18n.observers && i18n.observers.active) || 'Aktiv'}</th>
+                                    <th>${(i18n && i18n.observers && i18n.observers.primary_site) || 'HbOrt'}</th>
+                                    <th>GH</th>
+                                    <th>${(i18n && i18n.observers && i18n.observers.coordinates) || 'Koordinaten'}</th>
+                                    <th>${(i18n && i18n.observers && i18n.observers.secondary_site) || 'NbOrt'}</th>
+                                    <th>GN</th>
+                                    <th>${(i18n && i18n.observers && i18n.observers.coordinates) || 'Koordinaten'}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rows}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="modal-footer py-1">
+                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">${(i18n && i18n.ui && i18n.ui.buttons && i18n.ui.buttons.close) || 'Schließen'}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove any existing modal
+    const existingModal = document.getElementById('observers-modal');
+    if (existingModal) {
+        existingModal.remove();
     }
     
-    // Update record count in bottom right corner
-    const recordsLabel = i18n && i18n.observers ? i18n.observers.records_label : 'Datensätze';
-    recordCount.textContent = `${filteredObservers.length} ${recordsLabel}`;
-    pageInfo.textContent = '';
+    // Add modal to document
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
     
-    // Show results container and exit button
-    resultsContainer.style.display = 'block';
-    btnExitObservers.style.display = 'block';
+    // Show modal
+    const modalEl = document.getElementById('observers-modal');
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+    
+    // Clean up after modal is hidden
+    modalEl.addEventListener('hidden.bs.modal', () => {
+        modalEl.remove();
+    });
 }
 
 /**

@@ -44,6 +44,11 @@ main {
     border-radius: 0.25rem;
 }
 
+/* Statistics report - ensure black text */
+.statistics-report {
+    color: #000000 !important;
+}
+
 /* Increase spacing between menu items */
 .navbar-nav .nav-item {
     margin-left: 1rem;

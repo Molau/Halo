@@ -4,6 +4,7 @@ Loads language-specific strings from JSON resource files.
 """
 
 import json
+# Force reload for combined_prompt addition
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -140,12 +141,13 @@ class I18n:
 _i18n_instance: Optional[I18n] = None
 
 
-def get_i18n(language: Optional[str] = None) -> I18n:
+def get_i18n(language: Optional[str] = None, force_reload: bool = False) -> I18n:
     """
     Get global i18n instance (lazy initialization).
     
     Args:
         language: Optional language code to use
+        force_reload: Force reload JSON files even if language unchanged
         
     Returns:
         Global I18n instance
@@ -153,8 +155,9 @@ def get_i18n(language: Optional[str] = None) -> I18n:
     global _i18n_instance
     if _i18n_instance is None:
         _i18n_instance = I18n(language or 'de')
-    elif language and _i18n_instance.language != language:
-        _i18n_instance.load_language(language)
+    elif force_reload or (language and _i18n_instance.language != language):
+        if _i18n_instance is not None:
+            _i18n_instance.load_language(language or _i18n_instance.language)
     return _i18n_instance
 
 

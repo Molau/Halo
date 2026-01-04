@@ -284,6 +284,16 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     });
 
+    // ESC key support - close dialog and return to main
+    const escKeyHandler = (e) => {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            window.location.href = '/';
+        }
+    };
+    
+    document.addEventListener('keydown', escKeyHandler);
+
     // Auto-format month/year input
     monthYearInput.addEventListener('input', (e) => {
         let value = e.target.value;
@@ -393,8 +403,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Format title
         const year = data.jj < 50 ? 2000 + data.jj : 1900 + data.jj;
-        const titleTemplate = i18n.monthly_report?.report_title_template || 'Halobeobachtungen von {observer} im {month} {year}';
-        const title = titleTemplate.replace('{observer}', data.observer_name).replace('{month}', monthName).replace('{year}', year);
+        const title = i18n.monthly_report.report_title_template
+            .replace('{observer}', data.observer_name)
+            .replace('{month}', monthName)
+            .replace('{year}', year);
         
         // Modal title shows i18n title
         reportTitle.textContent = i18n.output?.monthly_report;
@@ -407,8 +419,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         html += ' '.repeat(titlePadLeft) + title + '\n';
         html += ' '.repeat(titlePadLeft) + '═'.repeat(title.length) + '\n\n';
         html += '╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗\n';
-        const sectors = i18n.monthly_report?.sectors || 'Sektoren';
-        const remarks = i18n.monthly_report?.remarks || 'Bemerkungen';
+        const sectors = i18n.monthly_report.sectors;
+        const remarks = i18n.monthly_report.remarks;
         const headerLine = `KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ${sectors.padEnd(15)} ${remarks.padEnd(47)}`;
         html += '║ ' + headerLine.substring(0, 118).padEnd(118) + ' ║\n';
         html += '╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣\n';
@@ -442,8 +454,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Footer
         html += '╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣\n';
-        let hbLine = i18n.monthly_report?.main_location + ': ' + data.observer_hbort;
-        let nbLine = i18n.monthly_report?.secondary_location + ': ' + data.observer_nbort;
+        let hbLine = i18n.monthly_report.main_location + ': ' + data.observer_hbort;
+        let nbLine = i18n.monthly_report.secondary_location + ': ' + data.observer_nbort;
         const hbPadLeft = Math.floor((122 - hbLine.length) / 2);
         hbLine = ' '.repeat(hbPadLeft) + hbLine;
         nbLine = ' '.repeat(hbPadLeft) + nbLine;
@@ -471,10 +483,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!currentReportData) return '';
         
         const data = currentReportData;
-        const monthName = i18n.months?.[data.mm] || data.mm;
+        const monthName = i18n.months[data.mm];
         const year = data.jj < 50 ? 2000 + data.jj : 1900 + data.jj;
-        const titleTemplate = i18n.monthly_report?.report_title_template || 'Halobeobachtungen von {observer} im {month} {year}';
-        const title = titleTemplate.replace('{observer}', data.observer_name).replace('{month}', monthName).replace('{year}', year);
+        const title = i18n.monthly_report.report_title_template
+            .replace('{observer}', data.observer_name)
+            .replace('{month}', monthName)
+            .replace('{year}', year);
         
         let text = '';
         
@@ -483,8 +497,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         text += ' '.repeat(titlePadLeft) + title + '\n';
         text += ' '.repeat(titlePadLeft) + '═'.repeat(title.length) + '\n\n';
         text += '╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗\n';
-        const sectors = i18n.monthly_report?.sectors || 'Sektoren';
-        const remarks = i18n.monthly_report?.remarks || 'Bemerkungen';
+        const sectors = i18n.monthly_report.sectors;
+        const remarks = i18n.monthly_report.remarks;
         const headerLine = `KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ${sectors.padEnd(15)} ${remarks.padEnd(47)}`;
         text += '║ ' + headerLine.substring(0, 118).padEnd(118) + ' ║\n';
         text += '╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣\n';
@@ -515,8 +529,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Footer (same as modal display)
         text += '╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣\n';
-        let hbLine = 'Hauptbeobachtungsort: ' + data.observer_hbort;
-        let nbLine = 'Nebenbeobachtungsort: ' + data.observer_nbort;
+        let hbLine = i18n.monthly_report.main_location + ': ' + data.observer_hbort;
+        let nbLine = i18n.monthly_report.secondary_location + ': ' + data.observer_nbort;
         const hbPadLeft = Math.floor((122 - hbLine.length) / 2);
         hbLine = ' '.repeat(hbPadLeft) + hbLine;
         nbLine = ' '.repeat(hbPadLeft) + nbLine;

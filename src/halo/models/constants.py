@@ -28,11 +28,29 @@ GERMANY_WITH_NEIGHBORS = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 16, 17, 21, 26, 27,
 # Halo types that can be partial
 PARTIAL_HALO_TYPES = {2, 3, 8, 9, 14, 15, 18, 19, 24, 25, 41, 42, 45, 46, 48, 49, 53, 54, 74, 75}
 
-# Additional halo types
-ADDITIONAL_HALO_TYPES = {4, 10, 16, 20, 26, 43, 47, 50, 55, 76}
+# Combined halo types (ZusHaloart in H_TYPES.PAS)
+# These represent observations of both left and right components
+COMBINED_HALO_TYPES = {4, 10, 16, 20, 26, 43, 47, 50, 55, 76}
 
 # Cirrus types that can be partial
 PARTIAL_CIRRUS_TYPES = {1, 2, 3}
+
+# Mapping of combined halo types to their individual components
+# Combined type splits into (left, right) for statistics
+# Pattern: EE N splits into (N-2, N-1)
+# Example: EE 04 (both 22° parhelia) → EE 02 (left) + EE 03 (right)
+COMBINED_TO_INDIVIDUAL_HALOS = {
+    4: (2, 3),      # Both 22° parhelia → left + right
+    10: (8, 9),     # Both 22° paranthelion → left + right
+    16: (14, 15),   # Both 46° parhelia → left + right
+    20: (18, 19),   # Both 46° paranthelion → left + right
+    26: (24, 25),   # Both 120° parhelia → left + right
+    43: (41, 42),   # Both Lowitz arcs → left + right
+    47: (45, 46),   # Both diffuse arcs → left + right
+    50: (48, 49),   # Both supralateral arcs → left + right
+    55: (53, 54),   # Both infralateral arcs → left + right
+    76: (74, 75),   # Both subparhelia → left + right
+}
 
 # Days per month [regular, leap year]
 DAYS_PER_MONTH = [
@@ -74,7 +92,7 @@ HALO_TYPE_FACTORS = [
     0, 0, 0, 0, 0, 0, 0, 0, 0  # 91-99
 ]
 
-# Halo brightness weighting factors
+# Halo brightness weighting factors (Halohellfaktor from H_TYPES.PAS)
 # -1: very faint, 0: faint, 1: medium, 2: bright, 3: very bright
 HALO_BRIGHTNESS_FACTORS = {
     -1: 1.0,
@@ -83,6 +101,205 @@ HALO_BRIGHTNESS_FACTORS = {
     2: 1.2,
     3: 1.4
 }
+
+def calculate_halo_activity(observations, observers, mm, jj, active_observers_only=True):
+    """
+    Calculate halo activity for a month (reusable function).
+    
+    Activity is calculated per day based on:
+    - Rarity of halo type (Haloartfaktor)
+    - Brightness (Halohellfaktor) 
+    - Duration (D field)
+    - Completeness (D field)
+    
+    Only solar halos (O=1) in Germany and neighbors with good weather (dd >= -1, dd <= 2)
+    are considered. Activity is normalized by number of active observers.
+    
+    Args:
+        observations: List of observation records
+        observers: Dict of observer data {KK: observer_info}
+        mm: Month (1-12)
+        jj: Year (2-digit)
+        active_observers_only: Only count active observers
+    
+    Returns:
+        Dict with 'real' and 'relative' activity per day (1-31) and 'active_count'
+    """
+    import math
+    import sys
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    # Initialize activity arrays
+    real_activity = {day: 0.0 for day in range(1, 32)}
+    relative_activity = {day: 0.0 for day in range(1, 32)}
+    active_observers = set()
+    
+    # Process each observation
+    filtered_count = 0
+    observer_found_count = 0
+    observer_not_found_count = 0
+    
+    for obs in observations:
+        # Filter criteria from Pascal code (lines 823-826)
+        if obs.MM != mm or obs.JJ != jj:
+            continue
+        if obs.O != 1:  # Only solar halos
+            continue
+        if obs.GG not in GERMANY_WITH_NEIGHBORS:  # Germany + neighbors
+            continue
+        if obs.d < -1 or obs.d > 2:  # Cirrus condition (d = cirrus density)
+            continue
+        if obs.g == 1:  # Exclude "other location"
+            continue
+        
+        filtered_count += 1
+        
+        # Check if observer exists in observer data
+        kk = str(obs.KK).zfill(2)
+        
+        # Track active observers for this month
+        active_observers.add(kk)
+        
+        # Log first few KK values to see format
+        if filtered_count <= 3:
+            logger.info(f"Processing obs: KK={kk} (from obs.KK={obs.KK}), checking if in observers dict...")
+        
+        # Calculate weight factor (lines 828-834)
+        factor = HALO_TYPE_FACTORS[obs.EE] * HALO_BRIGHTNESS_FACTORS.get(obs.H, 1.0)
+        
+        # Duration/completeness adjustment
+        if obs.DD > 0:
+            factor = factor * obs.DD / 6.0
+        elif obs.DD == 0:
+            factor = factor / 12.0
+        else:  # DD < 0
+            factor = factor / 6.0
+        
+        # Add to real activity
+        real_activity[obs.TT] += factor
+        
+        # Calculate relative activity with daylight factor
+        # Determine latitude from observer data
+        # observers is dict {kk: observer_record_list} where record is CSV row
+        if kk in observers:
+            observer_found_count += 1
+            observer_record = observers[kk]
+            
+            # CORRECTED COLUMN INDICES FOR LATITUDE
+            # Format: KK, VName, NName, seit, active, Ort, lonDeg, lonMin, lonSec, lonDir, latDeg, latMin, latDir, ...
+            # Columns: 0    1     2      3    4      5    6       7       8       9       10      11      12    ...
+            # Ort2, lonDeg, lonMin, lonSec, lonDir, latDeg, latMin, latDir
+            # 13   14      15      16      17      18      19      20
+            # Primary site (g=0): columns 10, 11, 12 = lat_deg, lat_min, lat_dir
+            # Secondary site (g=2): columns 18, 19, 20 = lat_deg, lat_min, lat_dir
+            if obs.g == 0:  # Primary site
+                lat_deg = int(observer_record[10]) if len(observer_record) > 10 and observer_record[10] else 50
+                lat_min = int(observer_record[11]) if len(observer_record) > 11 and observer_record[11] else 0
+                lat_ns = observer_record[12] if len(observer_record) > 12 else 'N'
+            else:  # Secondary site (g=2)
+                lat_deg = int(observer_record[18]) if len(observer_record) > 18 and observer_record[18] else 50
+                lat_min = int(observer_record[19]) if len(observer_record) > 19 and observer_record[19] else 0
+                lat_ns = observer_record[20] if len(observer_record) > 20 else 'N'
+            
+            latitude = lat_deg + lat_min / 60.0
+            if lat_ns == 'S':
+                latitude = -latitude
+            
+            # Daylight factor (matches Pascal SFaktor function)
+            daylight_factor = calculate_daylight_factor(obs.TT, mm, latitude)
+            
+            relative_activity[obs.TT] += factor * daylight_factor
+        else:
+            # No observer data, use real activity
+            observer_not_found_count += 1
+            relative_activity[obs.TT] += factor
+    
+    # Normalize by number of active observers
+    active_count = len(active_observers)
+    
+    logger.info(f"\n=== Activity calculation summary ===")
+    logger.info(f"Observations matching filters: {filtered_count}")
+    logger.info(f"Observer data FOUND: {observer_found_count}")
+    logger.info(f"Observer data NOT FOUND: {observer_not_found_count}")
+    logger.info(f"Active observers this month: {active_count}")
+    
+    if active_count > 0:
+        for day in range(1, 32):
+            real_activity[day] /= active_count
+            relative_activity[day] /= active_count
+    
+    # Calculate monthly totals
+    total_real = sum(real_activity.values())
+    total_relative = sum(relative_activity.values())
+    
+    ratio = total_relative / total_real if total_real > 0 else 0.0
+    
+    logger.info(f"Total real activity: {total_real:.2f}")
+    logger.info(f"Total relative activity: {total_relative:.2f}")
+    logger.info(f"Relative/Real ratio: {ratio:.3f}")
+    logger.info(f"=== End activity calculation ===\n")
+    
+    return {
+        'real': real_activity,
+        'relative': relative_activity,
+        'total_real': total_real,
+        'total_relative': total_relative,
+        'active_count': active_count,
+        'observation_count': filtered_count
+    }
+
+def calculate_daylight_factor(day, month, latitude):
+    """
+    Calculate daylight correction factor for relative halo activity.
+    Matches Pascal SFaktor function from H_ROUT.PAS.
+    
+    Longer days = more observation time = factor > 1
+    Shorter days = less observation time = factor < 1
+    
+    Args:
+        day: Day of month (1-31) - ta parameter in Pascal
+        month: Month (1-12) - mo parameter in Pascal
+        latitude: Observer latitude in degrees - breite parameter in Pascal
+    
+    Returns:
+        Daylight correction factor (Pascal: Pi/2 / ArcCos(-Tan(delta)*Tan(phi)))
+    """
+    import math
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    # Pascal: dd:=-81; FOR lauf:=1 TO mo-1 DO dd:=dd+Tage[lauf];
+    # Calculate day offset from start of year (starting at -81 for seasonal alignment)
+    dd = -81
+    for i in range(month - 1):
+        dd += DAYS_PER_MONTH[i][0]  # Use non-leap year days (Tage array in Pascal)
+    
+    # Pascal: delta:=0.41*Sin((dd+ta)*Pi/182.6);
+    # Solar declination (0.41 ≈ sin(23.45°), 182.6 = 365.2/2)
+    delta = 0.41 * math.sin((dd + day) * math.pi / 182.6)
+    
+    # Pascal: phi:=breite*Pi/180;
+    phi = latitude * math.pi / 180.0
+    
+    # Pascal: SFaktor:=Pi/2/ArcCos(-Tan(delta)*Tan(phi));
+    # Daylight factor based on solar declination and latitude
+    try:
+        tan_delta = math.tan(delta)
+        tan_phi = math.tan(phi)
+        cos_arg = -tan_delta * tan_phi
+        
+        # Clamp to valid range for acos
+        cos_arg_clamped = max(-1.0, min(1.0, cos_arg))
+        
+        factor = (math.pi / 2.0) / math.acos(cos_arg_clamped)
+        return factor
+    except Exception as e:
+        # Fallback if calculation fails (e.g., polar night/day)
+        logger.error(f"daylight_factor error: TT={day}, MM={month}, lat={latitude:.2f}° - {e}")
+        return 1.0
 
 # Color scheme constants (for potential GUI color configuration)
 # These were for the text-mode interface, may be adapted for GUI
@@ -102,3 +319,60 @@ COLOR_SCHEME = {
 
 # Version flag for file format
 FILE_FORMAT_VERSION = 25  # v2.5
+
+def resolve_halo_type(ee: int) -> list[int]:
+    """
+    Resolve a halo type to its individual components for statistics.
+    
+    Combined halo types (ZusHaloart) are split into their individual parts (TeilHaloart).
+    For example, EE 04 (both 22° parhelia) is resolved to [2, 3] (left + right).
+    
+    Individual halo types are returned as-is in a single-element list.
+    
+    Args:
+        ee: Halo type code (1-99)
+    
+    Returns:
+        List of individual halo type codes
+        - For combined types: returns 2 elements (left, right)
+        - For individual types: returns 1 element (the type itself)
+    
+    Examples:
+        resolve_halo_type(4)   # Returns [2, 3]  (both 22° parhelia)
+        resolve_halo_type(2)   # Returns [2]     (left 22° parhelion)
+        resolve_halo_type(10)  # Returns [8, 9]  (both 22° paranthelion)
+        resolve_halo_type(7)   # Returns [7]     (22° halo - not split)
+    """
+    if ee in COMBINED_TO_INDIVIDUAL_HALOS:
+        # Combined type: return both components
+        left, right = COMBINED_TO_INDIVIDUAL_HALOS[ee]
+        return [left, right]
+    else:
+        # Individual type: return as-is
+        return [ee]
+
+
+def is_combined_halo_type(ee: int) -> bool:
+    """
+    Check if a halo type is a combined type (both left and right components).
+    
+    Args:
+        ee: Halo type code (1-99)
+    
+    Returns:
+        True if the halo type represents both left and right components
+    """
+    return ee in COMBINED_HALO_TYPES
+
+
+def is_partial_halo_type(ee: int) -> bool:
+    """
+    Check if a halo type is an individual (partial) type.
+    
+    Args:
+        ee: Halo type code (1-99)
+    
+    Returns:
+        True if the halo type is an individual component (left or right)
+    """
+    return ee in PARTIAL_HALO_TYPES

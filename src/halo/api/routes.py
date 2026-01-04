@@ -10,6 +10,34 @@ from halo.io.csv_handler import ObservationCSV
 api_blueprint = Blueprint('api', __name__, url_prefix='/api')
 
 
+def get_days_in_month(month: int, year: int) -> int:
+    """Get number of days in a month, handling leap years.
+    
+    Args:
+        month: Month (1-12)
+        year: 2-digit year (0-99)
+    
+    Returns:
+        Number of days in the month (28-31)
+    """
+    days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    
+    if month < 1 or month > 12:
+        return 30  # Fallback
+    
+    days = days_per_month[month - 1]
+    
+    # Check for leap year in February
+    if month == 2:
+        # Convert 2-digit year to 4-digit
+        full_year = year + 2000 if year < 50 else year + 1900
+        # Simple leap year check (divisible by 4)
+        if full_year % 4 == 0:
+            days = 29
+    
+    return days
+
+
 def _format_lp8(e: int, ho: int | None, hu: int | None) -> str:
     """Direct translation of Pascal Kurzausgabe for the 8HO/HU field.
 
@@ -154,11 +182,6 @@ def get_observations() -> Dict[str, Any]:
         paginated = observations[offset:]
     else:
         paginated = observations[offset:offset + limit]
-
-    # Debug: log first observation's d and DD values
-    if paginated and len(paginated) > 0:
-        first_obs = paginated[0]
-        print(f"[DEBUG] First obs: KK={first_obs.KK}, ZS={first_obs.ZS}, ZM={first_obs.ZM}, d={first_obs.d}, DD={first_obs.DD}")
 
     result = {
         'total': total,
@@ -581,10 +604,16 @@ def file_status() -> Dict[str, Any]:
     """Get current file status (loaded file, dirty state)"""
     from flask import current_app
     
+    auto_loaded = current_app.config.get('AUTO_LOADED', False)
+    # Clear the flag after first check
+    if auto_loaded:
+        current_app.config['AUTO_LOADED'] = False
+    
     return jsonify({
         'filename': current_app.config.get('LOADED_FILE'),
         'dirty': current_app.config.get('DIRTY', False),
-        'count': len(current_app.config.get('OBSERVATIONS', []))
+        'count': len(current_app.config.get('OBSERVATIONS', [])),
+        'auto_loaded': auto_loaded
     })
 
 
@@ -809,6 +838,43 @@ def active_observers_setting() -> Dict[str, Any]:
         return jsonify({'enabled': enabled})
 
 
+@api_blueprint.route('/config/startup_file', methods=['GET', 'POST'])
+def startup_file_setting() -> Dict[str, Any]:
+    """Get or set the startup file setting.
+    
+    This setting controls whether a file should be automatically loaded on program start.
+    """
+    from flask import current_app, request
+    
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        enabled = bool(data.get('enabled', False))
+        file_path = data.get('file_path', '')
+        
+        current_app.config['STARTUP_FILE_ENABLED'] = enabled
+        current_app.config['STARTUP_FILE_PATH'] = file_path if enabled else ''
+        
+        # Persist settings
+        from pathlib import Path
+        root_path = Path(__file__).parent.parent.parent.parent
+        from halo.services.settings import Settings
+        Settings.save_key(current_app.config, root_path, 'STARTUP_FILE_ENABLED', '1' if enabled else '0')
+        Settings.save_key(current_app.config, root_path, 'STARTUP_FILE_PATH', file_path if enabled else '')
+        
+        return jsonify({
+            'success': True,
+            'enabled': enabled,
+            'file_path': file_path
+        })
+    else:
+        enabled = bool(current_app.config.get('STARTUP_FILE_ENABLED', False))
+        file_path = current_app.config.get('STARTUP_FILE_PATH', '')
+        return jsonify({
+            'enabled': enabled,
+            'file_path': file_path
+        })
+
+
 @api_blueprint.route('/monthly-report', methods=['GET'])
 def get_monthly_report() -> Dict[str, Any]:
     """Generate monthly report (Monatsmeldung) for a specific observer and month.
@@ -937,12 +1003,17 @@ def get_monthly_stats() -> Dict[str, Any]:
     - Active observers as rows
     - Cell values: number of solar halo types, or 'X' for lunar only, or '_N' for both
     - Summary columns: total solar halos, days with solar, days with lunar, total days
+    
+    Note: Combined halo types (e.g., EE 04 = both 22° parhelia) are resolved to
+    their individual components (EE 02 + EE 03) for statistical counting.
     """
     from flask import current_app
+    from halo.models.constants import resolve_halo_type
     
     # Check if observations are loaded
     observations = current_app.config.get('OBSERVATIONS', [])
     observers = current_app.config.get('OBSERVERS', [])
+    active_observers_only = bool(current_app.config.get('ACTIVE_OBSERVERS_ONLY', False))
     
     if not observations:
         return jsonify({'error': 'No observations loaded. Please load a file first.'}), 400
@@ -990,11 +1061,13 @@ def get_monthly_stats() -> Dict[str, Any]:
         
         # Observer is active if:
         # 1. They started before or during this month (seit <= month_year_value)
-        # 2. They are marked as active (aktiv == 1)
-        if seit <= month_year_value and aktiv == 1:
-            # Keep the most recent record for each KK
-            if kk not in active_observers or seit > _parse_seit(active_observers[kk][3]):
-                active_observers[kk] = obs_record
+        # 2. If active_observers_only is True, they must be marked as active (aktiv == 1)
+        #    If active_observers_only is False, include all observers (matches Pascal: aktbeob<>'J')
+        if seit <= month_year_value:
+            if not active_observers_only or aktiv == 1:
+                # Keep the most recent record for each KK
+                if kk not in active_observers or seit > _parse_seit(active_observers[kk][3]):
+                    active_observers[kk] = obs_record
     
     # Build observer overview table
     # Structure: observer_data[KK] = {
@@ -1033,9 +1106,12 @@ def get_monthly_stats() -> Dict[str, Any]:
         if tt not in observer_data[kk]['days']:
             observer_data[kk]['days'][tt] = {'solar_ee': set(), 'lunar': False}
         
-        # Track unique solar halo types (O=1) - same EE on same day counts only once
+        # Track unique solar halo types (O=1)
+        # Combined halo types are resolved to individual components
+        # Example: EE 04 (both 22° parhelia) → EE 02 + EE 03
         if o == 1:
-            observer_data[kk]['days'][tt]['solar_ee'].add(ee)
+            for individual_ee in resolve_halo_type(ee):
+                observer_data[kk]['days'][tt]['solar_ee'].add(individual_ee)
         
         # Mark if lunar halos observed (O=2)
         if o == 2:
@@ -1062,28 +1138,38 @@ def get_monthly_stats() -> Dict[str, Any]:
         
         observer_data[kk]['total_solar'] = total_unique_solar_ee
         
-        # Determine predominant region based on number of observation DAYS per region
-        obs_for_kk = [obs for obs in filtered_obs if obs.KK == kk]
+        # Determine predominant region based on where most observations were made
+        # Logic: Count observation days by site indicator (g)
+        #   g=0: primary site (HbOrt) -> use GH from observer record
+        #   g=1: other location -> display as // (region 39)
+        #   g=2: secondary site (NbOrt) -> use GN from observer record
+        obs_for_kk = [obs for obs in filtered_obs if str(obs.KK).zfill(2) == kk]
         
-        # Track which days have observations in which regions
-        region_days = {}  # region -> set of days
+        # Track which days have observations at which site (g value)
+        site_days = {0: set(), 1: set(), 2: set()}  # g -> set of days
         for obs in obs_for_kk:
-            gg = obs.GG if obs.GG != -1 else 0
-            if gg not in region_days:
-                region_days[gg] = set()
-            region_days[gg].add(obs.TT)
+            g = obs.g if hasattr(obs, 'g') and obs.g in [0, 1, 2] else 0
+            site_days[g].add(obs.TT)
         
-        # Find region with most observation days
-        if region_days:
-            max_region = max(region_days.items(), key=lambda x: len(x[1]))
-            predominant_region = max_region[0]
-            
-            # If predominant region is outside Germany (not in 1-11), display as 39 (renders as //)
-            # Germany regions defined in H_TYPES.PAS: [1,2,3,4,5,6,7,8,9,10,11]
-            if predominant_region not in [1,2,3,4,5,6,7,8,9,10,11]:
-                predominant_region = 39
-            
-            observer_data[kk]['region'] = predominant_region
+        # Find site (g value) with most observation days
+        max_site = max(site_days.items(), key=lambda x: len(x[1]))
+        predominant_g = max_site[0]
+        
+        # Determine region based on predominant site:
+        if predominant_g == 1:
+            # Most observations at "other" location -> display //
+            predominant_region = 39
+        elif predominant_g == 0:
+            # Most observations at primary site -> use GH from observer record (column 6)
+            predominant_region = int(active_observers[kk][6]) if active_observers[kk][6] else 39
+        elif predominant_g == 2:
+            # Most observations at secondary site -> use GN from observer record (column 14)
+            predominant_region = int(active_observers[kk][14]) if active_observers[kk][14] else 39
+        else:
+            # Fallback
+            predominant_region = int(active_observers[kk][6]) if active_observers[kk][6] else 39
+        
+        observer_data[kk]['region'] = predominant_region
         
         observer_data[kk]['days_solar'] = len(days_with_solar)
         observer_data[kk]['days_lunar'] = len(days_with_lunar)
@@ -1114,11 +1200,489 @@ def get_monthly_stats() -> Dict[str, Any]:
     # Sort by region, then by KK
     observer_list.sort(key=lambda x: (x['region'], x['kk']))
     
+    # Build EE overview table (Ergebnisübersicht Sonnenhalos)
+    # Structure: ee_overview[EE] = {1..31: count_of_observers}
+    # Count how many observers saw each halo type on each day
+    # Note: Same observer seeing same EE multiple times on same day counts only once
+    ee_overview = {}
+    
+    for obs in filtered_obs:
+        if obs.O != 1:  # Only solar halos (O=1)
+            continue
+        
+        kk = str(obs.KK).zfill(2)
+        tt = obs.TT
+        ee = obs.EE
+        
+        # Skip if observer not in active list
+        if kk not in observer_data:
+            continue
+        
+        # Resolve combined halo types to individual components
+        for individual_ee in resolve_halo_type(ee):
+            if individual_ee not in ee_overview:
+                ee_overview[individual_ee] = {}
+            
+            if tt not in ee_overview[individual_ee]:
+                ee_overview[individual_ee][tt] = set()
+            
+            # Add observer to set (ensures same observer counts only once per day)
+            ee_overview[individual_ee][tt].add(kk)
+    
+    # Convert sets to counts and calculate totals
+    # Filter to only show specific EE types: 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12
+    allowed_ee_types = {1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12}
+    
+    ee_list = []
+    for ee in sorted(ee_overview.keys()):
+        # Skip EE types not in the allowed list
+        if ee not in allowed_ee_types:
+            continue
+            
+        days_dict = {}
+        total_count = 0
+        
+        for tt in range(1, 32):  # Days 1-31
+            if tt in ee_overview[ee]:
+                count = len(ee_overview[ee][tt])
+                days_dict[tt] = count
+                total_count += count
+            else:
+                days_dict[tt] = 0
+        
+        ee_list.append({
+            'ee': ee,
+            'days': days_dict,
+            'total': total_count
+        })
+    
+    # Calculate daily totals (sum across allowed EE types only for each day)
+    daily_totals = {}
+    for tt in range(1, 32):
+        daily_totals[tt] = sum(
+            len(ee_overview[ee].get(tt, set())) 
+            for ee in ee_overview
+            if ee in allowed_ee_types
+        )
+    
+    # Calculate grand total
+    grand_total = sum(daily_totals.values())
+    
+    # Collect rare halos (EE > 12) for third table
+    # Structure: rare_halos = [{tt, ee, kk, gg}, ...] sorted by day, then EE, then KK
+    rare_halos = []
+    
+    for obs in filtered_obs:
+        if obs.O != 1:  # Only solar halos (O=1)
+            continue
+        
+        kk = str(obs.KK).zfill(2)
+        
+        # Skip if observer not in active list
+        if kk not in observer_data:
+            continue
+        
+        # Resolve combined halo types to check for rare halos
+        for individual_ee in resolve_halo_type(obs.EE):
+            if individual_ee > 12:
+                # Use GG directly from observation record
+                gg = obs.GG
+                
+                rare_halos.append({
+                    'tt': obs.TT,
+                    'ee': individual_ee,
+                    'kk': kk,
+                    'gg': str(gg).zfill(2) if gg != 39 else '//'
+                })
+    
+    # Sort rare halos by day, then EE, then KK
+    rare_halos.sort(key=lambda x: (x['tt'], x['ee'], x['kk']))
+    
+    # Calculate halo activity (real and relative)
+    from halo.models.constants import calculate_halo_activity
+    
+    # Get all observations for the month (not just solar)
+    activity_data = calculate_halo_activity(
+        observations=filtered_obs,
+        observers=active_observers,  # Pass the dict, not the raw list
+        mm=mm_int,
+        jj=jj_int,
+        active_observers_only=active_observers_only
+    )
+    
+    # Apply 30-day normalization (Pascal: aktf[i] * 30 / tprom[mm])
+    # This ensures activity values are comparable across months of different lengths
+    days_in_month = get_days_in_month(mm_int, jj_int)
+    normalization_factor = 30.0 / days_in_month
+    
+    # Apply normalization to daily and total activity values
+    normalized_real = {day: value * normalization_factor for day, value in activity_data['real'].items()}
+    normalized_relative = {day: value * normalization_factor for day, value in activity_data['relative'].items()}
+    normalized_total_real = activity_data['total_real'] * normalization_factor
+    normalized_total_relative = activity_data['total_relative'] * normalization_factor
+    
     return jsonify({
         'mm': mm_int,
         'jj': jj_int,
         'observer_overview': observer_list,
+        'ee_overview': ee_list,
+        'daily_totals': daily_totals,
+        'grand_total': grand_total,
+        'rare_halos': rare_halos,
+        'activity_real': normalized_real,
+        'activity_relative': normalized_relative,
+        'activity_totals': {
+            'real': normalized_total_real,
+            'relative': normalized_total_relative
+        },
+        'activity_count': activity_data['active_count'],
+        'activity_observation_count': activity_data['observation_count'],
         'count': len(filtered_obs)
+    })
+
+
+@api_blueprint.route('/annual-stats', methods=['GET'])
+def get_annual_stats() -> Dict[str, Any]:
+    """Get annual statistics for a given year.
+    
+    Query parameters:
+        jj: Year (2-digit, 50-99 for 1950-2099)
+    
+    Returns:
+        Dictionary with:
+        - jj: Year
+        - observer_overview: Observer statistics for the year
+        - activity_real: Real activity per month (1-12)
+        - activity_relative: Relative activity per month (1-12)
+        - activity_totals: Total real and relative activity
+        - activity_count: Number of active observers
+    """
+    from flask import current_app
+    from halo.models.constants import calculate_halo_activity
+    
+    # Check if observations are loaded
+    observations = current_app.config.get('OBSERVATIONS', [])
+    observers = current_app.config.get('OBSERVERS', [])
+    active_observers_only = bool(current_app.config.get('ACTIVE_OBSERVERS_ONLY', False))
+    
+    if not observations:
+        return jsonify({'error': 'No observations loaded. Please load a file first.'}), 400
+    
+    jj = request.args.get('jj', '').strip()
+    
+    if not jj:
+        return jsonify({'error': 'Missing required parameter: jj'}), 400
+    
+    try:
+        jj_int = int(jj)
+        
+        if jj_int < 0 or jj_int > 99:
+            return jsonify({'error': 'Invalid year (0-99)'}), 400
+    except ValueError:
+        return jsonify({'error': 'Invalid numeric parameter'}), 400
+    
+    # Filter observations for this year (all months)
+    filtered_obs = [obs for obs in observations if obs.JJ == jj_int]
+    
+    # Get all active observers up to end of year
+    # Use December of the year as reference (month 12)
+    month_year_value = 12 + 13 * jj_int
+    
+    # Get unique active observers up to this year
+    active_observers = {}
+    for obs_record in observers:
+        kk = obs_record[0]  # Column 0: KK
+        seit_str = obs_record[3]  # Column 3: seit (MM/JJ format)
+        aktiv_str = obs_record[4]  # Column 4: aktiv (0 or 1)
+        
+        # Parse seit from "MM/JJ" to integer MMJJ
+        seit = _parse_seit(seit_str) if seit_str else 0
+        
+        # Parse aktiv to integer
+        try:
+            aktiv = int(aktiv_str) if aktiv_str else 0
+        except (ValueError, TypeError):
+            aktiv = 0
+        
+        # Observer is active if:
+        # 1. They started before or during this year (seit <= month_year_value)
+        # 2. If active_observers_only is True, they must be marked as active (aktiv == 1)
+        if seit <= month_year_value:
+            if not active_observers_only or aktiv == 1:
+                # Keep the most recent record for each KK
+                if kk not in active_observers or seit > _parse_seit(active_observers[kk][3]):
+                    active_observers[kk] = obs_record
+    
+    # Calculate statistics per month using deduplication algorithm
+    # Prevents double counting: each observer (KK) can only count each halo type (EE) once per day
+    # Only EE=4 (both 22° parhelia) splits into EE=2 + EE=3
+    monthly_stats = {}
+    
+    # Track counts per individual EE type across all months
+    sun_ee_counts = {}  # {ee: count}
+    moon_ee_counts = {}  # {ee: count}
+    
+    for mm in range(1, 13):
+        month_obs = [obs for obs in filtered_obs if obs.MM == mm]
+        
+        # Sort observations by day for efficient processing
+        month_obs.sort(key=lambda o: (o.TT, o.KK, o.O, o.EE))
+        
+        # Track which (observer, object, halo_type) combinations have been counted each day
+        # Key: (day, observer_KK, object_O, halo_EE) -> prevents double counting
+        counted_today = set()
+        last_day = -1
+        
+        sun_ee_count = 0
+        moon_ee_count = 0
+        sun_days_set = set()
+        moon_days_set = set()
+        total_days_set = set()
+        
+        for obs in month_obs:
+            # Reset tracking when day changes
+            if obs.TT != last_day:
+                last_day = obs.TT
+                counted_today = set()
+            
+            # Handle EE=4 (both 22° parhelia) - splits into EE=2 + EE=3
+            halos_to_count = []
+            if obs.EE == 4:
+                # EE=4 splits into EE=2 (left parhelion) and EE=3 (right parhelion)
+                # Check if EE=2 hasn't been counted yet
+                if (obs.TT, obs.KK, obs.O, 2) not in counted_today:
+                    halos_to_count.append(2)
+                    counted_today.add((obs.TT, obs.KK, obs.O, 2))
+                # Check if EE=3 hasn't been counted yet
+                if (obs.TT, obs.KK, obs.O, 3) not in counted_today:
+                    halos_to_count.append(3)
+                    counted_today.add((obs.TT, obs.KK, obs.O, 3))
+            else:
+                # Normal halo type - check if not yet counted for this observer today
+                if (obs.TT, obs.KK, obs.O, obs.EE) not in counted_today:
+                    halos_to_count.append(obs.EE)
+                    counted_today.add((obs.TT, obs.KK, obs.O, obs.EE))
+            
+            # Count only if this observation adds new halo types
+            if halos_to_count:
+                count_increment = len(halos_to_count)
+                
+                if obs.O == 1:
+                    # Sun halos
+                    sun_ee_count += count_increment
+                    sun_days_set.add((obs.TT, obs.MM))
+                    total_days_set.add((obs.TT, obs.MM))
+                    # Track individual EE counts
+                    for ee in halos_to_count:
+                        sun_ee_counts[ee] = sun_ee_counts.get(ee, 0) + 1
+                elif obs.O == 2:
+                    # Moon halos
+                    moon_ee_count += count_increment
+                    moon_days_set.add((obs.TT, obs.MM))
+                    total_days_set.add((obs.TT, obs.MM))
+                    # Track individual EE counts
+                    for ee in halos_to_count:
+                        moon_ee_counts[ee] = moon_ee_counts.get(ee, 0) + 1
+        
+        sun_days = len(sun_days_set)
+        moon_days = len(moon_days_set)
+        total_days = len(total_days_set)
+        total_ee_count = sun_ee_count + moon_ee_count
+        
+        # Get sun observations for activity calculation
+        sun_obs = [obs for obs in month_obs if obs.O == 1]
+        
+        # Calculate activity
+        activity_data = calculate_halo_activity(
+            observations=sun_obs,  # Activity calculation typically based on sun observations
+            observers=active_observers,
+            mm=mm,
+            jj=jj_int,
+            active_observers_only=active_observers_only
+        )
+        
+        # Apply 30-day normalization for this month (Pascal: aktf[mm] * 30 / tprom[mm])
+        # This ensures activity values are comparable across months of different lengths
+        days_in_month = get_days_in_month(mm, jj_int)
+        normalization_factor = 30.0 / days_in_month
+        normalized_real = activity_data['total_real'] * normalization_factor
+        normalized_relative = activity_data['total_relative'] * normalization_factor
+        
+        # Use string keys for JSON serialization
+        monthly_stats[str(mm)] = {
+            'sun_ee': sun_ee_count,
+            'sun_days': sun_days,
+            'moon_ee': moon_ee_count,
+            'moon_days': moon_days,
+            'total_ee': total_ee_count,
+            'total_days': total_days,
+            'real': normalized_real,
+            'relative': normalized_relative
+        }
+    
+    # Calculate totals (using string keys)
+    totals = {
+        'sun_ee': sum(monthly_stats[str(mm)]['sun_ee'] for mm in range(1, 13)),
+        'sun_days': sum(monthly_stats[str(mm)]['sun_days'] for mm in range(1, 13)),
+        'moon_ee': sum(monthly_stats[str(mm)]['moon_ee'] for mm in range(1, 13)),
+        'moon_days': sum(monthly_stats[str(mm)]['moon_days'] for mm in range(1, 13)),
+        'total_ee': sum(monthly_stats[str(mm)]['total_ee'] for mm in range(1, 13)),
+        'total_days': sum(monthly_stats[str(mm)]['total_days'] for mm in range(1, 13)),
+        'real': sum(monthly_stats[str(mm)]['real'] for mm in range(1, 13)),
+        'relative': sum(monthly_stats[str(mm)]['relative'] for mm in range(1, 13))
+    }
+    
+    # Calculate per-observer EE distribution (EE 01, 02, 03, 05-07)
+    # Track for each observer: counts of EE 01, 02, 03, 05, 06, 07 and total sun EE
+    observer_stats = {}
+    
+    # First pass: initialize observer stats and count total days (sun + moon)
+    for obs in filtered_obs:
+        kk = obs.KK
+        if kk not in observer_stats:
+            observer_stats[kk] = {
+                'ee01': 0, 'ee02': 0, 'ee03': 0, 'ee567': 0,
+                'total_sun_ee': 0, 'sun_days': set(), 'total_days': set()
+            }
+        # Track all halo days (sun and moon) for total_days
+        observer_stats[kk]['total_days'].add((obs.MM, obs.TT))
+    
+    # Now count sun halos with deduplication
+    filtered_obs.sort(key=lambda o: (o.MM, o.TT, o.KK, o.O, o.EE))
+    counted_per_observer = {}  # {kk: {(day, ee): counted}}
+    
+    for obs in filtered_obs:
+        if obs.O != 1:  # Only sun halos for EE distribution
+            continue
+        
+        kk = obs.KK
+        if kk not in counted_per_observer:
+            counted_per_observer[kk] = {}
+        
+        # Track per day for this observer (use month+day to make unique across year)
+        day_key = (obs.MM, obs.TT)
+        
+        # Handle EE=4 splitting
+        halos_to_count = []
+        if obs.EE == 4:
+            if (day_key, 2) not in counted_per_observer[kk]:
+                halos_to_count.append(2)
+                counted_per_observer[kk][(day_key, 2)] = True
+            if (day_key, 3) not in counted_per_observer[kk]:
+                halos_to_count.append(3)
+                counted_per_observer[kk][(day_key, 3)] = True
+        else:
+            if (day_key, obs.EE) not in counted_per_observer[kk]:
+                halos_to_count.append(obs.EE)
+                counted_per_observer[kk][(day_key, obs.EE)] = True
+        
+        # Count for this observer
+        for ee in halos_to_count:
+            observer_stats[kk]['total_sun_ee'] += 1
+            
+            if ee == 1:
+                observer_stats[kk]['ee01'] += 1
+            elif ee == 2:
+                observer_stats[kk]['ee02'] += 1
+            elif ee == 3:
+                observer_stats[kk]['ee03'] += 1
+            elif ee in [5, 6, 7]:
+                observer_stats[kk]['ee567'] += 1
+        
+        # Track sun halo days only
+        if halos_to_count:
+            observer_stats[kk]['sun_days'].add((obs.MM, obs.TT))
+    
+    # Convert sets to counts and calculate EE1-7
+    observer_distribution = []
+    for kk in sorted(observer_stats.keys()):
+        stats = observer_stats[kk]
+        ee17 = stats['ee01'] + stats['ee02'] + stats['ee03'] + stats['ee567']
+        
+        # Calculate percentages (relative to EE1-7)
+        if ee17 > 0:
+            pct01 = (stats['ee01'] / ee17) * 100.0
+            pct02 = (stats['ee02'] / ee17) * 100.0
+            pct03 = (stats['ee03'] / ee17) * 100.0
+            pct567 = (stats['ee567'] / ee17) * 100.0
+        else:
+            pct01 = pct02 = pct03 = pct567 = 0.0
+        
+        observer_distribution.append({
+            'kk': kk,
+            'ee01': stats['ee01'],
+            'pct01': pct01,
+            'ee02': stats['ee02'],
+            'pct02': pct02,
+            'ee03': stats['ee03'],
+            'pct03': pct03,
+            'ee567': stats['ee567'],
+            'pct567': pct567,
+            'ee17': ee17,
+            'total_sun_ee': stats['total_sun_ee'],
+            'sun_days': len(stats['sun_days']),
+            'total_days': len(stats['total_days'])
+        })
+    
+    # Calculate phenomena (observations with '*' in remarks, 5+ EE types visible simultaneously)
+    # Group by unique (MM, TT, KK, O) combination
+    phenomena_dict = {}  # Key: (MM, TT, KK, O), Value: phenomenon data
+    
+    for obs in filtered_obs:
+        # Check for '*' in remarks
+        if not obs.remarks or '*' not in obs.remarks:
+            continue
+        
+        # Group by (MM, TT, KK, O)
+        key = (obs.MM, obs.TT, obs.KK, obs.O)
+        if key not in phenomena_dict:
+            phenomena_dict[key] = {
+                'mm': obs.MM,
+                'tt': obs.TT,
+                'kk': obs.KK,
+                'gg': obs.GG,
+                'zs': obs.ZS,
+                'zm': obs.ZM,
+                'o': obs.O,
+                'ee_types': set(),
+                'ee_count': 0  # Track count of EE types
+            }
+        
+        # Add EE type (split if EE=4) and update count
+        ee_before = len(phenomena_dict[key]['ee_types'])
+        if obs.EE == 4:
+            phenomena_dict[key]['ee_types'].add(2)
+            phenomena_dict[key]['ee_types'].add(3)
+        else:
+            phenomena_dict[key]['ee_types'].add(obs.EE)
+        
+        ee_after = len(phenomena_dict[key]['ee_types'])
+        phenomena_dict[key]['ee_count'] = ee_after
+        
+        # Update time only if count < 6 (freeze time after 5th EE type confirmed)
+        if ee_after < 6:
+            phenomena_dict[key]['zs'] = obs.ZS
+            phenomena_dict[key]['zm'] = obs.ZM
+    
+    # Convert to sorted list (sort by month, day, kk, then by time within same kk)
+    phenomena_list = []
+    for key in sorted(phenomena_dict.keys()):
+        phenom = phenomena_dict[key]
+        phenom['ee_types'] = sorted(list(phenom['ee_types']))
+        phenomena_list.append(phenom)
+    
+    # Sort by (MM, TT, KK, time)
+    phenomena_list.sort(key=lambda p: (p['mm'], p['tt'], p['kk'], p['zs'], p['zm']))
+    
+    return jsonify({
+        'jj': jj_int,
+        'monthly_stats': monthly_stats,
+        'totals': totals,
+        'observer_count': len(active_observers),
+        'sun_ee_counts': sun_ee_counts,
+        'moon_ee_counts': moon_ee_counts,
+        'observer_distribution': observer_distribution,
+        'phenomena': phenomena_list
     })
 
 

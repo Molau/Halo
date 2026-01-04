@@ -43,6 +43,10 @@ class Settings:
                         app_config['ACTIVE_OBSERVERS_ONLY'] = value in ('1', 'true', 'True')
                     elif key == 'FIXED_OBSERVER':
                         app_config['FIXED_OBSERVER'] = value
+                    elif key == 'STARTUP_FILE_ENABLED':
+                        app_config['STARTUP_FILE_ENABLED'] = value in ('1', 'true', 'True')
+                    elif key == 'STARTUP_FILE_PATH':
+                        app_config['STARTUP_FILE_PATH'] = value
         except Exception:
             # On any error, keep existing defaults
             pass
@@ -54,6 +58,8 @@ class Settings:
             ['INPUT_MODE', app_config.get('INPUT_MODE', 'N')],
             ['ACTIVE_OBSERVERS_ONLY', '1' if app_config.get('ACTIVE_OBSERVERS_ONLY', False) else '0'],
             ['FIXED_OBSERVER', app_config.get('FIXED_OBSERVER', '')],
+            ['STARTUP_FILE_ENABLED', '1' if app_config.get('STARTUP_FILE_ENABLED', False) else '0'],
+            ['STARTUP_FILE_PATH', app_config.get('STARTUP_FILE_PATH', '')],
         ]
         with open(cfg_file, 'w', encoding='utf-8', newline='') as f:
             writer = csv.writer(f)

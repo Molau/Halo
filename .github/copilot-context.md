@@ -129,6 +129,32 @@
   - Creating new validation logic for data already validated elsewhere
   - Writing custom formatters for standardized fields
 
+### 7. No Fallback Values - Fail Fast
+- **Decision #015**: Never use fallback values or default data - fail explicitly when data is missing
+- **Date**: 2026-01-04
+- **Status**: ✓ Approved
+- **Rationale**:
+  - Makes problems visible immediately rather than masking them
+  - Easier to debug - errors point directly to missing data
+  - Prevents silent failures that can go unnoticed for long periods
+  - Forces proper implementation of i18n and data structures
+- **Core Rules**:
+  1. ✗ **NEVER** use optional chaining with fallbacks: `i18n?.months || ['default']`
+  2. ✓ **ALWAYS** access data directly: `i18n.months`
+  3. ✗ **NEVER** provide fallback strings in templates or JavaScript
+  4. ✓ **ALWAYS** let code fail if required data is missing
+- **Examples**:
+  - ✗ Wrong: `const months = i18n?.months || ['Januar', 'Februar', ...]`
+  - ✓ Correct: `const months = i18n.months`
+  - ✗ Wrong: `i18n.dialogs?.no_data?.message || 'No data'`
+  - ✓ Correct: `i18n.dialogs.no_data.message`
+- **Benefits**:
+  - Missing i18n keys cause immediate errors in development
+  - Missing API fields cause immediate errors that get fixed
+  - No silent degradation of functionality
+  - Code is cleaner without fallback logic everywhere
+- **Status**: Active principle
+
 ---
 
 ## Technology Stack Decisions

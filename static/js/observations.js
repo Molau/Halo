@@ -685,12 +685,15 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const response = await fetch('/api/config/inputmode');
             const config = await response.json();
+            console.log('[DEBUG] INPUT_MODE config:', config);
             displayMode = config.mode === 'M' ? 'lang' : 'kurz';
+            console.log('[DEBUG] displayMode set to:', displayMode);
         } catch (error) {
             console.error('Error loading config:', error);
             displayMode = 'kurz';  // Default to compact on error
         }
         
+        console.log('[DEBUG] Calling display function for mode:', displayMode);
         if (displayMode === 'kurz') {
             displayCompactView();
         } else {

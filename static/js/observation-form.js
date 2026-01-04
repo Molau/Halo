@@ -152,8 +152,9 @@ class ObservationForm {
                         </div>
                         <div class="modal-footer py-1">
                             ${this.mode === 'view' ? `<button type="button" class="btn btn-secondary btn-sm" id="btn-obs-form-prev" ${this.currentNum === 1 ? 'disabled' : ''}>${this.i18n?.common?.previous || 'Zurück'}</button>` : ''}
-                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${this.mode === 'view' ? (this.i18n?.common?.close || 'Schließen') : (this.i18n?.common?.cancel || 'Cancel')}</button>
-                            ${this.mode === 'view' ? `<button type="button" class="btn btn-primary btn-sm" id="btn-obs-form-next">${this.i18n?.common?.next || 'Weiter'}</button>` : ''}
+                            ${this.mode === 'view' ? `<button type="button" class="btn btn-secondary btn-sm" id="btn-obs-form-next" ${this.currentNum === this.totalNum ? 'disabled' : ''}>${this.i18n?.common?.next || 'Weiter'}</button>` : ''}
+                            ${this.mode === 'view' ? `<button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal">${this.i18n?.common?.ok || 'OK'}</button>` : ''}
+                            ${this.mode !== 'view' ? `<button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${this.i18n?.common?.cancel || 'Abbrechen'}</button>` : ''}
                             ${(this.mode === 'edit' || this.mode === 'delete') ? `<button type="button" class="btn btn-outline-primary btn-sm" id="btn-obs-form-no">${this.i18n?.observers?.no || 'Nein'}</button>` : ''}
                             ${(this.mode === 'edit' || this.mode === 'delete') ? `<button type="button" class="btn btn-primary btn-sm" id="btn-obs-form-yes">${this.i18n?.observers?.yes || 'Ja'}</button>` : ''}
                             ${this.mode === 'add' ? `<button type="button" class="btn btn-primary btn-sm" id="btn-obs-form-ok" disabled>${this.i18n?.common?.ok || 'OK'}</button>` : ''}

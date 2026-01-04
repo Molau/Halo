@@ -23,9 +23,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             const i18nResponse = await fetch(`/api/i18n/${lang}`);
             i18n = await i18nResponse.json();
             console.log('i18n loaded:', i18n);
-            
-            // Update UI text
-            updateUIText();
         } catch (error) {
             console.error('Error loading i18n:', error);
             i18n = { monthly_stats: {}, ui: { messages: {} } };
@@ -62,19 +59,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    // Update UI text from i18n
-    function updateUIText() {
-        // Month/year label
-        const monthYearLabel = document.getElementById('month-year-label');
-        if (monthYearLabel) {
-            monthYearLabel.textContent = i18n.monthly_stats?.month_year_label;
-        }
-        
-        // Month/year placeholder
-        if (monthYearInput) {
-            monthYearInput.placeholder = i18n.monthly_stats?.month_year_placeholder;
-        }
-    }
+    // Placeholder is already set in HTML template via Jinja2
 
     // Check if observations are loaded (same approach as monthly_report.js)
     async function checkDataLoaded() {
@@ -226,11 +211,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Set title
         const resultsTitle = document.getElementById('results-modal-title');
         if (resultsTitle) {
-            resultsTitle.textContent = `${i18n.monthly_stats?.title} - ${monthName} ${year}`;
+            resultsTitle.textContent = i18n.monthly_stats?.title;
         }
         
         // Build statistics HTML
-        let html = '<div class="statistics-report" style="font-family: monospace; white-space: pre; font-size: 11px;">';
+        let html = '<div class="statistics-report" style="font-family: monospace; white-space: pre; font-size: 11px; color: #000000; line-height: 1;">';
         
         // Title (centered)
         const titleLine = `${i18n.monthly_stats?.title} ${monthName} ${year}`;
@@ -241,6 +226,21 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Table 1: Observer Overview (Beobachterübersicht)
         if (data.observer_overview && data.observer_overview.length > 0) {
             html += renderObserverOverview(data.observer_overview, monthName, year);
+        }
+        
+        // Table 2: EE Overview (Ergebnisübersicht Sonnenhalos)
+        if (data.ee_overview && data.ee_overview.length > 0) {
+            html += renderEEOverview(data.ee_overview, data.daily_totals || {}, data.grand_total || 0, monthName, year);
+        }
+        
+        // Table 3: Rare Halos (Erscheinungen über EE 12)
+        if (data.rare_halos && data.rare_halos.length > 0) {
+            html += renderRareHalos(data.rare_halos, monthName, year);
+        }
+        
+        // Table 4: Activity (Haloaktivität)
+        if (data.activity_real && data.activity_relative && data.activity_totals) {
+            html += renderActivityTable(data.activity_real, data.activity_relative, data.activity_totals, monthName, year);
         }
         
         html += '</div>';
@@ -264,7 +264,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Table header
         html += '╔' + '═'.repeat(86) + '╗\n';
-        const headerText = `Beobachterübersicht ${monthName} ${year}`;
+        const headerText = `${i18n.monthly_stats?.observer_overview} ${monthName} ${year}`;
         const headerPadding = Math.max(0, Math.floor((86 - headerText.length) / 2));
         html += '║' + ' '.repeat(headerPadding) + headerText + ' '.repeat(86 - headerPadding - headerText.length) + '║\n';
         html += '╠════╦══════════╦══════════╦══════════╦══════════╦══════════╦════════════╦═════════════╣\n';
@@ -311,7 +311,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             // Add separator every 5 rows (but not at the end)
             if (rowCount % 5 === 0 && rowCount < observers.length) {
-                html += '╠════╬══════════╬══════════╬══════════╬══════════╬══════════╬═════════════╬════════════╣\n';
+                html += '╠════╬══════════╬══════════╬══════════╬══════════╬══════════╬════════════╬═════════════╣\n';
             }
         }
         
@@ -319,6 +319,243 @@ document.addEventListener('DOMContentLoaded', async function() {
         html += '╠════╩══════════╩══════════╩══════════╩══════════╩══════════╩═════════════╩════════════╣\n';
         html += '║  1) = EE (Sonne)   2) = Tage (Sonne)   3) = Tage (Mond)   4) = Tage (gesamt)         ║\n';
         html += '╚' + '═'.repeat(86) + '╝\n\n';
+        
+        return html;
+    }
+
+    // Render EE overview table (Ergebnisübersicht Sonnenhalos)
+    function renderEEOverview(eeData, dailyTotals, grandTotal, monthName, year) {
+        let html = '';
+        
+        // Table header
+        html += '    ╔' + '═'.repeat(76) + '╗\n';
+        const headerText = `${i18n.monthly_stats?.ee_overview} ${monthName} ${year}`;
+        const headerPadding = Math.max(0, Math.floor((76 - headerText.length) / 2));
+        html += '    ║' + ' '.repeat(headerPadding) + headerText + ' '.repeat(76 - headerPadding - headerText.length) + '║\n';
+        html += '    ╠══╦══════════╦══════════╦══════════╦══════════╦══════════╦════════════╦═════╣\n';
+        html += '    ║EE║ 1   3   5║   7   9  ║11  13  15║  17  19  ║21  23  25║  27  29  31║ ges ║\n';
+        html += '    ║  ║   2   4  ║ 6   8  10║  12  14  ║16  18  20║  22  24  ║26  28  30  ║     ║\n';
+        html += '    ╠══╬══════════╬══════════╬══════════╬══════════╬══════════╬════════════╬═════╣\n';
+        
+        // Data rows
+        let rowCount = 0;
+        for (const eeRow of eeData) {
+            const ee = eeRow.ee.toString().padStart(2, '0');
+            html += '    ║' + ee + '║';
+            
+            // Days 1-31 in groups of 5
+            for (let day = 1; day <= 31; day++) {
+                const count = eeRow.days[day] || 0;
+                const cellValue = count > 0 ? count.toString().padStart(2) : '  ';
+                html += cellValue;
+                
+                // Add column separator after every 5 days
+                if (day % 5 === 0 && day !== 30) {
+                    html += '║';
+                }
+            }
+            html += '║';
+            
+            // Total column
+            html += eeRow.total.toString().padStart(4) + ' ║\n';
+            
+            rowCount++;
+            
+            // Add separator after each EE row, except:
+            // - After the last row
+            // - Between EE 5, 6, 7 (keep them grouped)
+            const currentEE = eeRow.ee;
+            const isLast = rowCount >= eeData.length;
+            const isBeforeGroup567 = currentEE === 5 || currentEE === 6;
+            
+            if (!isLast && !isBeforeGroup567) {
+                html += '    ╠══╬══════════╬══════════╬══════════╬══════════╬══════════╬════════════╬═════╣\n';
+            }
+        }
+        
+        // Daily totals row
+        html += '    ╠══╩══════════╩══════════╩══════════╩══════════╩══════════╩════════════╩═════╣\n';
+        html += '    ║  ║';
+        for (let day = 1; day <= 31; day++) {
+            const count = dailyTotals[day] || 0;
+            const cellValue = count > 0 ? count.toString().padStart(2) : '  ';
+            html += cellValue;
+            
+            if (day % 5 === 0 && day !== 30) {
+                html += '║';
+            }
+        }
+        html += '║';
+        html += grandTotal.toString().padStart(4) + ' ║\n';
+        html += '    ╚' + '═'.repeat(76) + '╝\n\n';
+        
+        return html;
+    }
+
+    // Render rare halos table (EE > 12)
+    function renderRareHalos(rareHalos, monthName, year) {
+        let html = '';
+        
+        // Table header
+        html += '    ╔' + '═'.repeat(77) + '╗\n';
+        const headerText = i18n.monthly_stats?.rare_halos;
+        const headerPadding = Math.max(0, Math.floor((77 - headerText.length) / 2));
+        html += '    ║' + ' '.repeat(headerPadding) + headerText + ' '.repeat(77 - headerPadding - headerText.length) + '║\n';
+        
+        // Check if there are any rare halos
+        if (!rareHalos || rareHalos.length === 0) {
+            // No rare halos - show message
+            html += '    ╠' + '═'.repeat(77) + '╣\n';
+            const noneText = (i18n.monthly_stats?.rare_halos_none || 'No occurrences above EE 12.').replace('{month}', monthName);
+            const nonePadding = Math.max(0, Math.floor((77 - noneText.length) / 2));
+            html += '    ║' + ' '.repeat(nonePadding) + noneText + ' '.repeat(77 - nonePadding - noneText.length) + '║\n';
+            html += '    ╚' + '═'.repeat(77) + '╝\n\n';
+            return html;
+        }
+        
+        // Column header
+        html += '    ╠════════════╦════════════╦════════════╦════════════╦════════════╦════════════╣\n';
+        html += '    ║ TT EE KKGG ║ TT EE KKGG ║ TT EE KKGG ║ TT EE KKGG ║ TT EE KKGG ║ TT EE KKGG ║\n';
+        html += '    ╠════════════╬════════════╬════════════╬════════════╬════════════╬════════════╣\n';
+        
+        // Distribute all halos across 6 columns sequentially
+        // Insert empty row when day changes
+        const itemsPerCol = Math.ceil(rareHalos.length / 6);
+        const maxRows = itemsPerCol;
+        
+        let lastDay = null;
+        let itemIndex = 0;
+        let displayedItems = [];
+        
+        // Build array with empty slots for day boundaries
+        for (const halo of rareHalos) {
+            if (lastDay !== null && halo.tt !== lastDay) {
+                // Day changed - insert empty slot
+                displayedItems.push(null);
+            }
+            displayedItems.push(halo);
+            lastDay = halo.tt;
+        }
+        
+        // Recalculate rows based on items + empty slots
+        const totalItems = displayedItems.length;
+        const itemsPerColumn = Math.ceil(totalItems / 6);
+        
+        for (let row = 0; row < itemsPerColumn; row++) {
+            html += '    ║';
+            for (let col = 0; col < 6; col++) {
+                const idx = col * itemsPerColumn + row;
+                if (idx < displayedItems.length && displayedItems[idx] !== null) {
+                    const h = displayedItems[idx];
+                    const ttStr = String(h.tt).padStart(2, ' ');
+                    const eeStr = String(h.ee).padStart(2, '0');
+                    html += ` ${ttStr} ${eeStr} ${h.kk}${h.gg} ║`;
+                } else {
+                    html += '            ║';
+                }
+            }
+            html += '\n';
+        }
+        
+        html += '    ╚════════════╩════════════╩════════════╩════════════╩════════════╩════════════╝\n\n';
+        
+        return html;
+    }
+
+    // Render activity table (real and relative) - split into two tables
+    function renderActivityTable(activityReal, activityRelative, activityTotals, monthName, year) {
+        let html = '';
+        
+        // Table header
+        html += '    ╔' + '═'.repeat(86) + '╗\n';
+        const headerText = `${i18n.monthly_stats?.activity_title} ${monthName} ${year}`;
+        const headerPadding = Math.max(0, Math.floor((86 - headerText.length) / 2));
+        html += '    ║' + ' '.repeat(headerPadding) + headerText + ' '.repeat(86 - headerPadding - headerText.length) + '║\n';
+        html += '    ╠═════╦════════════════════════╦════════════════════════╦════════════════════════╦═════╣\n';
+        
+        // First table: Days 1-16
+        html += '    ║ Tag ║  1.   2.   3.   4.   5.║  6.   7.   8.   9.  10.║ 11.  12.  13.  14.  15.║ 16. ║\n';
+        html += '    ╠═════╬════════════════════════╬════════════════════════╬════════════════════════╬═════╣\n';
+        
+        // Real activity row (days 1-16)
+        html += '    ║ real║';
+        for (let d = 1; d <= 16; d++) {
+            const val = activityReal[d] || 0;
+            const valStr = val.toFixed(1);
+            html += valStr.padStart(4, ' ');
+            if (d % 5 === 0) {
+                html += '║';
+            } else if (d === 16) {
+                html += ' ║';
+            } else {
+                html += ' ';
+            }
+        }
+        html += '\n';
+        
+        // Separator
+        html += '    ╠═════╬════════════════════════╬════════════════════════╬════════════════════════╬═════╣\n';
+        
+        // Relative activity row (days 1-16)
+        html += '    ║ rel.║';
+        for (let d = 1; d <= 16; d++) {
+            const val = activityRelative[d] || 0;
+            const valStr = val.toFixed(1);
+            html += valStr.padStart(4, ' ');
+            if (d % 5 === 0) {
+                html += '║';
+            } else if (d === 16) {
+                html += ' ║';
+            } else {
+                html += ' ';
+            }
+        }
+        html += '\n';
+        html += '    ╚═════╩════════════════════════╩════════════════════════╩════════════════════════╩═════╝\n';
+        
+        // Second table: Days 17-31 with total
+        html += '    ╔═════╦═══════════════════╦════════════════════════╦════════════════════════╦════╦═════╗\n';
+        html += '    ║ Tag ║ 17.  18.  19.  20.║ 21.  22.  23.  24.  25.║ 26.  27.  28.  29.  30.║ 31.║ ges ║\n';
+        html += '    ╠═════╬═══════════════════╬════════════════════════╬════════════════════════╬════╬═════╣\n';
+        
+        // Real activity row (days 17-31)
+        html += '    ║ real║';
+        for (let d = 17; d <= 31; d++) {
+            const val = activityReal[d] || 0;
+            const valStr = val.toFixed(1);
+            html += valStr.padStart(4, ' ');
+            if (d % 5 === 0) {
+                html += '║';
+            } else if (d === 31) {
+                html += '║';
+            } else {
+                html += ' ';
+            }
+        }
+        const totalRealStr = (activityTotals.real || 0).toFixed(1);
+        html += totalRealStr.padStart(5, ' ') + '║\n';
+        
+        // Separator
+        html += '    ╠═════╬═══════════════════╬════════════════════════╬════════════════════════╬════╬═════╣\n';
+        
+        // Relative activity row (days 17-31)
+        html += '    ║ rel.║';
+        for (let d = 17; d <= 31; d++) {
+            const val = activityRelative[d] || 0;
+            const valStr = val.toFixed(1);
+            html += valStr.padStart(4, ' ');
+            if (d % 5 === 0) {
+                html += '║';
+            } else if (d === 31) {
+                html += '║';
+            } else {
+                html += ' ';
+            }
+        }
+        const totalRelStr = (activityTotals.relative || 0).toFixed(1);
+        html += totalRelStr.padStart(5, ' ') + '║\n';
+        
+        html += '    ╚═════╩═══════════════════╩════════════════════════╩════════════════════════╩════╩═════╝\n\n';
         
         return html;
     }
@@ -346,9 +583,19 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     };
     
-    // Remove any existing handler first to avoid duplicates
+    // ESC key support - close monthly statistics and return to main
+    const escKeyHandler = (e) => {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            window.location.href = '/';
+        }
+    };
+    
+    // Remove any existing handlers first to avoid duplicates
     document.removeEventListener('keypress', filterEnterKeyHandler);
     document.addEventListener('keypress', filterEnterKeyHandler);
+    document.removeEventListener('keydown', escKeyHandler);
+    document.addEventListener('keydown', escKeyHandler);
     
     // Setup action button handlers
     function setupActionButtons() {
@@ -409,9 +656,165 @@ document.addEventListener('DOMContentLoaded', async function() {
                 URL.revokeObjectURL(url);
             };
         }
+        
+        // Chart button
+        const btnStatsChart = document.getElementById('btn-stats-chart');
+        if (btnStatsChart) {
+            btnStatsChart.onclick = () => {
+                if (!currentStatsData) return;
+                showActivityChart(currentStatsData);
+            };
+        }
     }
     
-    // Generate plain text statistics content for save
+    // Show activity chart
+    function showActivityChart(data) {
+        const months = i18n.months || {};
+        const monthName = months[data.mm] || months[data.mm.toString()];
+        const year = data.jj >= 50 ? `19${data.jj.toString().padStart(2, '0')}` : 
+                     `20${data.jj.toString().padStart(2, '0')}`;
+        
+        // Set printable chart title (shown in the chart)
+        const chartPrintableTitle = document.getElementById('chart-printable-title');
+        if (chartPrintableTitle) {
+            chartPrintableTitle.textContent = `Haloaktivität im ${monthName} ${year}`;
+        }
+        
+        // Set chart subtitle
+        const chartSubtitle = document.getElementById('chart-subtitle');
+        if (chartSubtitle) {
+            const observationCount = data.activity_observation_count || 0;
+            chartSubtitle.textContent = `berechnet aus ${observationCount} Einzelbeobachtungen`;
+        }
+        
+        // Prepare chart data - days 1-31
+        const days = Array.from({length: 31}, (_, i) => i + 1);
+        const realData = days.map(d => data.activity_real?.[d] || 0);
+        const relativeData = days.map(d => data.activity_relative?.[d] || 0);
+        
+        // Create chart
+        const ctx = document.getElementById('activity-chart').getContext('2d');
+        
+        // Destroy existing chart if it exists
+        if (window.activityChart) {
+            window.activityChart.destroy();
+        }
+        
+        window.activityChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: days,
+                datasets: [
+                    {
+                        label: i18n.monthly_stats?.activity_real || 'real',
+                        data: realData,
+                        borderColor: '#dc3545',  // Red
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,  // Spline smoothing
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#dc3545'
+                    },
+                    {
+                        label: i18n.monthly_stats?.activity_relative || 'rel.',
+                        data: relativeData,
+                        borderColor: '#28a745',  // Green
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,  // Spline smoothing
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#28a745'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            font: { size: 12 },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: i18n.monthly_stats?.x_axis || 'Datum',
+                            font: { size: 12, weight: 'bold' }
+                        },
+                        ticks: {
+                            stepSize: 1
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: i18n.monthly_stats?.y_axis || 'Aktivität',
+                            font: { size: 12, weight: 'bold' }
+                        },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+        
+        // Show chart modal
+        const chartModal = new bootstrap.Modal(document.getElementById('chart-modal'));
+        chartModal.show();
+        
+        // Wire up chart print button
+        const btnChartPrint = document.getElementById('btn-chart-print');
+        if (btnChartPrint) {
+            btnChartPrint.onclick = () => {
+                // Hide stats content and results modal for printing
+                const statsContent = document.getElementById('stats-content');
+                const resultsModal = document.getElementById('results-modal');
+                const resultsBackdrop = document.querySelector('.modal-backdrop.show');
+                
+                // Store original display states
+                const originalStatsDisplay = statsContent?.style.display;
+                const originalResultsDisplay = resultsModal?.style.display;
+                const originalBackdropDisplay = resultsBackdrop?.style.display;
+                
+                if (statsContent) statsContent.style.display = 'none';
+                if (resultsModal) resultsModal.style.display = 'none';
+                if (resultsBackdrop) resultsBackdrop.style.display = 'none';
+                
+                // Print
+                window.print();
+                
+                // Restore visibility after print dialog closes
+                setTimeout(() => {
+                    if (statsContent) statsContent.style.display = originalStatsDisplay || '';
+                    if (resultsModal) resultsModal.style.display = originalResultsDisplay || '';
+                    if (resultsBackdrop) resultsBackdrop.style.display = originalBackdropDisplay || '';
+                }, 100);
+            };
+        }
+        
+        // Wire up chart close button to return to stats
+        const btnChartClose = document.getElementById('btn-chart-close');
+        if (btnChartClose) {
+            btnChartClose.onclick = () => {
+                const chartModal = bootstrap.Modal.getInstance(document.getElementById('chart-modal'));
+                if (chartModal) chartModal.hide();
+                // Results modal will still be open behind
+            };
+        }
+    }
+    
+    // Generate plain text statistics content for save and print
     function generateStatsText() {
         if (!currentStatsData) return '';
         
@@ -429,69 +832,24 @@ document.addEventListener('DOMContentLoaded', async function() {
         text += ' '.repeat(titlePadding) + titleLine + '\n';
         text += ' '.repeat(titlePadding) + '═'.repeat(titleLine.length) + '\n\n';
         
-        // Table 1: Observer Overview
+        // Table 1: Observer Overview (reuse rendering function)
         if (data.observer_overview && data.observer_overview.length > 0) {
-            const observers = data.observer_overview;
-            
-            // Table header
-            text += '╔' + '═'.repeat(86) + '╗\n';
-            const headerText = `Beobachterübersicht ${monthName} ${year}`;
-            const headerPadding = Math.max(0, Math.floor((86 - headerText.length) / 2));
-            text += '║' + ' '.repeat(headerPadding) + headerText + ' '.repeat(86 - headerPadding - headerText.length) + '║\n';
-            text += '╠════╦═══════════╦══════════╦══════════╦══════════╦══════════╦═════════════╦═════════════╣\n';
-            text += '║KKGG║ 1   3   5 ║   7   9  ║11  13  15║  17  19  ║21  23  25║  27  29  31 ║ 1) 2) 3) 4) ║\n';
-            text += '║    ║   2   4   ║ 6   8  10║  12  14  ║16  18  20║  22  24  ║26  28  30   ║             ║\n';
-            text += '╠════╬═══════════╬══════════╬══════════╬══════════╬══════════╬══════════════╬═════════════╣\n';
-            
-            // Data rows
-            let rowCount = 0;
-            for (const obs of observers) {
-                const kk = obs.kk.toString().padStart(2, '0');
-                const gg = obs.region === 39 ? '//' : obs.region.toString().padStart(2, '0');
-                
-                text += '║' + kk + gg + '║';
-                
-                // Days 1-31 in groups of 5
-                for (let day = 1; day <= 31; day++) {
-                    const dayData = obs.days[day];
-                    let cellValue = '  ';
-                    if (dayData) {
-                        const solar = dayData.solar || 0;
-                        const lunar = dayData.lunar || false;
-                        if (solar > 0 && lunar) cellValue = '_' + solar.toString().padStart(1);
-                        else if (solar > 0) cellValue = solar.toString().padStart(2);
-                        else if (lunar) cellValue = ' X';
-                    }
-                    text += cellValue;
-                    
-                    // Add spacing between days within group, or column separator after every 5 days
-                    if (day % 5 === 0 && day !== 30) {
-                        text += '║';
-                    } else if (day < 31) {
-                        text += ' ';
-                    }
-                }
-                text += '║';
-                
-                // Summary columns
-                text += obs.total_solar.toString().padStart(3) + ' ';
-                text += obs.days_solar.toString().padStart(2) + ' ';
-                text += obs.days_lunar.toString().padStart(2) + ' ';
-                text += obs.total_days.toString().padStart(2) + ' ';
-                text += '║\n';
-                
-                rowCount++;
-                
-                // Add separator every 5 rows (but not at the end)
-                if (rowCount % 5 === 0 && rowCount < observers.length) {
-                    text += '╠════╬════════════╬══════════╬══════════╬══════════╬══════════╬══════════════╬═════════════╣\n';
-                }
-            }
-            
-            // Table footer
-            text += '╠════╩════════════╩══════════╩══════════╩══════════╩══════════╩══════════════╩═════════════╣\n';
-            text += '║  1) = EE (Sonne)   2) = Tage (Sonne)   3) = Tage (Mond)   4) = Tage (gesamt)         ║\n';
-            text += '╚' + '═'.repeat(86) + '╝\n\n';
+            text += renderObserverOverview(data.observer_overview, monthName, year);
+        }
+        
+        // Table 2: EE Overview (reuse rendering function)
+        if (data.ee_overview && data.ee_overview.length > 0) {
+            text += renderEEOverview(data.ee_overview, data.daily_totals || {}, data.grand_total || 0, monthName, year);
+        }
+        
+        // Table 3: Rare Halos (reuse rendering function)
+        if (data.rare_halos && data.rare_halos.length > 0) {
+            text += renderRareHalos(data.rare_halos, monthName, year);
+        }
+        
+        // Table 4: Activity (reuse rendering function)
+        if (data.activity_real && data.activity_relative && data.activity_totals) {
+            text += renderActivityTable(data.activity_real, data.activity_relative, data.activity_totals, monthName, year);
         }
         
         return text;
@@ -511,6 +869,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                 keyboard: false
             });
             modal.show();
+            
+            // Focus month/year input when modal is shown
+            filterDialog.addEventListener('shown.bs.modal', () => {
+                if (monthYearInput) {
+                    monthYearInput.focus();
+                }
+            });
         }
     }
 

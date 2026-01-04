@@ -47,6 +47,27 @@ def create_app(config=None):
     
     # Load persisted settings from HALO.CFG (CSV)
     Settings.load_into(app.config, root_path)
+    
+    # Load startup file if configured
+    startup_enabled = app.config.get('STARTUP_FILE_ENABLED', False)
+    startup_file = app.config.get('STARTUP_FILE_PATH', '')
+    
+    if startup_enabled and startup_file:
+        data_path = root_path / 'data' / startup_file
+        if data_path.exists():
+            try:
+                # Import here to avoid circular imports
+                from halo.io.csv_handler import ObservationCSV
+                observations = ObservationCSV.read_observations(data_path)
+                app.config['OBSERVATIONS'] = observations
+                app.config['LOADED_FILE'] = startup_file
+                app.config['DIRTY'] = False
+                app.config['AUTO_LOADED'] = True  # Flag for showing notification
+                print(f"Auto-loaded {len(observations)} observations from {startup_file}")
+            except Exception as e:
+                print(f"Warning: Failed to auto-load startup file {startup_file}: {e}")
+        else:
+            print(f"Warning: Configured startup file not found: {data_path}")
 
     # Load observer metadata from resources/halobeo.csv
     observers_file = root_path / 'resources' / 'halobeo.csv'
@@ -128,6 +149,11 @@ def create_app(config=None):
     def monthly_stats():
         """Monthly statistics (Monatsstatistik) page."""
         return render_template('monthly_stats.html')
+    
+    @app.route('/annual-stats')
+    def annual_stats():
+        """Annual statistics (Jahresstatistik) page."""
+        return render_template('annual_stats.html')
     
     @app.route('/statistics')
     def statistics():

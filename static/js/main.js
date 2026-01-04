@@ -266,6 +266,9 @@ function handleMenuAction(action) {
         case 'settings-active-observers':
             showActiveObserversDialog();
             break;
+        case 'settings-startup-file':
+            showStartupFileDialog();
+            break;
             
         // Output menu
         case 'output-monthly-report':
@@ -275,7 +278,7 @@ function handleMenuAction(action) {
             window.location.href = '/monthly-stats';
             break;
         case 'output-yearly-stats':
-            console.info('Yearly stats not implemented');
+            window.location.href = '/annual-stats';
             break;
             
         // Help menu
@@ -325,14 +328,14 @@ async function showAddObservationDialog() {
 async function showAddObservationDialogNumeric() {
     // Check if a file is loaded
     if (!window.haloData.isLoaded) {
-        showWarningModal(i18nStrings.menus?.observations?.no_file_loaded || 'Please load or create a file first.');
+        showWarningModal(i18nStrings.observations?.no_file_loaded || 'Please load or create a file first.');
         return;
     }
     
     // Ensure i18n is loaded
-    if (!i18nStrings.menus?.observations) {
+    if (!i18nStrings.observations) {
         await loadI18n(currentLanguage);
-        if (!i18nStrings.menus?.observations) {
+        if (!i18nStrings.observations) {
             console.error('Failed to load i18n strings:', i18nStrings);
             throw new Error('i18n strings not loaded');
         }
@@ -2714,15 +2717,314 @@ async function showDisplayObservationsDialog() {
     
     // Show filter dialog with callbacks
     filterDialog.show(
-        (filterState) => {
+        async (filterState) => {
             // onApply callback - filters have been applied
-            showDisplaySingleObservations(filterState);
+            // Check INPUT_MODE to decide display format
+            try {
+                const response = await fetch('/api/config/inputmode');
+                const config = await response.json();
+                
+                if (config.mode === 'N') {
+                    // Zahleneingaben - show compact list in modal
+                    showDisplayCompactList(filterState);
+                } else {
+                    // Menüeingaben - show detail view one-by-one
+                    showDisplaySingleObservations(filterState);
+                }
+            } catch (error) {
+                console.error('Error loading INPUT_MODE:', error);
+                // Default to detail view on error
+                showDisplaySingleObservations(filterState);
+            }
         },
         () => {
             // onCancel callback - user cancelled
             console.log('Display dialog cancelled');
         }
     );
+}
+
+// Show compact list of observations in modal (Kurzausgabe - number format)
+function showDisplayCompactList(filterState) {
+    // Apply filters to get filtered observations
+    const filteredObs = applyFilterToObservations(filterState);
+    
+    if (filteredObs.length === 0) {
+        showWarningModal(i18nStrings.ui?.messages?.no_observations || 'Keine Beobachtungen gefunden!');
+        return;
+    }
+    
+    const pageSize = 50;
+    let currentPage = 1;
+    const maxPage = Math.ceil(filteredObs.length / pageSize);
+    
+    // Create modal
+    const modalHtml = `
+        <div class="modal fade" id="compact-list-modal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+            <div class="modal-dialog modal-xl modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header py-2">
+                        <h6 class="modal-title mb-0">${i18nStrings.observations?.title || 'Beobachtungen'}</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-3">
+                        <div class="compact-header mb-2">
+                            <pre style="font-family: 'Courier New', Consolas, monospace; font-size: 14px; margin: 0; padding: 10px; background: #f8f9fa; border-radius: 4px 4px 0 0;">KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ${currentLanguage === 'de' ? 'Sektoren        ' : 'Sectors         '}${currentLanguage === 'de' ? 'Bemerkungen' : 'Remarks'}</pre>
+                        </div>
+                        <div class="compact-body" style="max-height: 60vh; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 0 0 4px 4px; margin-top: -10px;">
+                            <pre id="compact-list-content" style="font-family: 'Courier New', Consolas, monospace; font-size: 14px; line-height: 1.4; margin: 0;"></pre>
+                        </div>
+                        <div class="compact-navigation mt-3 d-flex justify-content-between align-items-center">
+                            <div class="d-flex gap-2">
+                                <button id="btn-first" class="btn btn-sm btn-secondary" title="${currentLanguage === 'de' ? 'Erste Seite' : 'First Page'}">
+                                    <i class="bi bi-chevron-bar-left"></i>
+                                </button>
+                                <button id="btn-prev" class="btn btn-sm btn-secondary" title="${currentLanguage === 'de' ? 'Vorherige' : 'Previous'}">
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                            </div>
+                            <span id="page-info" class="text-muted"></span>
+                            <div class="d-flex gap-2">
+                                <button id="btn-next" class="btn btn-sm btn-secondary" title="${currentLanguage === 'de' ? 'Nächste' : 'Next'}">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                                <button id="btn-last" class="btn btn-sm btn-secondary" title="${currentLanguage === 'de' ? 'Letzte Seite' : 'Last Page'}">
+                                    <i class="bi bi-chevron-bar-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="text-center mt-2">
+                            <small id="record-info" class="text-muted"></small>
+                        </div>
+                    </div>
+                    <div class="modal-footer py-2">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${i18nStrings.common?.close || 'Schließen'}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modalEl = document.getElementById('compact-list-modal');
+    const modal = new bootstrap.Modal(modalEl);
+    
+    // Display function
+    const displayPage = () => {
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = Math.min(startIndex + pageSize, filteredObs.length);
+        const pageData = filteredObs.slice(startIndex, endIndex);
+        
+        // Generate compact lines using kurzausgabe
+        const lines = pageData.map(obs => kurzausgabe(obs));
+        document.getElementById('compact-list-content').textContent = lines.join('\n');
+        
+        // Update page info
+        const pageText = currentLanguage === 'de' ? 'Seite' : 'Page';
+        const ofText = currentLanguage === 'de' ? 'von' : 'of';
+        document.getElementById('page-info').textContent = `${pageText} ${currentPage} ${ofText} ${maxPage}`;
+        
+        // Update record info
+        const recordText = currentLanguage === 'de' ? 'Zeile' : 'Row';
+        document.getElementById('record-info').textContent = `${recordText} ${startIndex + 1}-${endIndex} ${ofText} ${filteredObs.length}`;
+        
+        // Update button states
+        document.getElementById('btn-first').disabled = currentPage === 1;
+        document.getElementById('btn-prev').disabled = currentPage === 1;
+        document.getElementById('btn-next').disabled = currentPage === maxPage;
+        document.getElementById('btn-last').disabled = currentPage === maxPage;
+    };
+    
+    // Navigation handlers
+    document.getElementById('btn-first').onclick = () => { currentPage = 1; displayPage(); };
+    document.getElementById('btn-prev').onclick = () => { if (currentPage > 1) { currentPage--; displayPage(); } };
+    document.getElementById('btn-next').onclick = () => { if (currentPage < maxPage) { currentPage++; displayPage(); } };
+    document.getElementById('btn-last').onclick = () => { currentPage = maxPage; displayPage(); };
+    
+    // Close button
+    const btnClose = modalEl.querySelector('[data-bs-dismiss="modal"]');
+    
+    // Enter key support when modal is visible
+    const enterKeyHandler = (e) => {
+        if (e.key === 'Enter' && modalEl.classList.contains('show')) {
+            e.preventDefault();
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+            window.location.href = '/';
+        }
+    };
+    
+    // Remove any existing handler first to avoid duplicates
+    document.removeEventListener('keypress', enterKeyHandler);
+    document.addEventListener('keypress', enterKeyHandler);
+    
+    // Cleanup on close
+    modalEl.addEventListener('hidden.bs.modal', () => {
+        document.removeEventListener('keypress', enterKeyHandler);
+        modalEl.remove();
+        window.location.href = '/';
+    });
+    
+    // Show modal and display first page
+    modal.show();
+    displayPage();
+    
+    // Focus close button after modal is shown
+    modalEl.addEventListener('shown.bs.modal', () => {
+        if (btnClose) btnClose.focus();
+    });
+}
+
+// Kurzausgabe formatter (from observations.js)
+function kurzausgabe(obs) {
+    let first = '';
+    
+    // KK - observer code
+    if (obs.KK < 100) {
+        first += String(Math.floor(obs.KK / 10)) + String(obs.KK % 10);
+    } else {
+        first += String.fromCharCode(Math.floor(obs.KK / 10) + 55) + String(obs.KK % 10);
+    }
+    
+    // O - object type
+    first += String(obs.O);
+    
+    // JJ - year (2 digits)
+    first += String(Math.floor(obs.JJ / 10)) + String(obs.JJ % 10);
+    
+    // MM - month
+    first += String(Math.floor(obs.MM / 10)) + String(obs.MM % 10);
+    
+    // TT - day
+    first += String(Math.floor(obs.TT / 10)) + String(obs.TT % 10);
+    
+    // g - observing site location (0-2)
+    first += String(obs.g);
+    
+    // ZS - time start hour
+    if (obs.ZS === null || obs.ZS === -1) {
+        first += '//';
+    } else {
+        first += String(Math.floor(obs.ZS / 10)) + String(obs.ZS % 10);
+    }
+    
+    // ZM - time start minute
+    if (obs.ZM === null || obs.ZM === -1) {
+        first += '//';
+    } else {
+        first += String(Math.floor(obs.ZM / 10)) + String(obs.ZM % 10);
+    }
+    
+    // d - duration
+    if (obs.d === null || obs.d === -1) {
+        first += '/';
+    } else {
+        first += String(obs.d);
+    }
+    
+    // DD - halo source
+    if (obs.DD === null || obs.DD === -1) {
+        first += '//';
+    } else {
+        first += String(Math.floor(obs.DD / 10)) + String(obs.DD % 10);
+    }
+    
+    // N - sky coverage
+    if (obs.N === null || obs.N === -1) {
+        first += '/';
+    } else {
+        first += String(obs.N);
+    }
+    
+    // C - cirrus type
+    if (obs.C === null || obs.C === -1) {
+        first += '/';
+    } else {
+        first += String(obs.C);
+    }
+    
+    // c - low clouds
+    if (obs.c === null || obs.c === -1) {
+        first += '/';
+    } else {
+        first += String(obs.c);
+    }
+    
+    // EE - halo type
+    if (obs.EE === null || obs.EE === -1) {
+        first += '//';
+    } else {
+        first += String(Math.floor(obs.EE / 10)) + String(obs.EE % 10);
+    }
+    
+    // H - brightness
+    if (obs.H === null || obs.H === -1) {
+        first += '/';
+    } else {
+        first += String(obs.H);
+    }
+    
+    // F - colour
+    if (obs.F === null || obs.F === -1) {
+        first += '/';
+    } else {
+        first += String(obs.F);
+    }
+    
+    // V - completeness
+    if (obs.V === null || obs.V === -1) {
+        first += '/';
+    } else {
+        first += String(obs.V);
+    }
+    
+    // f - weather phenomenon
+    if (obs.f === null || obs.f === -1) {
+        first += '/';
+    } else {
+        first += String(obs.f);
+    }
+    
+    // zz - precipitation
+    if (obs.zz === null || obs.zz === -1) {
+        first += '//';
+    } else if (obs.zz === 0) {
+        first += '99';
+    } else {
+        first += String(Math.floor(obs.zz / 10)) + String(obs.zz % 10);
+    }
+    
+    // GG - observing region
+    if (obs.GG === null || obs.GG === -1) {
+        first += '//';
+    } else {
+        first += String(Math.floor(obs.GG / 10)) + String(obs.GG % 10);
+    }
+    
+    // Now add spaces after every 5 characters (up to position 35)
+    let erg = '';
+    for (let i = 0; i < first.length; i += 5) {
+        const chunk = first.substring(i, i + 5);
+        if (!chunk) break;
+        erg += chunk;
+        if (chunk.length === 5) erg += ' ';
+    }
+    
+    // lp8 - light pillar field (8HHHH) - 5 characters
+    let lp8 = obs.lp8 || '     ';
+    erg += lp8.padEnd(5, ' ') + ' ';
+    
+    // Sectors - 15 characters
+    let sectors = obs.sectors || '';
+    sectors = sectors.trim().substring(0, 15).padEnd(15, ' ');
+    erg += sectors + ' ';
+    
+    // Remarks
+    if (obs.remarks) {
+        erg += obs.remarks.trim();
+    }
+    
+    return erg;
 }
 
 // Show single observations for display (one by one with navigation)
@@ -2832,6 +3134,118 @@ async function showActiveObserversDialog() {
         console.error('Active observers dialog error:', error);
     }
 }
+
+// Startup file setting dialog
+async function showStartupFileDialog() {
+    try {
+        const response = await fetch('/api/config/startup_file');
+        const config = await response.json();
+        const enabled = !!config.enabled;
+        const currentFile = config.file_path || '';
+
+        const title = i18nStrings.menus.settings.startup_file_title || 'Load File on Startup';
+        const question = i18nStrings.menus.settings.startup_file_question || 'Should a file be loaded automatically on program start?';
+        const yesText = i18nStrings.observers?.yes || 'Yes';
+        const noText = i18nStrings.observers?.no || 'No';
+
+        const modalHtml = `
+            <div class="modal fade" id="startup-file-modal" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">${title}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="mb-3">${question}</p>
+                            <div class="form-check form-check-inline mb-3">
+                                <input class="form-check-input" type="radio" name="startup_file" id="startup-yes" value="1" ${enabled ? 'checked' : ''}>
+                                <label class="form-check-label" for="startup-yes">${yesText}</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-3">
+                                <input class="form-check-input" type="radio" name="startup_file" id="startup-no" value="0" ${!enabled ? 'checked' : ''}>
+                                <label class="form-check-label" for="startup-no">${noText}</label>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                            <button type="button" class="btn btn-primary" id="btn-startup-ok">${i18nStrings.common.ok}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        const modalEl = document.getElementById('startup-file-modal');
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+
+        // Handle Enter key to submit
+        modalEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('btn-startup-ok').click();
+            }
+        });
+
+        document.getElementById('btn-startup-ok').addEventListener('click', async () => {
+            const selected = document.querySelector('input[name="startup_file"]:checked');
+            const newEnabled = selected ? selected.value === '1' : enabled;
+            modal.hide();
+
+            if (newEnabled) {
+                // Show file selector
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = '.HAL,.hal,.CSV,.csv';
+                fileInput.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        await fetch('/api/config/startup_file', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({enabled: true, file_path: file.name})
+                        });
+                        // Show success message
+                        const successMsg = document.createElement('div');
+                        successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+                        successMsg.style.cssText = 'z-index:9999;min-width:300px;';
+                        successMsg.innerHTML = `
+                            <strong>✓</strong> ${i18nStrings.menus.settings.startup_file_changed || 'Startup file saved.'}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        `;
+                        document.body.appendChild(successMsg);
+                        setTimeout(() => successMsg.remove(), 3000);
+                    }
+                };
+                fileInput.click();
+            } else {
+                // Disable startup file loading
+                await fetch('/api/config/startup_file', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({enabled: false, file_path: ''})
+                });
+                // Show success message
+                const successMsg = document.createElement('div');
+                successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+                successMsg.style.cssText = 'z-index:9999;min-width:300px;';
+                successMsg.innerHTML = `
+                    <strong>✓</strong> ${i18nStrings.menus.settings.startup_file_disabled || 'Automatic loading disabled.'}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.body.appendChild(successMsg);
+                setTimeout(() => successMsg.remove(), 3000);
+            }
+        });
+
+        modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
+    } catch (error) {
+        console.error('Startup file dialog error:', error);
+    }
+}
+
 // Create new file
 async function showNewFileDialog() {
     const modalHtml = `
@@ -3202,7 +3616,8 @@ async function checkAutosaveRecovery() {
         modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
         modal.show();
     } catch (error) {
-        console.error('[AUTOSAVE RECOVERY] Error:', error);
+        // Silently ignore - autosave check is optional and may fail if feature not enabled
+        console.debug('[AUTOSAVE RECOVERY] Skipped:', error.message);
     }
 }
 
@@ -3391,20 +3806,35 @@ window.clearFileInfoDisplay = clearFileInfoDisplay;
 // Check if data is loaded on server and update display
 async function checkAndDisplayFileInfo() {
     try {
-        // Check if observations are loaded on server
-        const response = await fetch('/api/observations?limit=1');
-        if (response.ok) {
-            const data = await response.json();
-            if (data.total > 0 && data.file) {
+        // Check file status from server
+        const statusResponse = await fetch('/api/file/status');
+        if (statusResponse.ok) {
+            const status = await statusResponse.json();
+            
+            if (status.count > 0 && status.filename) {
                 // Data is loaded, update display and global state
-                // Only update if sessionStorage didn't already restore the observations
                 if (window.haloData.observations.length === 0) {
                     window.haloData.isLoaded = true;
-                    window.haloData.fileName = data.file;
+                    window.haloData.fileName = status.filename;
                     window.haloData.observations = [];
-                    saveHaloDataToSession();  // Sync to sessionStorage
+                    saveHaloDataToSession();
                 }
-                updateFileInfoDisplay(data.file, data.total);
+                updateFileInfoDisplay(status.filename, status.count);
+                
+                // Show notification if file was auto-loaded
+                if (status.auto_loaded) {
+                    const successMsg = document.createElement('div');
+                    successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+                    successMsg.style.cssText = 'z-index:9999;min-width:300px;';
+                    const loadedText = currentLanguage === 'de' ? 'geladen' : 'loaded';
+                    const recordsText = currentLanguage === 'de' ? 'Datensätze' : 'records';
+                    successMsg.innerHTML = `
+                        <strong>✓</strong> ${status.filename} ${loadedText} (${status.count} ${recordsText})
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    document.body.appendChild(successMsg);
+                    setTimeout(() => successMsg.remove(), 3000);
+                }
             } else {
                 // No data loaded
                 clearFileInfoDisplay();
@@ -4339,8 +4769,13 @@ async function showDeleteObserverConfirmDialog(observer, sites) {
 
 // Edit Observer Dialog Functions
 async function showEditObserverDialog() {
-    const i18n = i18nStrings.observers || {};
-    const common = i18nStrings.common || {};
+    const i18n = i18nStrings.observers;
+    const common = i18nStrings.common;
+    
+    if (!i18n || !common) {
+        showErrorDialog('ERROR: i18n strings not loaded');
+        return;
+    }
     
     // Load observers first
     try {
@@ -4348,7 +4783,7 @@ async function showEditObserverDialog() {
         const data = await resp.json();
         
         if (!data.observers || data.observers.length === 0) {
-            showErrorDialog(i18n.error_loading_observers || 'No observers found');
+            showErrorDialog(i18n.error_loading_observers || 'ERROR: Missing i18n key: observers.error_loading_observers');
             return;
         }
         
@@ -4363,18 +4798,18 @@ async function showEditObserverDialog() {
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header py-2">
-                            <h5 class="modal-title">${i18n.select_observer || 'Select Observer'}</h5>
+                            <h5 class="modal-title">${i18n.select_observer || 'ERROR: Missing i18n key: observers.select_observer'}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
-                            <label class="form-label">${i18n.select_observer_prompt || 'Select an observer:'}</label>
+                            <label class="form-label">${i18n.select_observer_prompt || 'ERROR: Missing i18n key: observers.select_observer_prompt'}</label>
                             <select class="form-select" id="observer-select" required>
                                 ${observerOptions}
                             </select>
                         </div>
                         <div class="modal-footer py-1">
-                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${common.cancel || 'Cancel'}</button>
-                            <button type="button" class="btn btn-primary btn-sm" id="btn-select-observer-ok">${common.ok || 'OK'}</button>
+                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${common.cancel || 'ERROR: Missing i18n key: common.cancel'}</button>
+                            <button type="button" class="btn btn-primary btn-sm" id="btn-select-observer-ok">${common.ok || 'ERROR: Missing i18n key: common.ok'}</button>
                         </div>
                     </div>
                 </div>
@@ -5338,25 +5773,29 @@ async function showEditSiteFormDialog(observer, sites, currentIndex) {
     const yearNum = parseInt(site.seit_year);
     const fullYear = yearNum < 50 ? 2000 + yearNum : 1900 + yearNum;
     
+    // Pad GH and GN to 2 digits for select matching
+    const ghPadded = String(site.GH).padStart(2, '0');
+    const gnPadded = String(site.GN).padStart(2, '0');
+    
     // Pre-fill form with existing values
-    document.getElementById('edit-site-seit-month').value = site.seit_month;
-    document.getElementById('edit-site-seit-year').value = fullYear;
-    document.getElementById('edit-site-active').value = site.active;
+    document.getElementById('edit-site-seit-month').value = String(site.seit_month);
+    document.getElementById('edit-site-seit-year').value = String(fullYear);
+    document.getElementById('edit-site-active').value = String(site.active);
     document.getElementById('edit-site-hb-ort').value = site.HbOrt;
-    document.getElementById('edit-site-gh').value = site.GH.padStart(2, '0');
-    document.getElementById('edit-site-hlg').value = site.HLG;
-    document.getElementById('edit-site-hlm').value = site.HLM;
+    document.getElementById('edit-site-gh').value = ghPadded;
+    document.getElementById('edit-site-hlg').value = String(site.HLG);
+    document.getElementById('edit-site-hlm').value = String(site.HLM);
     document.getElementById('edit-site-how').value = site.HOW;
-    document.getElementById('edit-site-hbg').value = site.HBG;
-    document.getElementById('edit-site-hbm').value = site.HBM;
+    document.getElementById('edit-site-hbg').value = String(site.HBG);
+    document.getElementById('edit-site-hbm').value = String(site.HBM);
     document.getElementById('edit-site-hns').value = site.HNS;
     document.getElementById('edit-site-nb-ort').value = site.NbOrt;
-    document.getElementById('edit-site-gn').value = site.GN.padStart(2, '0');
-    document.getElementById('edit-site-nlg').value = site.NLG;
-    document.getElementById('edit-site-nlm').value = site.NLM;
+    document.getElementById('edit-site-gn').value = gnPadded;
+    document.getElementById('edit-site-nlg').value = String(site.NLG);
+    document.getElementById('edit-site-nlm').value = String(site.NLM);
     document.getElementById('edit-site-now').value = site.NOW;
-    document.getElementById('edit-site-nbg').value = site.NBG;
-    document.getElementById('edit-site-nbm').value = site.NBM;
+    document.getElementById('edit-site-nbg').value = String(site.NBG);
+    document.getElementById('edit-site-nbm').value = String(site.NBM);
     document.getElementById('edit-site-nns').value = site.NNS;
     
     modal.show();

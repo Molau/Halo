@@ -60,11 +60,6 @@ class ObservationCSV:
                 obs.d = ObservationCSV._parse_int(parts[8], -1)
                 obs.DD = ObservationCSV._parse_int(parts[9], -1)
                 
-                # Debug output for first observation
-                if len(observations) == 0:
-                    print(f"[CSV DEBUG] First line parts[6-9]: ZS={parts[6]}, ZM={parts[7]}, d={parts[8]}, DD={parts[9]}")
-                    print(f"[CSV DEBUG] Parsed: ZS={obs.ZS}, ZM={obs.ZM}, d={obs.d}, DD={obs.DD}")
-                
                 obs.N = ObservationCSV._parse_int(parts[10], -1)
                 obs.C = ObservationCSV._parse_int(parts[11], -1)
                 obs.c = ObservationCSV._parse_int(parts[12], -1)

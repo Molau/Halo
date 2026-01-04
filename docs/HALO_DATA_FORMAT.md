@@ -18,11 +18,53 @@ The observation data follows this format:
 KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen
 ```
 
+**Note on Pascal Variable Names**: Since Pascal is case-insensitive, the original source code (`H_TYPES.PAS`) uses a naming convention based on whether the HALO key element uses capital or lowercase letters:
+
+- **Lowercase HALO key elements** (g, d, c, f) → **Two lowercase letters in Pascal** (gg, dd, cc, ff)
+- **Capital HALO key elements** (KK, O, JJ, MM, TT, DD, GG, etc.) → **One capital letter in Pascal** (K, O, J, M, T, D, G, etc.)
+- **Already two lowercase letters** (zz) → **Same in Pascal** (zz)
+
+Examples:
+- HALO key **"KK"** (capitals) → Pascal **`K`** (one capital)
+- HALO key **"O"** (capital) → Pascal **`O`** (one capital)
+- HALO key **"g"** (lowercase) → Pascal **`gg`** (two lowercase)
+- HALO key **"d"** (lowercase) → Pascal **`dd`** (two lowercase) - weather condition
+- HALO key **"DD"** (capitals) → Pascal **`D`** (one capital) - cirrus density
+- HALO key **"GG"** (capitals) → Pascal **`G`** (one capital)
+- HALO key **"zz"** (already two lowercase) → Pascal **`zz`** (same)
+
+Complete mapping:
+- `K` (Byte) = **KK** field (observer number)
+- `O` (ShortInt) = **O** field
+- `J` (ShortInt) = **JJ** field (year)
+- `M` (ShortInt) = **MM** field (month)
+- `T` (ShortInt) = **TT** field (day)
+- `gg` (ShortInt) = **g** field (location)
+- `ZS` (ShortInt) = **ZZ** (start time hours)
+- `ZM` (ShortInt) = **ZZ** (start time minutes)
+- `dd` (ShortInt) = **d** field (weather condition)
+- `D` (ShortInt) = **DD** field (cirrus density)
+- `N` (ShortInt) = **N** field
+- `C` (ShortInt) = **C** field
+- `cc` (ShortInt) = **c** field (cloud cover after)
+- `E` (ShortInt) = **EE** field
+- `H` (ShortInt) = **H** field
+- `F` (ShortInt) = **F** field
+- `V` (ShortInt) = **V** field
+- `ff` (ShortInt) = **f** field
+- `zz` (ShortInt) = **zz** field
+- `G` (ShortInt) = **GG** field (region)
+- `HO` (ShortInt) = **HH** (height upper)
+- `HU` (ShortInt) = **HH** (height lower)
+
+**Important**: When reading Pascal code, remember that `elem.dd` refers to the **d** field (weather), not `elem.D` which is the **DD** field (duration).
+
 ---
 
 ## Field Definitions
 
 ### 1. KK - Observer Number (Beobachter Kennummer)
+- **Pascal Variable**: `K` (Byte)
 - **Position**: Characters 1-2
 - **Type**: Integer (2 digits)
 - **Range**: 01-99
@@ -30,6 +72,7 @@ KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen
 - **Special Values**: None allowed (required field)
 
 ### 2. O - Object (Objekt)
+- **Pascal Variable**: `O` (Byte)
 - **Position**: Character 3
 - **Type**: Integer (1 digit)
 - **Range**: 1-5
@@ -44,6 +87,7 @@ KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen
 - **Validation**: Must be 1-5
 
 ### 3. JJ - Year (Jahr)
+- **Pascal Variable**: `J` (ShortInt)
 - **Position**: Characters 4-5
 - **Type**: Integer (2 digits)
 - **Range**: 00-99 (represents 19xx or 20xx)
@@ -52,6 +96,7 @@ KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen
 - **Note**: Automatic carry-over handling for years < 50 (treated as 20xx) vs ≥ 50 (treated as 19xx)
 
 ### 4. MM - Month (Monat)
+- **Pascal Variable**: `M` (ShortInt)
 - **Position**: Characters 6-7
 - **Type**: Integer (2 digits)
 - **Range**: 01-12
@@ -59,6 +104,7 @@ KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen
 - **Validation**: Must be 01-12
 
 ### 5. TT - Day (Tag)
+- **Pascal Variable**: `T` (ShortInt)
 - **Position**: Characters 8-9
 - **Type**: Integer (2 digits)
 - **Range**: 01-31 (depending on month)
@@ -69,6 +115,7 @@ KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen
   - Must not exceed days in month
 
 ### 6. g - Observation Location (Beobachtungsort)
+- **Pascal Variable**: `gg` (ShortInt)
 - **Position**: Character 10
 - **Type**: Integer (1 digit)
 - **Range**: 0-2
@@ -83,6 +130,7 @@ KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen
 - **Special Values**: None (required field)
 
 ### 7. ZZZZ - Time (Zeit)
+- **Pascal Variables**: `ZS` (hours), `ZM` (minutes) (both ShortInt)
 - **Position**: Characters 11-14 (ZS=11-12, ZM=13-14)
 - **Type**: Two integers (2 digits each)
 - **Components**:
@@ -98,6 +146,7 @@ KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen
     - Minutes: 0-59
 
 ### 8. d - Origin/Density (Dichte/Entstehungsort)
+- **Pascal Variable**: `dd` (ShortInt)
 - **Position**: Character 15
 - **Type**: Integer (1 digit)
 - **Range**: 0-7 (excluding 3)
@@ -118,6 +167,7 @@ KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen
   - `/` = Not specified (value -1)
 
 ### 9. DD - Duration (Dauer)
+- **Pascal Variable**: `D` (ShortInt)
 - **Position**: Characters 16-17
 - **Type**: Integer (2 digits)
 - **Range**: 00-99 (represents duration × 10 minutes)
@@ -130,6 +180,7 @@ KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen
   - `//` = Duration not specified (value -1)
 
 ### 10. N - Cloud Cover (Himmelsbedeckung)
+- **Pascal Variable**: `N` (ShortInt)
 - **Position**: Character 18
 - **Type**: Integer (1 digit)
 - **Values**: See ConN array
@@ -153,6 +204,7 @@ KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen
   - 0 = Only when forced by d ≥ 4
 
 ### 11. C - Cirrus Type (Cirrustyp)
+- **Pascal Variable**: `C` (ShortInt)
 - **Position**: Character 19
 - **Type**: Integer (1 digit)
 - **Range**: 0-7
@@ -175,6 +227,7 @@ KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen
 - **Validation**: C ≠ 8 or 9
 
 ### 12. c - Low Cloud Cover (tiefe Bewölkung)
+- **Pascal Variable**: `cc` (ShortInt)
 - **Position**: Character 20
 - **Type**: Integer (1 digit)
 - **Range**: 0-9
@@ -197,6 +250,7 @@ KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen
 - **Validation**: If N=9, then c ≠ 0
 
 ### 13. EE - Halo Type (Haloart)
+- **Pascal Variable**: `E` (ShortInt)
 - **Position**: Characters 21-22
 - **Type**: Integer (2 digits)
 - **Range**: 01-78, 99
@@ -287,6 +341,7 @@ KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen
 - **Special Values**: None (required field)
 
 ### 14. H - Brightness (Helligkeit)
+- **Pascal Variable**: `H` (ShortInt)
 - **Position**: Character 23
 - **Type**: Integer (1 digit)
 - **Range**: 0-3
@@ -301,6 +356,7 @@ KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen
   - `/` = Not specified (value -1)
 
 ### 15. F - Color (Farbe)
+- **Pascal Variable**: `F` (ShortInt)
 - **Position**: Character 24
 - **Type**: Integer (1 digit)
 - **Range**: 0-5
@@ -317,6 +373,7 @@ KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen
   - `/` = Not specified (value -1)
 
 ### 16. V - Completeness (Vollständigkeit)
+- **Pascal Variable**: `V` (ShortInt)
 - **Position**: Character 25
 - **Type**: Integer (1 digit)
 - **Range**: 1-2
@@ -332,6 +389,7 @@ KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen
 - **Validation**: V ≠ 0
 
 ### 17. f - Weather Front (Witterungsfront)
+- **Pascal Variable**: `ff` (ShortInt)
 - **Position**: Character 26
 - **Type**: Integer (1 digit)
 - **Range**: 0-8
@@ -351,6 +409,7 @@ KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen
   - ` ` (space) = Not specified (value -1)
 
 ### 18. zz - Precipitation (Niederschlag)
+- **Pascal Variable**: `zz` (ShortInt)
 - **Position**: Characters 27-28
 - **Type**: Integer (2 digits)
 - **Range**: 00-98, 99, or blank
@@ -364,6 +423,7 @@ KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen
 - **Unit**: Hours
 
 ### 19. GG - Geographic Region (Beobachtungsgebiet)
+- **Pascal Variable**: `G` (ShortInt)
 - **Position**: Characters 29-30
 - **Type**: Integer (2 digits)
 - **Range**: 01-39 (excluding 12-15, 18)
@@ -416,6 +476,7 @@ KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen
   - ConG[GG] must not be empty (13-15, 18 are empty)
 
 ### 20. 8HHHH - Sun Pillar Heights (Lichtsäulenhöhen)
+- **Pascal Variables**: `HO` (upper pillar), `HU` (lower pillar) (both ShortInt)
 - **Position**: Characters 31-35
 - **Type**: Special format with prefix '8' + 4 digits
 - **Components**:

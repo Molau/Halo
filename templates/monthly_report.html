@@ -35,11 +35,13 @@
                     </div>
                     <div class="modal-body">
                         <div class="filter-form">
+                            <!-- Combined Prompt -->
+                            <p class="form-label fw-bold mb-3">
+                                {% if lang() == 'de' %}{{ g.i18n.get('monthly_report.combined_prompt') }}{% else %}{{ g.i18n.get('monthly_report.combined_prompt') }}{% endif %}
+                            </p>
+                            
                             <!-- Observer Selection -->
                             <div class="filter-group mb-3">
-                                <label class="form-label fw-bold" id="observer-label">
-                                    {{ g.i18n.get('observers.select_observer') }}
-                                </label>
                                 <select id="observer-select" class="form-select">
                                     <option value="" id="observer-select-placeholder">-- {{ g.i18n.get('observers.select_prompt') }} --</option>
                                 </select>
@@ -47,9 +49,6 @@
 
                             <!-- Month/Year Input -->
                             <div class="filter-group mb-3">
-                                <label class="form-label fw-bold" for="month-year-input" id="month-year-label">
-                                    {{ g.i18n.get('monthly_report.month_year_label') }}
-                                </label>
                                 <input type="text" 
                                        id="month-year-input" 
                                        class="form-control"
