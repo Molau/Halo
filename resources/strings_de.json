@@ -126,8 +126,7 @@
       "receive": "Empfangen"
     },
     "analysis": {
-      "one_param": "ein Parameter",
-      "two_params": "zwei Parameter",
+      "create": "Erstellen",
       "load": "Laden",
       "two_params_alert": "Zwei Parameter"
     },
@@ -188,6 +187,41 @@
       "exit": "Verlassen",
       "return": "Rückkehr",
       "confirm_exit": "Anwendung beenden?"
+    }
+  },
+  "analysis_dialog": {
+    "dimension_title": "Auswertung",
+    "dimension_question": "Welche Art von Auswertung möchten Sie durchführen?",
+    "one_dimensional": "Auswertung mit einem Parameter",
+    "two_dimensional": "Auswertung mit zwei Parametern",
+    "first_param_prompt": "Geben Sie bitte den ersten Parameter ein!",
+    "second_param_prompt": "Geben Sie bitte den zweiten Parameter ein!",
+    "param_prompt": "Geben Sie bitte den gewünschten Parameter ein!",
+    "limit_question": "Soll dieser Parameter eingeschränkt werden?",
+    "limit_yes": "Ja, Parameter einschränken",
+    "limit_no": "Nein, voller Bereich",
+    "from_label": "Von:",
+    "to_label": "Bis:",
+    "param_names": {
+      "JJ": "Jahr",
+      "MM": "Monat",
+      "TT": "Tag",
+      "ZZ": "Uhrzeit",
+      "SH": "Sonnenhöhe",
+      "KK": "Beobachter",
+      "GG": "Beobachtungsgebiet",
+      "O": "Objekt",
+      "f": "Wetterfront",
+      "C": "Cirrusart",
+      "d": "Entstehungsort",
+      "EE": "Haloart",
+      "DD": "Dauer",
+      "H": "Helligkeit",
+      "F": "Halofarbe",
+      "V": "Vollständigkeit",
+      "zz": "Zeit bis Niederschlag",
+      "HO_HU": "Lichtsäulenhöhe",
+      "SE": "Sektoren"
     }
   },
   "observations": {
@@ -461,39 +495,6 @@
     "7": "Altostratus (As)",
     "8": "Altocumulus (Ac)",
     "9": "As + Ac"
-  },
-  "brightness": {
-    "-1": "keine Angabe",
-    "0": "sehr schwach",
-    "1": "schwach, wenig auffällig",
-    "2": "hell, auffällig",
-    "3": "sehr hell, sehr auffällig"
-  },
-  "color": {
-    "-1": "keine Angabe",
-    "0": "weiß",
-    "1": "farbig",
-    "2": "Blauanteil besonders auffällig",
-    "3": "Gelbanteil besonders auffällig",
-    "4": "Rotanteil besonders auffällig",
-    "5": "Grünanteil besonders auffällig"
-  },
-  "completeness": {
-    "-1": "keine Angabe",
-    "1": "unvollständig",
-    "2": "vollständig"
-  },
-  "weather_front": {
-    "-1": "keine Angabe",
-    "0": "sonstige Front",
-    "1": "Warmfront",
-    "2": "Kaltfront",
-    "3": "Okklusion",
-    "4": "Trog(bereich/achse)",
-    "5": "Wärmegewitter/Schauer",
-    "6": "Konvergenzlinie",
-    "7": "Höhentief/Kaltlufttropfen",
-    "8": "Strahlstrom"
   },
   "months": {
     "1": "Januar",

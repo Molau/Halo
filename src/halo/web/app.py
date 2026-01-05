@@ -155,6 +155,11 @@ def create_app(config=None):
         """Annual statistics (Jahresstatistik) page."""
         return render_template('annual_stats.html')
     
+    @app.route('/analysis')
+    def analysis():
+        """Analysis (Auswertung) page."""
+        return render_template('analysis.html')
+    
     @app.route('/statistics')
     def statistics():
         """Statistics and analysis page."""

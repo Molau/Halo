@@ -109,8 +109,7 @@
     },
     "analysis": {
       "title": "Analysis",
-      "one_param": "One Parameter",
-      "two_params": "Two Parameters",
+      "create": "Create",
       "load": "Load",
       "statistics": "Statistics",
       "frequency": "Frequency Analysis",
@@ -217,6 +216,41 @@
       "remarks_short": "remarks    : ",
       "remarks_long": "remarks           : ",
       "segments": "segments          : "
+    }
+  },
+  "analysis_dialog": {
+    "dimension_title": "Analysis",
+    "dimension_question": "Which type of analysis would you like to perform?",
+    "one_dimensional": "Analysis with one parameter",
+    "two_dimensional": "Analysis with two parameters",
+    "first_param_prompt": "Please enter the first parameter!",
+    "second_param_prompt": "Please enter the second parameter!",
+    "param_prompt": "Please enter the desired parameter!",
+    "limit_question": "Should this parameter be limited?",
+    "limit_yes": "Yes, limit parameter",
+    "limit_no": "No, full range",
+    "from_label": "From:",
+    "to_label": "To:",
+    "param_names": {
+      "JJ": "Year",
+      "MM": "Month",
+      "TT": "Day",
+      "ZZ": "Time",
+      "SH": "Solar altitude",
+      "KK": "Observer",
+      "GG": "Observing area",
+      "O": "Object",
+      "f": "Weather front",
+      "C": "Cirrus type",
+      "d": "Formation location",
+      "EE": "Halo type",
+      "DD": "Duration",
+      "H": "Brightness",
+      "F": "Halo colour",
+      "V": "Completeness",
+      "zz": "Time until precipitation",
+      "HO_HU": "Pillar height",
+      "SE": "Segments"
     }
   },
   "output": {
@@ -440,39 +474,6 @@
     "7": "Altostratus (As)",
     "8": "Altocumulus (Ac)",
     "9": "As + Ac"
-  },
-  "brightness": {
-    "-1": "not observed",
-    "0": "very faint",
-    "1": "faint, barely obvious",
-    "2": "bright, obvious",
-    "3": "very bright, very obvious"
-  },
-  "color": {
-    "-1": "not observed",
-    "0": "white",
-    "1": "coloured",
-    "2": "blue content very obvious",
-    "3": "yellow content very obvious",
-    "4": "red content very obvious",
-    "5": "green content very obvious"
-  },
-  "completeness": {
-    "-1": "not observed",
-    "1": "incomplete",
-    "2": "complete"
-  },
-  "weather_front": {
-    "-1": "not observed",
-    "0": "other front",
-    "1": "warm front",
-    "2": "cold front",
-    "3": "occlusion",
-    "4": "trough",
-    "5": "thunderstorm",
-    "6": "convergence",
-    "7": "upper low",
-    "8": "jet stream"
   },
   "months": {
     "1": "January",

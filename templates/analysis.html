@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="{{ lang() }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% if lang() == 'de' %}
+    <title>Auswertung - HALO</title>
+    {% else %}
+    <title>Analysis - HALO</title>
+    {% endif %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <style>
+        /* Keep filter2 select background white when disabled, only grey out text */
+        #filter2-select:disabled {
+            background-color: #ffffff;
+            color: #6c757d;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    {% include 'header.html' %}
+
+    <!-- Main Content Area -->
+    <div class="container-fluid mt-3">
+        <div class="row">
+            <div class="col">
+                <div id="results-area">
+                    <!-- Results will be displayed here after parameter selection -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Parameter Selection Dialog (shown on page load) -->
+    <div class="modal fade" id="param-dialog" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        {% if lang() == 'de' %}
+                        Auswertung - Parameter auswählen
+                        {% else %}
+                        Analysis - Select Parameters
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <!-- First Parameter (mandatory) -->
+                    <div class="mb-3">
+                        <label for="param1-select" class="form-label">
+                            {% if lang() == 'de' %}
+                            Erster Parameter <span class="text-danger">*</span>
+                            {% else %}
+                            First Parameter <span class="text-danger">*</span>
+                            {% endif %}
+                        </label>
+                        <select class="form-select" id="param1-select" required autofocus>
+                            <option value="">
+                                {% if lang() == 'de' %}
+                                -- Bitte wählen --
+                                {% else %}
+                                -- Please select --
+                                {% endif %}
+                            </option>
+                            <!-- Will be populated by JavaScript -->
+                        </select>
+                    </div>
+
+                    <!-- Range Selection for First Parameter (shown after selection) -->
+                    <div id="param1-range" style="display: none;">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="param1-from" class="form-label">
+                                    {% if lang() == 'de' %}
+                                    Von:
+                                    {% else %}
+                                    From:
+                                    {% endif %}
+                                </label>
+                                <select class="form-select" id="param1-from">
+                                    <!-- Will be populated by JavaScript -->
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="param1-to" class="form-label">
+                                    {% if lang() == 'de' %}
+                                    Bis:
+                                    {% else %}
+                                    To:
+                                    {% endif %}
+                                </label>
+                                <select class="form-select" id="param1-to">
+                                    <!-- Will be populated by JavaScript -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Special fields for day parameter (TT) -->
+                    <div id="param1-day-fields" style="display: none;">
+                        <!-- Day range restrictions (first and last day) on top -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="param1-day-from" class="form-label">
+                                    {% if lang() == 'de' %}
+                                    Von Tag:
+                                    {% else %}
+                                    From Day:
+                                    {% endif %}
+                                </label>
+                                <select class="form-select" id="param1-day-from">
+                                    <!-- Will be populated by JavaScript -->
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="param1-day-to" class="form-label">
+                                    {% if lang() == 'de' %}
+                                    Bis Tag:
+                                    {% else %}
+                                    To Day:
+                                    {% endif %}
+                                </label>
+                                <select class="form-select" id="param1-day-to">
+                                    <!-- Will be populated by JavaScript -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Month and Year as extra input below -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="param1-month" class="form-label">
+                                    {% if lang() == 'de' %}
+                                    Monat:
+                                    {% else %}
+                                    Month:
+                                    {% endif %}
+                                </label>
+                                <select class="form-select" id="param1-month">
+                                    <!-- Will be populated by JavaScript -->
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="param1-year" class="form-label">
+                                    {% if lang() == 'de' %}
+                                    Jahr:
+                                    {% else %}
+                                    Year:
+                                    {% endif %}
+                                </label>
+                                <select class="form-select" id="param1-year">
+                                    <!-- Will be populated by JavaScript -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Special fields for time parameter (ZZ) -->
+                    <div id="param1-time-fields" style="display: none;">
+                        <label class="form-label">
+                            {% if lang() == 'de' %}
+                            Zeitzone:
+                            {% else %}
+                            Time Zone:
+                            {% endif %}
+                        </label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="param1-timezone" id="param1-tz-cet" value="cet" checked>
+                            <label class="form-check-label" for="param1-tz-cet">
+                                {% if lang() == 'de' %}
+                                CET
+                                {% else %}
+                                CET
+                                {% endif %}
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="param1-timezone" id="param1-tz-local" value="local">
+                            <label class="form-check-label" for="param1-tz-local">
+                                {% if lang() == 'de' %}
+                                Ortszeit
+                                {% else %}
+                                Local Time
+                                {% endif %}
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Special fields for solar altitude parameter (SH) -->
+                    <div id="param1-sh-fields" style="display: none;">
+                        <label class="form-label">
+                            {% if lang() == 'de' %}
+                            Welche Sonnenhöhe im Beobachtungsinterval soll verwendet werden:
+                            {% else %}
+                            Which solar altitude in the observation interval should be used:
+                            {% endif %}
+                        </label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="param1-sh-time" id="param1-sh-min" value="min">
+                            <label class="form-check-label" for="param1-sh-min">
+                                {% if lang() == 'de' %}
+                                minimale
+                                {% else %}
+                                minimum
+                                {% endif %}
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="param1-sh-time" id="param1-sh-mean" value="mean" checked>
+                            <label class="form-check-label" for="param1-sh-mean">
+                                {% if lang() == 'de' %}
+                                mittlere
+                                {% else %}
+                                mean
+                                {% endif %}
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="param1-sh-time" id="param1-sh-max" value="max">
+                            <label class="form-check-label" for="param1-sh-max">
+                                {% if lang() == 'de' %}
+                                maximale
+                                {% else %}
+                                maximum
+                                {% endif %}
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Special fields for halo type parameter (EE) -->
+                    <div id="param1-ee-fields" style="display: none;">
+                        <label class="form-label">
+                            {% if lang() == 'de' %}
+                            Zusammengesetzte Haloarten:
+                            {% else %}
+                            Complete halo elements:
+                            {% endif %}
+                        </label>
+                        <br>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="param1-ee-split" id="param1-ee-split" value="split" checked>
+                            <label class="form-check-label" for="param1-ee-split">
+                                {% if lang() == 'de' %}
+                                Aufteilen
+                                {% else %}
+                                Split
+                                {% endif %}
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="param1-ee-split" id="param1-ee-nosplit" value="nosplit">
+                            <label class="form-check-label" for="param1-ee-nosplit">
+                                {% if lang() == 'de' %}
+                                Nicht aufteilen
+                                {% else %}
+                                Don't split
+                                {% endif %}
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Special fields for cirrus type parameter (C) -->
+                    <div id="param1-c-fields" style="display: none;">
+                        <label class="form-label">
+                            {% if lang() == 'de' %}
+                            Zusammengesetzte Cirrusarten:
+                            {% else %}
+                            Complete cirrus types:
+                            {% endif %}
+                        </label>
+                        <br>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="param1-c-split" id="param1-c-split" value="split" checked>
+                            <label class="form-check-label" for="param1-c-split">
+                                {% if lang() == 'de' %}
+                                Aufteilen
+                                {% else %}
+                                Split
+                                {% endif %}
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="param1-c-split" id="param1-c-nosplit" value="nosplit">
+                            <label class="form-check-label" for="param1-c-nosplit">
+                                {% if lang() == 'de' %}
+                                Nicht aufteilen
+                                {% else %}
+                                Don't split
+                                {% endif %}
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Special fields for duration parameter (DD) -->
+                    <div id="param1-dd-fields" style="display: none;">
+                        <label class="form-label">
+                            {% if lang() == 'de' %}
+                            Beobachtungen ohne Anfang oder Ende (kA, kE):
+                            {% else %}
+                            Observations without begin or end (kA, kE):
+                            {% endif %}
+                        </label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="param1-dd-incomplete" id="param1-dd-incomplete" value="include" checked>
+                            <label class="form-check-label" for="param1-dd-incomplete">
+                                {% if lang() == 'de' %}
+                                Verwenden
+                                {% else %}
+                                Use
+                                {% endif %}
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="param1-dd-incomplete" id="param1-dd-complete" value="exclude">
+                            <label class="form-check-label" for="param1-dd-complete">
+                                {% if lang() == 'de' %}
+                                Nicht verwenden
+                                {% else %}
+                                Don't use
+                                {% endif %}
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Second Parameter (optional) -->
+                    <div class="mb-3">
+                        <label for="param2-select" class="form-label">
+                            {% if lang() == 'de' %}
+                            Zweiter Parameter
+                            {% else %}
+                            Second Parameter
+                            {% endif %}
+                        </label>
+                        <select class="form-select" id="param2-select">
+                            <option value="">
+                                {% if lang() == 'de' %}
+                                -- Kein zweiter Parameter --
+                                {% else %}
+                                -- No second parameter --
+                                {% endif %}
+                            </option>
+                            <!-- Will be populated by JavaScript -->
+                        </select>
+                    </div>
+
+                    <!-- Range Selection for Second Parameter (shown after selection) -->
+                    <div id="param2-range" style="display: none;">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="param2-from" class="form-label">
+                                    {% if lang() == 'de' %}
+                                    Von:
+                                    {% else %}
+                                    From:
+                                    {% endif %}
+                                </label>
+                                <select class="form-select" id="param2-from">
+                                    <!-- Will be populated by JavaScript -->
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="param2-to" class="form-label">
+                                    {% if lang() == 'de' %}
+                                    Bis:
+                                    {% else %}
+                                    To:
+                                    {% endif %}
+                                </label>
+                                <select class="form-select" id="param2-to">
+                                    <!-- Will be populated by JavaScript -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Special fields for day parameter (TT) in param2 -->
+                    <div id="param2-day-fields" style="display: none;">
+                        <!-- Day range restrictions (first and last day) on top -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="param2-day-from" class="form-label">
+                                    {% if lang() == 'de' %}
+                                    Von Tag:
+                                    {% else %}
+                                    From Day:
+                                    {% endif %}
+                                </label>
+                                <select class="form-select" id="param2-day-from">
+                                    <!-- Will be populated by JavaScript -->
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="param2-day-to" class="form-label">
+                                    {% if lang() == 'de' %}
+                                    Bis Tag:
+                                    {% else %}
+                                    To Day:
+                                    {% endif %}
+                                </label>
+                                <select class="form-select" id="param2-day-to">
+                                    <!-- Will be populated by JavaScript -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Month and Year as extra input below -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="param2-month" class="form-label">
+                                    {% if lang() == 'de' %}
+                                    Monat:
+                                    {% else %}
+                                    Month:
+                                    {% endif %}
+                                </label>
+                                <select class="form-select" id="param2-month">
+                                    <!-- Will be populated by JavaScript -->
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="param2-year" class="form-label">
+                                    {% if lang() == 'de' %}
+                                    Jahr:
+                                    {% else %}
+                                    Year:
+                                    {% endif %}
+                                </label>
+                                <select class="form-select" id="param2-year">
+                                    <!-- Will be populated by JavaScript -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Special fields for time parameter (ZZ) in param2 -->
+                    <div id="param2-time-fields" style="display: none;">
+                        <label class="form-label">
+                            {% if lang() == 'de' %}
+                            Zeitzone:
+                            {% else %}
+                            Time Zone:
+                            {% endif %}
+                        </label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="param2-timezone" id="param2-tz-cet" value="cet" checked>
+                            <label class="form-check-label" for="param2-tz-cet">
+                                {% if lang() == 'de' %}
+                                CET
+                                {% else %}
+                                CET
+                                {% endif %}
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="param2-timezone" id="param2-tz-local" value="local">
+                            <label class="form-check-label" for="param2-tz-local">
+                                {% if lang() == 'de' %}
+                                Ortszeit
+                                {% else %}
+                                Local Time
+                                {% endif %}
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Special fields for solar altitude parameter (SH) in param2 -->
+                    <div id="param2-sh-fields" style="display: none;">
+                        <label class="form-label">
+                            {% if lang() == 'de' %}
+                            Welche Sonnenhöhe im Beobachtungsinterval soll verwendet werden:
+                            {% else %}
+                            Which solar altitude in the observation interval should be used:
+                            {% endif %}
+                        </label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="param2-sh-time" id="param2-sh-min" value="min">
+                            <label class="form-check-label" for="param2-sh-min">
+                                {% if lang() == 'de' %}
+                                minimale
+                                {% else %}
+                                minimum
+                                {% endif %}
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="param2-sh-time" id="param2-sh-mean" value="mean" checked>
+                            <label class="form-check-label" for="param2-sh-mean">
+                                {% if lang() == 'de' %}
+                                mittlere
+                                {% else %}
+                                mean
+                                {% endif %}
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="param2-sh-time" id="param2-sh-max" value="max">
+                            <label class="form-check-label" for="param2-sh-max">
+                                {% if lang() == 'de' %}
+                                maximale
+                                {% else %}
+                                maximum
+                                {% endif %}
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Special fields for halo type parameter (EE) in param2 -->
+                    <div id="param2-ee-fields" style="display: none;">
+                        <label class="form-label">
+                            {% if lang() == 'de' %}
+                            Zusammengesetzte Haloarten:
+                            {% else %}
+                            Complete halo elements:
+                            {% endif %}
+                        </label>
+                        <br>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="param2-ee-split" id="param2-ee-split" value="split" checked>
+                            <label class="form-check-label" for="param2-ee-split">
+                                {% if lang() == 'de' %}
+                                Aufteilen
+                                {% else %}
+                                Split
+                                {% endif %}
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="param2-ee-split" id="param2-ee-nosplit" value="nosplit">
+                            <label class="form-check-label" for="param2-ee-nosplit">
+                                {% if lang() == 'de' %}
+                                Nicht aufteilen
+                                {% else %}
+                                Don't split
+                                {% endif %}
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Special fields for cirrus type parameter (C) in param2 -->
+                    <div id="param2-c-fields" style="display: none;">
+                        <label class="form-label">
+                            {% if lang() == 'de' %}
+                            Zusammengesetzte Cirrusarten:
+                            {% else %}
+                            Complete cirrus types:
+                            {% endif %}
+                        </label>
+                        <br>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="param2-c-split" id="param2-c-split" value="split" checked>
+                            <label class="form-check-label" for="param2-c-split">
+                                {% if lang() == 'de' %}
+                                Aufteilen
+                                {% else %}
+                                Split
+                                {% endif %}
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="param2-c-split" id="param2-c-nosplit" value="nosplit">
+                            <label class="form-check-label" for="param2-c-nosplit">
+                                {% if lang() == 'de' %}
+                                Nicht aufteilen
+                                {% else %}
+                                Don't split
+                                {% endif %}
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Special fields for duration parameter (DD) in param2 -->
+                    <div id="param2-dd-fields" style="display: none;">
+                        <label class="form-label">
+                            {% if lang() == 'de' %}
+                            Beobachtungen ohne Anfang oder Ende (kA, kE):
+                            {% else %}
+                            Observations without begin or end (kA, kE):
+                            {% endif %}
+                        </label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="param2-dd-incomplete" id="param2-dd-incomplete" value="include" checked>
+                            <label class="form-check-label" for="param2-dd-incomplete">
+                                {% if lang() == 'de' %}
+                                Verwenden
+                                {% else %}
+                                Use
+                                {% endif %}
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="param2-dd-incomplete" id="param2-dd-complete" value="exclude">
+                            <label class="form-check-label" for="param2-dd-complete">
+                                {% if lang() == 'de' %}
+                                Nicht verwenden
+                                {% else %}
+                                Don't use
+                                {% endif %}
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- First Filter Parameter (optional) -->
+                    <div class="mb-3">
+                        <label for="filter1-select" class="form-label">
+                            {% if lang() == 'de' %}
+                            Erster Filterparameter
+                            {% else %}
+                            First Filter Parameter
+                            {% endif %}
+                        </label>
+                        <select class="form-select" id="filter1-select">
+                            <option value="">
+                                {% if lang() == 'de' %}
+                                -- Kein Filter --
+                                {% else %}
+                                -- No filter --
+                                {% endif %}
+                            </option>
+                            <!-- Will be populated by JavaScript -->
+                        </select>
+                    </div>
+
+                    <!-- Filter1 Value (single selection, not range) -->
+                    <div id="filter1-value" style="display: none;">
+                        <div class="mb-3">
+                            <label for="filter1-value-select" class="form-label">
+                                {% if lang() == 'de' %}
+                                Filterwert:
+                                {% else %}
+                                Filter value:
+                                {% endif %}
+                            </label>
+                            <select class="form-select" id="filter1-value-select">
+                                <!-- Will be populated by JavaScript -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Filter1 Day Fields (for TT parameter) -->
+                    <div id="filter1-day-fields" style="display: none;">
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="filter1-month-select" class="form-label">
+                                    {% if lang() == 'de' %}
+                                    Monat:
+                                    {% else %}
+                                    Month:
+                                    {% endif %}
+                                </label>
+                                <select class="form-select" id="filter1-month-select">
+                                    <!-- Will be populated by JavaScript -->
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="filter1-year-select" class="form-label">
+                                    {% if lang() == 'de' %}
+                                    Jahr:
+                                    {% else %}
+                                    Year:
+                                    {% endif %}
+                                </label>
+                                <select class="form-select" id="filter1-year-select">
+                                    <!-- Will be populated by JavaScript -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filter1 Time Fields (for ZZ parameter) -->
+                    <div id="filter1-time-fields" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label">
+                                {% if lang() == 'de' %}
+                                Zeitangabe:
+                                {% else %}
+                                Time specification:
+                                {% endif %}
+                            </label><br>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="filter1-timezone" id="filter1-tz-cet" value="CET" checked>
+                                <label class="form-check-label" for="filter1-tz-cet">CET</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="filter1-timezone" id="filter1-tz-local" value="local">
+                                <label class="form-check-label" for="filter1-tz-local">
+                                    {% if lang() == 'de' %}
+                                    Ortszeit
+                                    {% else %}
+                                    Local time
+                                    {% endif %}
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filter1 Solar Altitude Fields (for SH parameter) -->
+                    <div id="filter1-sh-fields" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label">
+                                {% if lang() == 'de' %}
+                                Sonnenhöhe:
+                                {% else %}
+                                Solar altitude:
+                                {% endif %}
+                            </label><br>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="filter1-sh-time" id="filter1-sh-min" value="min">
+                                <label class="form-check-label" for="filter1-sh-min">
+                                    {% if lang() == 'de' %}
+                                    minimale
+                                    {% else %}
+                                    minimum
+                                    {% endif %}
+                                </label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="filter1-sh-time" id="filter1-sh-mean" value="mean" checked>
+                                <label class="form-check-label" for="filter1-sh-mean">
+                                    {% if lang() == 'de' %}
+                                    mittlere
+                                    {% else %}
+                                    mean
+                                    {% endif %}
+                                </label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="filter1-sh-time" id="filter1-sh-max" value="max">
+                                <label class="form-check-label" for="filter1-sh-max">
+                                    {% if lang() == 'de' %}
+                                    maximale
+                                    {% else %}
+                                    maximum
+                                    {% endif %}
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filter1 Halo Type Split Fields (for EE parameter) -->
+                    <div id="filter1-ee-fields" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label">
+                                {% if lang() == 'de' %}
+                                Halo-Arten:
+                                {% else %}
+                                Halo types:
+                                {% endif %}
+                            </label><br>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="filter1-ee-split" id="filter1-ee-split-yes" value="split" checked>
+                                <label class="form-check-label" for="filter1-ee-split-yes">
+                                    {% if lang() == 'de' %}
+                                    Aufteilen
+                                    {% else %}
+                                    Split
+                                    {% endif %}
+                                </label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="filter1-ee-split" id="filter1-ee-split-no" value="no-split">
+                                <label class="form-check-label" for="filter1-ee-split-no">
+                                    {% if lang() == 'de' %}
+                                    Nicht aufteilen
+                                    {% else %}
+                                    Don't split
+                                    {% endif %}
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filter1 Cirrus Type Split Fields (for C parameter) -->
+                    <div id="filter1-c-fields" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label">
+                                {% if lang() == 'de' %}
+                                Cirrus-Arten:
+                                {% else %}
+                                Cirrus types:
+                                {% endif %}
+                            </label><br>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="filter1-c-split" id="filter1-c-split-yes" value="split" checked>
+                                <label class="form-check-label" for="filter1-c-split-yes">
+                                    {% if lang() == 'de' %}
+                                    Aufteilen
+                                    {% else %}
+                                    Split
+                                    {% endif %}
+                                </label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="filter1-c-split" id="filter1-c-split-no" value="no-split">
+                                <label class="form-check-label" for="filter1-c-split-no">
+                                    {% if lang() == 'de' %}
+                                    Nicht aufteilen
+                                    {% else %}
+                                    Don't split
+                                    {% endif %}
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filter1 Duration Incomplete Fields (for DD parameter) -->
+                    <div id="filter1-dd-fields" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label">
+                                {% if lang() == 'de' %}
+                                Beobachtungen ohne Anfang (kA) oder Ende (kE):
+                                {% else %}
+                                Observations without begin (kA) or end (kE):
+                                {% endif %}
+                            </label><br>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="filter1-dd-incomplete" id="filter1-dd-include" value="include" checked>
+                                <label class="form-check-label" for="filter1-dd-include">
+                                    {% if lang() == 'de' %}
+                                    Verwenden
+                                    {% else %}
+                                    Use
+                                    {% endif %}
+                                </label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="filter1-dd-incomplete" id="filter1-dd-exclude" value="exclude">
+                                <label class="form-check-label" for="filter1-dd-exclude">
+                                    {% if lang() == 'de' %}
+                                    Nicht verwenden
+                                    {% else %}
+                                    Don't use
+                                    {% endif %}
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Second Filter Parameter (optional) -->
+                    <div class="mb-3">
+                        <label for="filter2-select" class="form-label">
+                            {% if lang() == 'de' %}
+                            Zweiter Filterparameter
+                            {% else %}
+                            Second Filter Parameter
+                            {% endif %}
+                        </label>
+                        <select class="form-select" id="filter2-select">
+                            <option value="">
+                                {% if lang() == 'de' %}
+                                -- Kein Filter --
+                                {% else %}
+                                -- No filter --
+                                {% endif %}
+                            </option>
+                            <!-- Will be populated by JavaScript -->
+                        </select>
+                    </div>
+
+                    <!-- Filter2 Value (single selection, not range) -->
+                    <div id="filter2-value" style="display: none;">
+                    <div class="mb-3">
+                        <label for="filter2-value-select" class="form-label">
+                            {% if lang() == 'de' %}
+                            Filterwert:
+                            {% else %}
+                            Filter value:
+                            {% endif %}
+                        </label>
+                        <select class="form-select" id="filter2-value-select">
+                            <!-- Will be populated by JavaScript -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Filter2 Day Fields (for TT parameter) -->
+                <div id="filter2-day-fields" style="display: none;">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="filter2-month-select" class="form-label">
+                                {% if lang() == 'de' %}
+                                Monat:
+                                {% else %}
+                                Month:
+                                {% endif %}
+                            </label>
+                            <select class="form-select" id="filter2-month-select">
+                                <!-- Will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="filter2-year-select" class="form-label">
+                                {% if lang() == 'de' %}
+                                Jahr:
+                                {% else %}
+                                Year:
+                                {% endif %}
+                            </label>
+                            <select class="form-select" id="filter2-year-select">
+                                <!-- Will be populated by JavaScript -->
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter2 Time Fields (for ZZ parameter) -->
+                <div id="filter2-time-fields" style="display: none;">
+                    <div class="mb-3">
+                        <label class="form-label">
+                            {% if lang() == 'de' %}
+                            Zeitangabe:
+                            {% else %}
+                            Time specification:
+                            {% endif %}
+                        </label><br>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="filter2-timezone" id="filter2-tz-cet" value="CET" checked>
+                            <label class="form-check-label" for="filter2-tz-cet">CET</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="filter2-timezone" id="filter2-tz-local" value="local">
+                            <label class="form-check-label" for="filter2-tz-local">
+                                {% if lang() == 'de' %}
+                                Ortszeit
+                                {% else %}
+                                Local time
+                                {% endif %}
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter2 Solar Altitude Fields (for SH parameter) -->
+                <div id="filter2-sh-fields" style="display: none;">
+                    <div class="mb-3">
+                        <label class="form-label">
+                            {% if lang() == 'de' %}
+                            Sonnenhöhe:
+                            {% else %}
+                            Solar altitude:
+                            {% endif %}
+                        </label><br>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="filter2-sh-time" id="filter2-sh-min" value="min">
+                            <label class="form-check-label" for="filter2-sh-min">
+                                {% if lang() == 'de' %}
+                                minimale
+                                {% else %}
+                                minimum
+                                {% endif %}
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="filter2-sh-time" id="filter2-sh-mean" value="mean" checked>
+                            <label class="form-check-label" for="filter2-sh-mean">
+                                {% if lang() == 'de' %}
+                                mittlere
+                                {% else %}
+                                mean
+                                {% endif %}
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="filter2-sh-time" id="filter2-sh-max" value="max">
+                            <label class="form-check-label" for="filter2-sh-max">
+                                {% if lang() == 'de' %}
+                                maximale
+                                {% else %}
+                                maximum
+                                {% endif %}
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter2 Halo Type Split Fields (for EE parameter) -->
+                <div id="filter2-ee-fields" style="display: none;">
+                    <div class="mb-3">
+                        <label class="form-label">
+                            {% if lang() == 'de' %}
+                            Halo-Arten:
+                            {% else %}
+                            Halo types:
+                            {% endif %}
+                        </label><br>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="filter2-ee-split" id="filter2-ee-split-yes" value="split" checked>
+                            <label class="form-check-label" for="filter2-ee-split-yes">
+                                {% if lang() == 'de' %}
+                                Aufteilen
+                                {% else %}
+                                Split
+                                {% endif %}
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="filter2-ee-split" id="filter2-ee-split-no" value="no-split">
+                            <label class="form-check-label" for="filter2-ee-split-no">
+                                {% if lang() == 'de' %}
+                                Nicht aufteilen
+                                {% else %}
+                                Don't split
+                                {% endif %}
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter2 Cirrus Type Split Fields (for C parameter) -->
+                <div id="filter2-c-fields" style="display: none;">
+                    <div class="mb-3">
+                        <label class="form-label">
+                            {% if lang() == 'de' %}
+                            Cirrus-Arten:
+                            {% else %}
+                            Cirrus types:
+                            {% endif %}
+                        </label><br>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="filter2-c-split" id="filter2-c-split-yes" value="split" checked>
+                            <label class="form-check-label" for="filter2-c-split-yes">
+                                {% if lang() == 'de' %}
+                                Aufteilen
+                                {% else %}
+                                Split
+                                {% endif %}
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="filter2-c-split" id="filter2-c-split-no" value="no-split">
+                            <label class="form-check-label" for="filter2-c-split-no">
+                                {% if lang() == 'de' %}
+                                Nicht aufteilen
+                                {% else %}
+                                Don't split
+                                {% endif %}
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter2 Duration Incomplete Fields (for DD parameter) -->
+                <div id="filter2-dd-fields" style="display: none;">
+                    <div class="mb-3">
+                        <label class="form-label">
+                            {% if lang() == 'de' %}
+                            Beobachtungen ohne Anfang (kA) oder Ende (kE):
+                            {% else %}
+                            Observations without begin (kA) or end (kE):
+                            {% endif %}
+                        </label><br>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="filter2-dd-incomplete" id="filter2-dd-include" value="include" checked>
+                            <label class="form-check-label" for="filter2-dd-include">
+                                {% if lang() == 'de' %}
+                                Verwenden
+                                {% else %}
+                                Use
+                                {% endif %}
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="filter2-dd-incomplete" id="filter2-dd-exclude" value="exclude">
+                            <label class="form-check-label" for="filter2-dd-exclude">
+                                {% if lang() == 'de' %}
+                                Nicht verwenden
+                                {% else %}
+                                Don't use
+                                {% endif %}
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="btn-cancel-param">
+                        {% if lang() == 'de' %}
+                        Abbrechen
+                        {% else %}
+                        Cancel
+                        {% endif %}
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btn-apply-param">
+                        {% if lang() == 'de' %}
+                        OK
+                        {% else %}
+                        OK
+                        {% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'footer.html' %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/analysis.js') }}"></script>
+</body>
+</html>

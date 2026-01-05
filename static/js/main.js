@@ -249,11 +249,11 @@ function handleMenuAction(action) {
             break;
             
         // Analysis menu
-        case 'analysis-one':
-            window.location.href = '/statistics';
+        case 'analysis-create':
+            window.location.href = '/analysis';
             break;
-        case 'analysis-two':
-            console.info('Two-parameter analysis not implemented');
+        case 'analysis-load':
+            console.info('Load analysis not implemented');
             break;
             
         // Settings menu
@@ -1611,8 +1611,7 @@ function updateMenuText() {
         updateDropdownItem('observer-add', i18nStrings.observations.add);
         updateDropdownItem('observer-modify', i18nStrings.observations.modify);
         updateDropdownItem('observer-delete', i18nStrings.observations.delete);
-        updateDropdownItem('analysis-one', i18nStrings.analysis.one_param);
-        updateDropdownItem('analysis-two', i18nStrings.analysis.two_params);
+        updateDropdownItem('analysis-create', i18nStrings.analysis.create);
         updateDropdownItem('analysis-load', i18nStrings.analysis.load);
         updateDropdownItem('output-monthly-report', i18nStrings.output.monthly_report);
         updateDropdownItem('output-monthly-stats', i18nStrings.output.monthly_stats);
@@ -1649,8 +1648,7 @@ function updateMenuText() {
         updateDropdownItem('observer-add', i18nStrings.observations.add);
         updateDropdownItem('observer-modify', i18nStrings.observations.modify);
         updateDropdownItem('observer-delete', i18nStrings.observations.delete);
-        updateDropdownItem('analysis-one', i18nStrings.analysis.one_param);
-        updateDropdownItem('analysis-two', i18nStrings.analysis.two_params);
+        updateDropdownItem('analysis-create', i18nStrings.analysis.create);
         updateDropdownItem('analysis-load', i18nStrings.analysis.load);
         updateDropdownItem('output-monthly-report', i18nStrings.output.monthly_report);
         updateDropdownItem('output-monthly-stats', i18nStrings.output.monthly_stats);
