@@ -6,6 +6,7 @@ from flask import Blueprint, jsonify, request, current_app
 from pathlib import Path
 from typing import Dict, Any
 from halo.io.csv_handler import ObservationCSV
+from halo.services.astronomy import calculate_solar_altitude, get_observer_coordinates
 
 api_blueprint = Blueprint('api', __name__, url_prefix='/api')
 
@@ -917,7 +918,7 @@ def get_monthly_report() -> Dict[str, Any]:
     # Sort by day and time
     filtered_obs.sort(key=lambda o: (o.TT, o.ZS if o.ZS != -1 else 0, o.ZM if o.ZM != -1 else 0))
     
-    # Get observer info
+    # Get observer info - find the record valid for this month/year
     observers = current_app.config.get('OBSERVERS', [])
     observer_name = ''
     observer_hbort = ''
@@ -925,28 +926,54 @@ def get_monthly_report() -> Dict[str, Any]:
     observer_gh = ''
     observer_gn = ''
     
+    # Create sortable seit value for this month/year: YYYYMM
+    obs_year = 1900 + jj_int if jj_int >= 50 else 2000 + jj_int
+    month_year_comparable = obs_year * 100 + mm_int
+    
+    # Find the observer record valid for this month/year
+    candidates = []
+    for obs_rec in observers:
+        if len(obs_rec) >= 21 and obs_rec[0] == kk:
+            try:
+                seit_parts = obs_rec[3].split('/')
+                seit_month = int(seit_parts[0])
+                seit_year_2digit = int(seit_parts[1])
+                seit_year = 1900 + seit_year_2digit if seit_year_2digit >= 50 else 2000 + seit_year_2digit
+                rec_seit_comparable = seit_year * 100 + seit_month
+                
+                if rec_seit_comparable <= month_year_comparable:
+                    candidates.append((rec_seit_comparable, obs_rec))
+            except (ValueError, IndexError):
+                pass
+    
+    if candidates:
+        # Use the record with the most recent seit date
+        candidates.sort(key=lambda x: x[0], reverse=True)
+        obs_rec = candidates[0][1]
+        
+        observer_name = f"{obs_rec[1]} {obs_rec[2]}"
+        observer_hbort = obs_rec[5]
+        observer_nbort = obs_rec[13]
+        # Get region indices - obs_rec[6] is GH, obs_rec[14] is GN
+        try:
+            gh_idx = int(obs_rec[6]) if obs_rec[6] else 0
+            gn_idx = int(obs_rec[14]) if obs_rec[14] else 0
+        except (ValueError, IndexError):
+            gh_idx = 0
+            gn_idx = 0
+    else:
+        gh_idx = 0
+        gn_idx = 0
+    
     # Get region names from i18n
     from flask import g
     regions = g.i18n.get_array('geographic_regions') if hasattr(g, 'i18n') else {}
     
-    for obs_rec in observers:
-        if len(obs_rec) >= 21 and obs_rec[0] == kk:
-            observer_name = f"{obs_rec[1]} {obs_rec[2]}"
-            observer_hbort = obs_rec[5]
-            observer_nbort = obs_rec[13]
-            # Get region indices - obs_rec[6] is GH, obs_rec[14] is GN
-            try:
-                gh_idx = int(obs_rec[6]) if obs_rec[6] else 0
-                gn_idx = int(obs_rec[14]) if obs_rec[14] else 0
-                observer_gh = regions.get(str(gh_idx), '') if gh_idx > 0 else ''
-                observer_gn = regions.get(str(gn_idx), '') if gn_idx > 0 else ''
-            except (ValueError, IndexError):
-                observer_gh = ''
-                observer_gn = ''
-            # Combine site and region
-            observer_hbort = f"{observer_hbort} ({observer_gh})" if observer_gh else observer_hbort
-            observer_nbort = f"{observer_nbort} ({observer_gn})" if observer_gn else observer_nbort
-            break
+    observer_gh = regions.get(str(gh_idx), '') if gh_idx > 0 else ''
+    observer_gn = regions.get(str(gn_idx), '') if gn_idx > 0 else ''
+    # Combine site and region
+    observer_hbort = f"{observer_hbort} ({observer_gh})" if observer_gh else observer_hbort
+    observer_nbort = f"{observer_nbort} ({observer_gn})" if observer_gn else observer_nbort
     
     return jsonify({
         'kk': kk_int,
@@ -1189,6 +1216,8 @@ def get_monthly_stats() -> Dict[str, Any]:
         
         observer_list.append({
             'kk': kk,
+            'vname': active_observers[kk][1] if kk in active_observers and len(active_observers[kk]) > 1 else '',
+            'nname': active_observers[kk][2] if kk in active_observers and len(active_observers[kk]) > 2 else '',
             'region': data['region'],
             'days': days_dict,
             'total_solar': data['total_solar'],
@@ -1833,7 +1862,6 @@ def get_observers_list() -> Dict[str, Any]:
     from flask import current_app
     
     observers = current_app.config.get('OBSERVERS', [])
-    print(f"DEBUG: /api/observers/list called - total observers in config: {len(observers)}")
     
     # Get unique observers by KK
     unique_observers = {}
@@ -1857,7 +1885,6 @@ def get_observers_list() -> Dict[str, Any]:
                 'NName': nname
             }
     
-    print(f"DEBUG: Returning {len(unique_observers)} unique observers")
     # Convert to list and sort by KK
     observer_list = sorted(unique_observers.values(), key=lambda x: x['KK'])
     
@@ -2525,3 +2552,1063 @@ def delete_observer():
         })
     except Exception as e:
         return jsonify({'error': f'Failed to delete observer: {str(e)}'}), 500
+
+
+@api_blueprint.route('/analysis', methods=['POST'])
+def analyze_observations() -> Dict[str, Any]:
+    """
+    Perform analysis on observations with selected parameters.
+    
+    Request body:
+        - param1: Primary parameter (MM, JJ, TT, ZZ, SH, KK, GG, O, f, C, d, EE, DD, H, F, V, zz, HO_HU, SE)
+        - param1_from: Range start for param1 (varies by parameter type, e.g., day 1-31 for TT, degree -90 to +90 for SH)
+        - param1_to: Range end for param1 (varies by parameter type, e.g., day 1-31 for TT, degree -90 to +90 for SH)
+        - param1_month: Month for TT parameter (1-12, required when param1=TT)
+        - param1_year: Year for TT parameter (0-99, required when param1=TT)
+        - param2: Secondary parameter (optional)
+        - param2_from: Range start for param2 (optional)
+        - param2_to: Range end for param2 (optional)
+        - param2_month: Month for param2 when TT (optional)
+        - param2_year: Year for param2 when TT (optional)
+        - filter1: First filter parameter (optional)
+        - filter1_value: Value for filter1 (optional)
+        - filter2: Second filter parameter (optional)
+        - filter2_value: Value for filter2 (optional)
+        - param1_ee_split: Split EE parameter (true/false)
+        - param1_c_split: Split C parameter (true/false)
+        - param1_dd_incomplete: Include incomplete DD observations (true/false)
+        - filter1_ee_split: Split filter1 EE parameter (true/false)
+        - filter1_c_split: Split filter1 C parameter (true/false)
+        - filter1_dd_incomplete: Include incomplete filter1 DD (true/false)
+        - filter2_ee_split: Split filter2 EE parameter (true/false)
+        - filter2_c_split: Split filter2 C parameter (true/false)
+        - filter2_dd_incomplete: Include incomplete filter2 DD (true/false)
+    
+    Returns:
+        JSON object with:
+        - success: True/False
+        - data: Object with grouped observation counts {value: count, ...}
+        - total: Total number of observations matching criteria
+    """
+    from halo.io.csv_handler import ObservationCSV
+    from collections import defaultdict
+    
+    try:
+        # Get request parameters
+        params = request.get_json()
+        
+        # Load observations from current session or default file
+        observations = current_app.config.get('OBSERVATIONS', [])
+        if not observations:
+            csv_handler = ObservationCSV()
+            data_path = Path(__file__).parent.parent.parent.parent / 'data' / 'ALLE.CSV'
+            observations = csv_handler.read_observations(str(data_path))
+        
+        # Apply filters first
+        filtered_obs = observations
+        
+        # Apply filter1 if specified
+        if params.get('filter1'):
+            filter1 = params['filter1']
+            filter1_value = params.get('filter1_value', '')
+            print(f"Applying filter1: {filter1} = {filter1_value} (type: {type(filter1_value)})")
+            print(f"Before filter1: {len(filtered_obs)} observations")
+            filtered_obs = _apply_filter(filtered_obs, filter1, filter1_value, params, 'filter1')
+            print(f"After filter1: {len(filtered_obs)} observations")
+        
+        # Apply filter2 if specified
+        if params.get('filter2'):
+            filter2 = params['filter2']
+            filter2_value = params.get('filter2_value', '')
+            print(f"Applying filter2: {filter2} = {filter2_value} (type: {type(filter2_value)})")
+            print(f"Before filter2: {len(filtered_obs)} observations")
+            filtered_obs = _apply_filter(filtered_obs, filter2, filter2_value, params, 'filter2')
+            print(f"After filter2: {len(filtered_obs)} observations")
+        
+        # Apply param1 range filter if needed
+        param1 = params.get('param1')
+        filtered_obs = _apply_param_range_filter(filtered_obs, param1, params, 'param1')
+        
+        # Apply param2 range filter if specified
+        param2 = params.get('param2')
+        if param2:
+            filtered_obs = _apply_param_range_filter(filtered_obs, param2, params, 'param2')
+        
+        # Group by parameter(s)
+        if not param2:
+            # Single parameter analysis
+            data = _group_by_parameter(filtered_obs, param1, params, 'param1')
+        else:
+            # Two parameter analysis (cross-tabulation)
+            data = _group_by_two_parameters(filtered_obs, param1, param2, params)
+        
+        return jsonify({
+            'success': True,
+            'data': data,
+            'total': len(filtered_obs)
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'Analysis error: {str(e)}'
+        }), 400
+
+
+def _apply_filter(observations, param_name, param_value, all_params, prefix):
+    """Apply a single filter constraint to observations."""
+    result = []
+    for obs in observations:
+        if _matches_parameter(obs, param_name, param_value, all_params, prefix):
+            result.append(obs)
+    return result
+
+
+def _get_timezone_offset(region_code):
+    """Calculate timezone offset (in hours) for a geographic region.
+    
+    Args:
+        region_code: Geographic region code (GG field, 1-39)
+    
+    Returns:
+        Hour offset to add to CET to get local time
+    """
+    try:
+        region = int(region_code)
+    except (ValueError, TypeError):
+        return 0
+    
+    # Asia regions (15-26)
+    if 15 <= region <= 20:
+        return 4
+    elif 21 <= region <= 26:
+        return 7
+    
+    # Americas regions (27-34)
+    elif 27 <= region <= 30:
+        return -6
+    elif 31 <= region <= 34:
+        return -4
+    
+    # Europe and other regions (1-14, 35-39)
+    else:
+        return 0
+
+
+def _calculate_observation_solar_altitude(obs, observers_list, sh_type='mean'):
+    """Calculate solar altitude for an observation.
+    
+    This is only applicable for sun observations (O=1) with known observer location.
+    
+    Args:
+        obs: Observation object
+        observers_list: List of observer records
+        sh_type: Altitude calculation type ('min', 'mean', or 'max')
+    
+    Returns:
+        Solar altitude in degrees (integer), or None if not calculable
+    """
+    # Only calculate for sun observations
+    if obs.O != 1:
+        return None
+    
+    # Skip if g=1 (observation outside known sites - location unknown)
+    if obs.g == 1:
+        return None
+    
+    # Find observer record valid for this observation date
+    observer_kk = str(obs.KK).zfill(2)
+    observer_record = None
+    
+    # Convert observation date to comparable format
+    # obs.JJ is 2-digit year: >= 50 means 19xx, < 50 means 20xx
+    obs_month = obs.MM
+    obs_year_2digit = obs.JJ
+    obs_year = 1900 + obs_year_2digit if obs_year_2digit >= 50 else 2000 + obs_year_2digit
+    
+    # Create sortable seit value for observation: YYYYMM (year*100 + month)
+    obs_seit_comparable = obs_year * 100 + obs_month
+    
+    # Find the observer record for this KK that is valid on this observation date
+    # Multiple records per observer - find the latest one with seit <= obs_seit
+    candidates = []
+    for obs_rec in observers_list:
+        if obs_rec[0] == observer_kk:  # obs_rec[0] is KK field
+            # obs_rec[3] is seit field in format "MM/YY"
+            try:
+                seit_parts = obs_rec[3].split('/')
+                seit_month = int(seit_parts[0])
+                seit_year_2digit = int(seit_parts[1])
+                seit_year = 1900 + seit_year_2digit if seit_year_2digit >= 50 else 2000 + seit_year_2digit
+                
+                # Create sortable seit value for record: YYYYMM
+                rec_seit_comparable = seit_year * 100 + seit_month
+                
+                # Check if this record is valid on the observation date
+                if rec_seit_comparable <= obs_seit_comparable:
+                    candidates.append((rec_seit_comparable, obs_rec))
+            except (ValueError, IndexError):
+                pass
+    
+    if candidates:
+        # Use the record with the most recent seit date that is still valid
+        candidates.sort(key=lambda x: x[0], reverse=True)
+        observer_record = candidates[0][1]
+    
+    if not observer_record:
+        return None
+    
+    # Convert observer record tuple to dict for easier access
+    # Format: (KK, VName, NName, seit, aktiv, HbOrt, GH, HLG, HLM, HOW, HBG, HBM, HNS, NbOrt, GN, NLG, NLM, NOW, NBG, NBM, NNS)
+    observer_dict = {
+        'HLG': observer_record[7],   # Main site longitude degrees
+        'HLM': observer_record[8],   # Main site longitude minutes
+        'HOW': observer_record[9],   # Main site E/W ('O' for Ost/East, 'W' for West)
+        'HBG': observer_record[10],  # Main site latitude degrees
+        'HBM': observer_record[11],  # Main site latitude minutes
+        'HNS': observer_record[12],  # Main site N/S
+        'NLG': observer_record[15],  # Alternate site longitude degrees
+        'NLM': observer_record[16],  # Alternate site longitude minutes
+        'NOW': observer_record[17],  # Alternate site E/W ('O' for Ost/East, 'W' for West)
+        'NBG': observer_record[18],  # Alternate site latitude degrees
+        'NBM': observer_record[19],  # Alternate site latitude minutes
+        'NNS': observer_record[20],  # Alternate site N/S
+    }
+    
+    # Get observer coordinates
+    longitude, latitude = get_observer_coordinates(observer_dict, obs.g)
+    
+    # Calculate solar altitude
+    # Convert DD (duration in units of 10 minutes) to actual minutes
+    # DD=1 means 10 minutes, DD=2 means 20 minutes, etc.
+    duration_minutes = obs.DD * 10 if obs.DD >= 0 else 0
+    
+    altitude = calculate_solar_altitude(
+        year=obs.JJ,
+        month=obs.MM,
+        day=obs.TT,
+        hour=obs.ZS,
+        minute=obs.ZM,
+        duration=duration_minutes,
+        longitude=longitude,
+        latitude=latitude,
+        altitude_type=sh_type,
+        gg=obs.g
+    )
+    
+    return altitude
+
+
+def _apply_param_range_filter(observations, param_name, all_params, prefix):
+    """Apply range filter to a parameter."""
+    # Special handling for TT (day) - ALWAYS filter by month/year, regardless of range
+    if param_name == 'TT':
+        month_key = f'{prefix}_month'
+        year_key = f'{prefix}_year'
+        month = all_params.get(month_key)
+        year = all_params.get(year_key)
+        
+        # TT parameter REQUIRES month and year context
+        if month is None or year is None:
+            return observations  # Can't filter without month/year
+        
+        try:
+            month = int(month)
+            year = int(year)
+            # Convert 4-digit year to 2-digit if needed
+            if year >= 1900:
+                year = year % 100
+        except (ValueError, TypeError):
+            return observations
+        
+        # Filter by month and year first
+        filtered = []
+        for obs in observations:
+            if obs.MM == month and obs.JJ == year:
+                filtered.append(obs)
+        
+        # Then apply day range if specified
+        from_key = f'{prefix}_from'
+        to_key = f'{prefix}_to'
+        if from_key in all_params and to_key in all_params:
+            from_val = all_params.get(from_key)
+            to_val = all_params.get(to_key)
+            if from_val is not None and to_val is not None:
+                try:
+                    from_val = int(from_val)
+                    to_val = int(to_val)
+                    result = []
+                    for obs in filtered:
+                        if from_val <= obs.TT <= to_val:
+                            result.append(obs)
+                    return result
+                except (ValueError, TypeError):
+                    pass
+        
+        return filtered
+    
+    from_key = f'{prefix}_from'
+    to_key = f'{prefix}_to'
+    
+    # Handle parameters with no range (single values)
+    if from_key not in all_params or to_key not in all_params:
+        return observations
+    
+    from_val = all_params.get(from_key)
+    to_val = all_params.get(to_key)
+    
+    if from_val is None or to_val is None:
+        return observations
+    
+    # Convert to appropriate numeric type
+    try:
+        if param_name == 'ZZ':
+            # Time can be float
+            from_val = float(from_val)
+            to_val = float(to_val)
+        elif param_name == 'JJ':
+            # Year - convert 4-digit to 2-digit (1988 -> 88)
+            from_val = int(from_val)
+            to_val = int(to_val)
+            if from_val >= 1900:
+                from_val = from_val % 100
+            if to_val >= 1900:
+                to_val = to_val % 100
+        else:
+            # Most parameters are integers
+            from_val = int(from_val)
+            to_val = int(to_val)
+    except (ValueError, TypeError):
+        return observations
+    
+    # Special handling for different parameter types
+    if param_name == 'TT':
+        # Day parameter - requires month/year context
+        return _apply_tt_range_filter(observations, all_params, prefix)
+    elif param_name == 'JJ':
+        # Year parameter - special handling for century boundary
+        result = []
+        
+        # Handle year ranges that cross century boundary
+        if from_val > to_val:
+            # Range crosses century (e.g., 50-49 means 1950-1999 AND 2000-2049)
+            for obs in observations:
+                val = getattr(obs, param_name, None)
+                if val is not None and (from_val <= val <= 99 or 0 <= val <= to_val):
+                    result.append(obs)
+        else:
+            # Normal range within same century
+            for obs in observations:
+                val = getattr(obs, param_name, None)
+                if val is not None and from_val <= val <= to_val:
+                    result.append(obs)
+        
+        return result
+    elif param_name == 'ZZ':
+        # Time parameter - from/to are hours (0-23 or float)
+        # Note: ZZ refers to ZS (hour) field in the observation model
+        # Observations are stored in CET, but may need conversion to local time
+        
+        # Check if timezone conversion is needed
+        timezone_key = f'{prefix}_timezone'
+        use_local = all_params.get(timezone_key) == 'local'
+        
+        result = []
+        for obs in observations:
+            zz = obs.ZS if hasattr(obs, 'ZS') else 0
+            
+            # If local time requested, convert from CET to observer's local time
+            if use_local:
+                # Get observer's region to determine timezone offset
+                # GG contains the geographic region code
+                region_code = obs.GG if hasattr(obs, 'GG') else 0
+                
+                # Calculate timezone offset based on region
+                # This is a simplified approach - in reality, timezones are complex
+                # For now, we'll use rough approximations based on longitude
+                # Europe regions (1-14): mostly CET (offset = 0)
+                # Asia regions (15-26): UTC+5 to UTC+9 (offset = +4 to +8 from CET)
+                # Americas regions (27-34): UTC-5 to UTC-8 (offset = -6 to -9 from CET)
+                # Other regions: assume CET
+                
+                offset = 0
+                if 15 <= region_code <= 20:  # West/Central Asia
+                    offset = 4  # Roughly UTC+5 = CET+4
+                elif 21 <= region_code <= 26:  # East Asia
+                    offset = 7  # Roughly UTC+8 = CET+7
+                elif 27 <= region_code <= 30:  # North America
+                    offset = -6  # Roughly UTC-6 = CET-7
+                elif 31 <= region_code <= 34:  # South America
+                    offset = -4  # Roughly UTC-3 = CET-4
+                
+                # Apply offset (with wraparound for 24-hour clock)
+                zz = (zz + offset) % 24
+            
+            if from_val <= zz <= to_val:
+                result.append(obs)
+        return result
+    elif param_name == 'SH':
+        # Solar altitude parameter - must be calculated on-the-fly
+        # Only applicable for sun observations (O=1) at known observer locations (g != 1)
+        observers = current_app.config.get('OBSERVERS', [])
+        
+        result = []
+        for obs in observations:
+            # Filter out observations that can't have solar altitude calculated
+            if obs.O != 1 or obs.g == 1:
+                continue
+            
+            sh_type = all_params.get('sh_type', 'mean')
+            altitude = _calculate_observation_solar_altitude(obs, observers, sh_type)
+            if altitude is not None and from_val <= altitude <= to_val:
+                result.append(obs)
+        
+        return result
+    else:
+        # Numeric range parameters
+        result = []
+        for obs in observations:
+            val = getattr(obs, param_name, None)
+            if val is not None and from_val <= val <= to_val:
+                result.append(obs)
+        return result
+
+
+def _apply_tt_range_filter(observations, all_params, prefix):
+    """Apply day range filter to TT parameter with month/year context."""
+    month_key = f'{prefix}_month'
+    year_key = f'{prefix}_year'
+    from_key = f'{prefix}_from'
+    to_key = f'{prefix}_to'
+    
+    month = all_params.get(month_key)
+    year = all_params.get(year_key)
+    day_from = all_params.get(from_key)
+    day_to = all_params.get(to_key)
+    
+    # If any required parameter is missing, don't filter
+    if month is None or year is None or day_from is None or day_to is None:
+        return observations
+    
+    try:
+        month = int(month)
+        year = int(year)
+        day_from = int(day_from)
+        day_to = int(day_to)
+        
+        # Convert 4-digit year to 2-digit if needed
+        if year >= 1900:
+            year = year % 100
+    except (ValueError, TypeError):
+        return observations
+    
+    result = []
+    for obs in observations:
+        # Only include observations from the specified month and year, within day range
+        if obs.MM == month and obs.JJ == year:
+            if day_from <= obs.TT <= day_to:
+                result.append(obs)
+    
+    return result
+
+
+def _matches_parameter(obs, param_name, param_value, all_params, prefix):
+    """Check if observation matches a parameter filter value."""
+    # Special handling for TT (day) - requires month and year context
+    if param_name == 'TT':
+        # Day parameter requires month and year to be meaningful
+        month_key = f'{prefix}_month'
+        year_key = f'{prefix}_year'
+        filter_month = all_params.get(month_key)
+        filter_year = all_params.get(year_key)
+        
+        # If month/year not provided, can't match properly
+        if filter_month is None or filter_year is None:
+            return False
+        
+        try:
+            filter_day = int(param_value)
+            filter_month = int(filter_month)
+            filter_year = int(filter_year)
+            
+            # Convert 4-digit year to 2-digit if needed
+            if filter_year >= 1900:
+                filter_year = filter_year % 100
+            
+            # Match all three: day, month, year
+            return (obs.TT == filter_day and 
+                    obs.MM == filter_month and 
+                    obs.JJ == filter_year)
+        except (ValueError, TypeError):
+            return False
+    
+    # Get the parameter value from observation
+    # Special handling for ZZ (time) - use ZS (hour) field
+    if param_name == 'ZZ':
+        obs_value = getattr(obs, 'ZS', None)
+        # Apply timezone conversion if needed
+        if obs_value is not None:
+            timezone_key = f'{prefix}_timezone'
+            use_local = all_params.get(timezone_key) == 'local'
+            if use_local:
+                region_code = getattr(obs, 'GG', None)
+                offset = _get_timezone_offset(region_code)
+                obs_value = (obs_value + offset) % 24
+    elif param_name == 'SH':
+        # Solar altitude - must be calculated (only for sun observations at known locations)
+        if obs.O != 1 or obs.g == 1:
+            obs_value = None
+        else:
+            observers = current_app.config.get('OBSERVERS', [])
+            sh_type = all_params.get('sh_type', 'mean')
+            obs_value = _calculate_observation_solar_altitude(obs, observers, sh_type)
+    else:
+        obs_value = getattr(obs, param_name, None)
+    
+
+    
+    if obs_value is None:
+        return False
+    
+    # Convert param_value to appropriate type for comparison
+    try:
+        if param_name in ['MM', 'JJ', 'ZZ', 'SH', 'KK', 'GG', 'O', 'f', 'd', 'EE', 'DD', 'H', 'F', 'V', 'zz']:
+            # Most parameters are integers (note: TT handled above)
+            if param_name == 'ZZ':
+                # Time can be float
+                param_value = float(param_value)
+            elif param_name == 'JJ':
+                # Year - convert 4-digit to 2-digit (1988 -> 88)
+                param_value = int(param_value)
+                if param_value >= 1900:
+                    param_value = param_value % 100
+            else:
+                param_value = int(param_value)
+            return obs_value == param_value
+    except (ValueError, TypeError):
+        return False
+    
+    # For composite parameters, handle special cases
+    if param_name == 'C':
+        # Completeness can have split option
+        split_key = f'{prefix}_c_split'
+        try:
+            param_value = int(param_value)
+        except (ValueError, TypeError):
+            return False
+        if all_params.get(split_key):
+            # When split, compare the full C value
+            return obs.C == param_value
+        else:
+            # When not split, compare without suffix
+            return str(obs.C).rstrip('+') == str(param_value)
+    
+    elif param_name == 'EE':
+        # Halo type can have split option
+        split_key = f'{prefix}_ee_split'
+        try:
+            param_value = int(param_value)
+        except (ValueError, TypeError):
+            return False
+        if all_params.get(split_key):
+            return obs.EE == param_value
+        else:
+            return str(obs.EE).rstrip('*') == str(param_value)
+    
+    elif param_name == 'DD':
+        # Duration with incomplete option
+        incomplete_key = f'{prefix}_dd_incomplete'
+        try:
+            param_value = int(param_value)
+        except (ValueError, TypeError):
+            return False
+        if all_params.get(incomplete_key):
+            # Include all observations
+            return True
+        else:
+            # Exclude observations with kA or kE
+            return obs.DD is not None and obs.DD not in ['kA', 'kE', '', None]
+    
+    return obs_value == param_value
+
+
+def _group_by_parameter(observations, param_name, all_params, prefix):
+    """Group observations by a single parameter and return counts."""
+    from collections import defaultdict
+    
+    groups = defaultdict(int)
+    
+    # Check if timezone conversion is needed for ZZ parameter
+    timezone_key = f'{prefix}_timezone'
+    use_local = all_params.get(timezone_key) == 'local' and param_name == 'ZZ'
+    
+    # Check if we need observer data for SH calculation
+    observers = None
+    if param_name == 'SH':
+        observers = current_app.config.get('OBSERVERS', [])
+    
+    for obs in observations:
+        # Get parameter value from observation
+        # Special handling for TT (day) - observations are already filtered by month/year in _apply_param_range_filter
+        if param_name == 'TT':
+            # Just use the day value directly - filtering by month/year already done
+            value = obs.TT
+        # Special handling for ZZ (time) - use ZS (hour) field
+        elif param_name == 'ZZ':
+            value = getattr(obs, 'ZS', None)
+            
+            # Apply timezone conversion if needed
+            if value is not None and use_local:
+                region_code = obs.GG if hasattr(obs, 'GG') else 0
+                offset = _get_timezone_offset(region_code)
+                value = (value + offset) % 24
+        elif param_name == 'SH':
+            # Solar altitude - must be calculated (only for sun observations at known locations)
+            if obs.O != 1 or obs.g == 1:
+                value = None
+            else:
+                sh_type = all_params.get('sh_type', 'mean')
+                value = _calculate_observation_solar_altitude(obs, observers, sh_type)
+        elif param_name == 'C':
+            # Cirrus type with split option
+            value = getattr(obs, 'C', None)
+            split_key = f'{prefix}_c_split'
+            if value is not None and all_params.get(split_key):
+                # When split is enabled, expand C4/C5/C6/C7 into components
+                c_value = int(value) if isinstance(value, (int, str)) else value
+                if c_value == 4:  # C4 (Ci + Cc) → count as both C1 and C2
+                    groups['1'] += 1
+                    groups['2'] += 1
+                    value = None  # Don't count again below
+                elif c_value == 5:  # C5 (Ci + Cs) → count as both C1 and C3
+                    groups['1'] += 1
+                    groups['3'] += 1
+                    value = None  # Don't count again below
+                elif c_value == 6:  # C6 (Cc + Cs) → count as both C2 and C3
+                    groups['2'] += 1
+                    groups['3'] += 1
+                    value = None  # Don't count again below
+                elif c_value == 7:  # C7 (Ci + Cc + Cs) → count as C1, C2, and C3
+                    groups['1'] += 1
+                    groups['2'] += 1
+                    groups['3'] += 1
+                    value = None  # Don't count again below
+        elif param_name == 'EE':
+            # Halo type with split option
+            value = getattr(obs, 'EE', None)
+            split_key = f'{prefix}_ee_split'
+            if value is not None and all_params.get(split_key):
+                # When split is enabled, expand combined halo types into components
+                from halo.models.constants import COMBINED_TO_INDIVIDUAL_HALOS
+                ee_value = int(value) if isinstance(value, (int, str)) else value
+                if ee_value in COMBINED_TO_INDIVIDUAL_HALOS:
+                    left, right = COMBINED_TO_INDIVIDUAL_HALOS[ee_value]
+                    groups[str(left)] += 1
+                    groups[str(right)] += 1
+                    value = None  # Don't count again below
+        else:
+            value = getattr(obs, param_name, None)
+        
+        # Convert 2-digit years to 4-digit years for JJ parameter
+        if param_name == 'JJ' and value is not None:
+            year = int(value) if isinstance(value, (int, str)) else value
+            # Year < 50 = 20xx, Year >= 50 = 19xx (as per HALO key standard)
+            if year < 50:
+                value = 2000 + year
+            elif year < 100:
+                value = 1900 + year
+            # else: already 4-digit year
+        
+        # Use unformatted key for grouping to avoid duplicates
+        if value is None:
+            if param_name in ['C', 'EE']:
+                # For C and EE parameters with split, we already added the component values above
+                pass
+            else:
+                group_key = 'keine Angabe'  # "not observed"
+                groups[group_key] += 1
+        else:
+            group_key = str(value)  # Keep numeric/raw value for grouping
+            groups[group_key] += 1
+    
+    # Generate all values in the range if range is specified
+    result = dict(groups)
+    
+    # Get range from parameters
+    from_key = f'{prefix}_from'
+    to_key = f'{prefix}_to'
+    
+    if from_key in all_params and to_key in all_params:
+        from_val = all_params[from_key]
+        to_val = all_params[to_key]
+        
+        if from_val is not None and to_val is not None:
+            try:
+                from_val = int(from_val) if from_val else None
+                to_val = int(to_val) if to_val else None
+                
+                if from_val is not None and to_val is not None:
+                    # Generate all values in range (handling century boundary for JJ)
+                    range_values = []
+                    
+                    if param_name == 'TT':
+                        # Day parameter - generate ALL days in the month (1 to max_day)
+                        # Get the number of days in the specified month
+                        month_key = f'{prefix}_month'
+                        year_key = f'{prefix}_year'
+                        month = all_params.get(month_key)
+                        year = all_params.get(year_key)
+                        
+                        if month is not None and year is not None:
+                            try:
+                                import calendar
+                                month = int(month)
+                                year = int(year)
+                                # Convert 2-digit year to 4-digit for calendar
+                                if year < 50:
+                                    year = 2000 + year
+                                elif year < 100:
+                                    year = 1900 + year
+                                
+                                # Get max days in this month
+                                max_day = calendar.monthrange(year, month)[1]
+                                
+                                # Generate all days in month (1 to max_day)
+                                range_values = list(range(1, max_day + 1))
+                            except (ValueError, TypeError):
+                                # Fallback to 1-31
+                                range_values = list(range(1, 32))
+                        else:
+                            # No month/year context, generate 1-31
+                            range_values = list(range(1, 32))
+                    elif param_name == 'JJ':
+                        # Year - convert 2-digit to 4-digit, then handle range
+                        # Year < 50 = 20xx, Year >= 50 = 19xx
+                        from_year = from_val
+                        to_year = to_val
+                        
+                        if from_year < 50:
+                            from_year = 2000 + from_year
+                        elif from_year < 100:
+                            from_year = 1900 + from_year
+                            
+                        if to_year < 50:
+                            to_year = 2000 + to_year
+                        elif to_year < 100:
+                            to_year = 1900 + to_year
+                        
+                        # Now generate range with 4-digit years
+                        if from_year > to_year:
+                            # Century boundary case: 1990-2010 for example
+                            range_values = list(range(from_year, 2050)) + list(range(1950, to_year + 1))
+                        else:
+                            # Normal case
+                            range_values = list(range(from_year, to_year + 1))
+                    else:
+                        # Regular numeric range
+                        range_values = list(range(from_val, to_val + 1))
+                    
+                    # Add missing values with count 0
+                    for val in range_values:
+                        str_val = str(val)
+                        if str_val not in result:
+                            result[str_val] = 0
+            except (ValueError, TypeError):
+                pass
+    
+    # Sort keys intelligently (before formatting)
+    if param_name in ['MM', 'JJ', 'TT', 'ZZ', 'SH']:
+        # Numeric sort for dates/times and solar altitude
+        def numeric_sort_key(item):
+            key = item[0]
+            if key == 'keine Angabe':
+                return (0, float('-inf'))  # Sort to beginning
+            try:
+                return (1, float(key))  # Sort numerically
+            except (ValueError, TypeError):
+                return (2, key)  # Non-numeric at end
+        
+        result = dict(sorted(result.items(), key=numeric_sort_key))
+    
+    # Remove combined types when split is enabled (they will have 0 counts)
+    if param_name == 'C' and all_params.get(f'{prefix}_c_split'):
+        # Remove C4, C5, C6, C7 (combined cirrus types)
+        for combined_c in ['4', '5', '6', '7']:
+            result.pop(combined_c, None)
+    elif param_name == 'EE' and all_params.get(f'{prefix}_ee_split'):
+        # Remove combined halo types
+        from halo.models.constants import COMBINED_TO_INDIVIDUAL_HALOS
+        for combined_ee in COMBINED_TO_INDIVIDUAL_HALOS.keys():
+            result.pop(str(combined_ee), None)
+    
+    # Format values for display - return as ordered list to preserve sort order in JSON
+    formatted_result = [
+        {"key": key, "count": count}
+        for key, count in result.items()
+    ]
+    
+    return formatted_result
+
+
+def _group_by_two_parameters(observations, param1_name, param2_name, all_params):
+    """Group observations by two parameters and return cross-tabulation."""
+    from collections import defaultdict
+    
+    # Create nested structure for cross-tab
+    groups = defaultdict(lambda: defaultdict(int))
+    
+    # Check if we need observer data for SH calculation
+    observers = None
+    if param1_name == 'SH' or param2_name == 'SH':
+        observers = current_app.config.get('OBSERVERS', [])
+    
+    for obs in observations:
+        # Get values for both parameters
+        # Special handling for ZZ (time) - use ZS (hour) field
+        if param1_name == 'ZZ':
+            val1 = getattr(obs, 'ZS', None)
+        elif param1_name == 'SH':
+            if obs.O != 1 or obs.g == 1:
+                val1 = None
+            else:
+                sh_type = all_params.get('sh_type', 'mean')
+                val1 = _calculate_observation_solar_altitude(obs, observers, sh_type)
+        else:
+            val1 = getattr(obs, param1_name, None)
+        
+        if param2_name == 'ZZ':
+            val2 = getattr(obs, 'ZS', None)
+        elif param2_name == 'SH':
+            if obs.O != 1 or obs.g == 1:
+                val2 = None
+            else:
+                sh_type = all_params.get('sh_type', 'mean')
+                val2 = _calculate_observation_solar_altitude(obs, observers, sh_type)
+        else:
+            val2 = getattr(obs, param2_name, None)
+        
+        # Apply timezone conversion for time parameters if needed
+        if param1_name == 'ZZ' and val1 is not None:
+            use_local = all_params.get('param1_timezone') == 'local'
+            if use_local:
+                region_code = getattr(obs, 'GG', None)
+                offset = _get_timezone_offset(region_code)
+                val1 = (val1 + offset) % 24
+        
+        if param2_name == 'ZZ' and val2 is not None:
+            use_local = all_params.get('param2_timezone') == 'local'
+            if use_local:
+                region_code = getattr(obs, 'GG', None)
+                offset = _get_timezone_offset(region_code)
+                val2 = (val2 + offset) % 24
+        
+        # Handle C (cirrus) splitting for param1
+        if param1_name == 'C' and val1 is not None and all_params.get('param1_c_split'):
+            c_value = int(val1) if isinstance(val1, (int, str)) else val1
+            if c_value == 4:  # C4 (Ci + Cc) → count as both C1 and C2
+                val1_list = ['1', '2']
+            elif c_value == 5:  # C5 (Ci + Cs) → count as both C1 and C3
+                val1_list = ['1', '3']
+            elif c_value == 6:  # C6 (Cc + Cs) → count as both C2 and C3
+                val1_list = ['2', '3']
+            elif c_value == 7:  # C7 (Ci + Cc + Cs) → count as C1, C2, and C3
+                val1_list = ['1', '2', '3']
+            else:
+                val1_list = [str(c_value)]
+        # Handle EE (halo) splitting for param1
+        elif param1_name == 'EE' and val1 is not None and all_params.get('param1_ee_split'):
+            from halo.models.constants import COMBINED_TO_INDIVIDUAL_HALOS
+            ee_value = int(val1) if isinstance(val1, (int, str)) else val1
+            if ee_value in COMBINED_TO_INDIVIDUAL_HALOS:
+                left, right = COMBINED_TO_INDIVIDUAL_HALOS[ee_value]
+                val1_list = [str(left), str(right)]
+            else:
+                val1_list = [str(ee_value)]
+        else:
+            val1_list = [str(val1) if val1 is not None else 'keine Angabe']
+        
+        # Handle C (cirrus) splitting for param2
+        if param2_name == 'C' and val2 is not None and all_params.get('param2_c_split'):
+            c_value = int(val2) if isinstance(val2, (int, str)) else val2
+            if c_value == 4:  # C4 (Ci + Cc) → count as both C1 and C2
+                val2_list = ['1', '2']
+            elif c_value == 5:  # C5 (Ci + Cs) → count as both C1 and C3
+                val2_list = ['1', '3']
+            elif c_value == 6:  # C6 (Cc + Cs) → count as both C2 and C3
+                val2_list = ['2', '3']
+            elif c_value == 7:  # C7 (Ci + Cc + Cs) → count as C1, C2, and C3
+                val2_list = ['1', '2', '3']
+            else:
+                val2_list = [str(c_value)]
+        # Handle EE (halo) splitting for param2
+        elif param2_name == 'EE' and val2 is not None and all_params.get('param2_ee_split'):
+            from halo.models.constants import COMBINED_TO_INDIVIDUAL_HALOS
+            ee_value = int(val2) if isinstance(val2, (int, str)) else val2
+            if ee_value in COMBINED_TO_INDIVIDUAL_HALOS:
+                left, right = COMBINED_TO_INDIVIDUAL_HALOS[ee_value]
+                val2_list = [str(left), str(right)]
+            else:
+                val2_list = [str(ee_value)]
+        else:
+            val2_list = [str(val2) if val2 is not None else 'keine Angabe']
+        
+        # Count all combinations
+        for v1 in val1_list:
+            for v2 in val2_list:
+                groups[v1][v2] += 1
+    
+    # Convert to dict of dicts
+    result = {}
+    for k, v in groups.items():
+        result[k] = dict(v)
+    
+    # Generate all values for param1 range
+    param1_from_key = 'param1_from'
+    param1_to_key = 'param1_to'
+    param1_range_values = []
+    
+    if param1_from_key in all_params and param1_to_key in all_params:
+        from_val = all_params[param1_from_key]
+        to_val = all_params[param1_to_key]
+        
+        if from_val is not None and to_val is not None:
+            try:
+                from_val = int(from_val) if from_val else None
+                to_val = int(to_val) if to_val else None
+                
+                if from_val is not None and to_val is not None:
+                    if param1_name == 'JJ':
+                        # Year - handle century boundary
+                        if from_val > to_val:
+                            param1_range_values = list(range(from_val, 100)) + list(range(0, to_val + 1))
+                        else:
+                            param1_range_values = list(range(from_val, to_val + 1))
+                    else:
+                        param1_range_values = list(range(from_val, to_val + 1))
+            except (ValueError, TypeError):
+                pass
+    
+    # Generate all values for param2 range
+    param2_from_key = 'param2_from'
+    param2_to_key = 'param2_to'
+    param2_range_values = []
+    
+    if param2_from_key in all_params and param2_to_key in all_params:
+        from_val = all_params[param2_from_key]
+        to_val = all_params[param2_to_key]
+        
+        if from_val is not None and to_val is not None:
+            try:
+                from_val = int(from_val) if from_val else None
+                to_val = int(to_val) if to_val else None
+                
+                if from_val is not None and to_val is not None:
+                    if param2_name == 'JJ':
+                        # Year - handle century boundary
+                        if from_val > to_val:
+                            param2_range_values = list(range(from_val, 100)) + list(range(0, to_val + 1))
+                        else:
+                            param2_range_values = list(range(from_val, to_val + 1))
+                    else:
+                        param2_range_values = list(range(from_val, to_val + 1))
+            except (ValueError, TypeError):
+                pass
+    
+    # Fill in missing rows and columns
+    if param1_range_values:
+        for val in param1_range_values:
+            str_val = str(val)
+            if str_val not in result:
+                result[str_val] = {}
+    
+    if param2_range_values:
+        for param1_val in result:
+            for val in param2_range_values:
+                str_val = str(val)
+                if str_val not in result[param1_val]:
+                    result[param1_val][str_val] = 0
+    
+    # Remove combined types when split is enabled (they will have 0 counts)
+    # For param1
+    if param1_name == 'C' and all_params.get('param1_c_split'):
+        for combined_c in ['4', '5', '6', '7']:
+            result.pop(combined_c, None)
+    elif param1_name == 'EE' and all_params.get('param1_ee_split'):
+        from halo.models.constants import COMBINED_TO_INDIVIDUAL_HALOS
+        for combined_ee in COMBINED_TO_INDIVIDUAL_HALOS.keys():
+            result.pop(str(combined_ee), None)
+    
+    # For param2
+    if param2_name == 'C' and all_params.get('param2_c_split'):
+        combined_c_list = ['4', '5', '6', '7']
+        for param1_val in result:
+            for combined_c in combined_c_list:
+                result[param1_val].pop(combined_c, None)
+    elif param2_name == 'EE' and all_params.get('param2_ee_split'):
+        from halo.models.constants import COMBINED_TO_INDIVIDUAL_HALOS
+        combined_ee_list = [str(k) for k in COMBINED_TO_INDIVIDUAL_HALOS.keys()]
+        for param1_val in result:
+            for combined_ee in combined_ee_list:
+                result[param1_val].pop(combined_ee, None)
+    
+    return result
+
+
+def _format_parameter_value(value, param_name, all_params, prefix):
+    """Format a parameter value for display."""
+    from flask import current_app
+    
+    if value is None:
+        return 'keine Angabe'
+    
+    # For KK (observer), format as "KK - Firstname Lastname"
+    if param_name == 'KK':
+        try:
+            kk = int(value) if isinstance(value, (int, float, str)) else None
+            if kk is not None:
+                # Get observers from app config
+                observers = current_app.config.get('OBSERVERS', [])
+                # Find observer with matching KK (observers are tuples with KK at index 0)
+                observer = next((obs for obs in observers if obs[0] == str(kk).zfill(2)), None)
+                if observer:
+                    # observer tuple: (KK, VName, NName, seit, aktiv, HbOrt, ...)
+                    vname = observer[1] if len(observer) > 1 else ''
+                    nname = observer[2] if len(observer) > 2 else ''
+                    return f"{str(kk).zfill(2)} - {vname} {nname}".strip()
+                # Fallback if observer not found
+                return str(kk).zfill(2)
+        except (ValueError, IndexError):
+            pass
+    
+    # For year (JJ), convert 2-digit to 4-digit for display
+    if param_name == 'JJ':
+        year = int(value)
+        if year < 50:
+            return str(2000 + year)
+        else:
+            return str(1900 + year)
+    
+    # For SH (solar altitude), just return numeric string (no degree symbol)
+    if param_name == 'SH':
+        try:
+            altitude = int(value)
+            return str(altitude)
+        except (ValueError, TypeError):
+            return str(value)
+    
+    # For EE with split option, remove asterisk
+    if param_name == 'EE':
+        split_key = f'{prefix}_ee_split'
+        if not all_params.get(split_key) and isinstance(value, str):
+            return value.rstrip('*')
+    
+    # For C with split option, remove plus sign
+    if param_name == 'C':
+        split_key = f'{prefix}_c_split'
+        if not all_params.get(split_key) and isinstance(value, str):
+            return value.rstrip('+')
+    
+    return value
+

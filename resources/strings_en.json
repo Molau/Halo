@@ -13,6 +13,7 @@
     "ok": "OK",
     "close": "Close",
     "print": "Print",
+    "save": "Save",
     "chart": "Chart"
   },
   "welcome": {
@@ -157,7 +158,12 @@
         "author": "Sirko Molau",
         "description": "Software package for the input, statistical analysis and output of halo observations",
         "section": "Sektion Halobeobachtung (SHB)",
-        "workgroup": "Arbeitskreis Meteore (AKM)"
+          "workgroup": "Arbeitskreis Meteore (AKM)",
+          "contact_name": "Sirko Molau",
+          "contact_address_line1": "Abenstastr. 13b",
+          "contact_address_line2": "D-84072 Seysdorf",
+          "contact_country": "Germany",
+          "contact_email": "sirko@molau.de"
       }
     },
     "exit": {
@@ -183,6 +189,7 @@
     "modify_type_question": "What would you like to modify?",
     "modify_single": "Individual Observations",
     "modify_groups": "Observation Groups",
+    "group_modify_info": "Only filled fields will be changed for all filtered observations.",
     "input_pattern": "KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sectors         Remarks",
     "error_loading_observers": "Error loading observer list",
     "input_incomplete": "Input incomplete or invalid.",
@@ -252,6 +259,19 @@
       "HO_HU": "Pillar height",
       "SE": "Segments"
     }
+  },
+  "analysis_results": {
+    "title": "Analysis",
+    "restriction": "Restriction",
+    "restrictions": "Restrictions",
+    "count": "Count",
+    "observations": "Observations",
+    "observation_s": "Observation(s)",
+    "observation_abbr": "Obs.",
+    "total": "Total",
+    "title_one_param": "Analysis with one parameter",
+    "title_two_params": "Analysis with two parameters",
+    "and": "and"
   },
   "output": {
     "monthly_report": "Monthly Report",
@@ -403,7 +423,8 @@
     "no_data": {
       "title": "No Data",
       "message": "No data loaded! Please load a file first."
-    }
+    },
+    "analysis_title": "Analysis"
   },
   "menu_titles": {
     "file": "File",
@@ -890,7 +911,8 @@
     "select": "Select",
     "not_specified": "not specified",
     "max_15_chars": "max 15 chars",
-    "max_60_chars": "max 60 chars"
+    "max_60_chars": "max 60 chars",
+    "not_applicable": "not applicable"
   },
   "ui": {
     "filter_dialog": {
@@ -925,6 +947,7 @@
     "messages": {
       "loading": "Loading data...",
       "loading_short": "Loading data...",
+      "error_loading": "Error loading data",
       "no_observations": "No observations found",
       "observations": "Observations",
       "row": "Row",

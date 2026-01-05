@@ -33,8 +33,7 @@
     "cancel": "Abbrechen",
     "ok": "OK",
     "close": "Schließen",
-    "print": "Drucken",
-    "chart": "Grafik"
+    "print": "Drucken",    "save": "Speichern",    "chart": "Grafik"
   },
   "welcome": {
     "title": "Willkommen beim HALO Auswerteprogramm",
@@ -180,7 +179,12 @@
         "author": "Sirko Molau",
         "description": "Programmpaket zur Erfassung und Auswertung von Halobeobachtungen",
         "section": "Sektion Halobeobachtung (SHB)",
-        "workgroup": "Arbeitskreis Meteore (AKM)"
+          "workgroup": "Arbeitskreis Meteore (AKM)",
+          "contact_name": "Sirko Molau",
+          "contact_address_line1": "Abenstastr. 13b",
+          "contact_address_line2": "D-84072 Seysdorf",
+          "contact_country": "Germany",
+          "contact_email": "sirko@molau.de"
       }
     },
     "exit": {
@@ -243,6 +247,7 @@
     "modify_type_question": "Was möchten Sie ändern?",
     "modify_single": "Einzelbeobachtungen",
     "modify_groups": "Beobachtungsgruppen",
+    "group_modify_info": "Nur die ausgefüllten Felder werden bei allen gefilterten Beobachtungen geändert.",
     "input_pattern": "KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren        Bemerkungen",
     "error_loading_observers": "Fehler beim Laden der Beobachterliste",
     "input_incomplete": "Eingabe unvollständig oder ungültig.",
@@ -408,7 +413,8 @@
     "no_data": {
       "title": "Keine Daten",
       "message": "Keine Daten geladen! Bitte laden Sie zuerst eine Datei."
-    }
+    },
+    "analysis_title": "Auswertung"
   },
   "menu_titles": {
     "file": "Datei",
@@ -860,7 +866,21 @@
     "select": "Auswählen",
     "not_specified": "keine Angabe",
     "max_15_chars": "max 15 Zeichen",
-    "max_60_chars": "max 60 Zeichen"
+    "max_60_chars": "max 60 Zeichen",
+    "not_applicable": "nicht zutreffend"
+  },
+  "analysis_results": {
+    "title": "Auswertung",
+    "restriction": "Filter",
+    "restrictions": "Filter",
+    "count": "Anzahl",
+    "observations": "Beobachtungen",
+    "observation_s": "Beobachtung(en)",
+    "observation_abbr": "Beob.",
+    "total": "Summe",
+    "title_one_param": "Auswertung mit einem Parameter",
+    "title_two_params": "Auswertung mit zwei Parametern",
+    "and": "und"
   },
   "ui": {
     "filter_dialog": {
@@ -895,6 +915,7 @@
     "messages": {
       "loading": "Daten werden geladen...",
       "loading_short": "Lade Daten...",
+      "error_loading": "Fehler beim Laden der Daten",
       "no_observations": "Keine Beobachtungen gefunden",
       "observations": "Beobachtungen",
       "row": "Zeile",

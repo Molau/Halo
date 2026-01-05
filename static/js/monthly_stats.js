@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         // No data loaded - show same warning as monthly_report
-        const msg = i18n.dialogs?.no_data?.message || i18n.observations?.no_file_loaded || 'No observations loaded.';
+        const msg = i18n.dialogs.no_data.message;
         showWarningModal(msg);
         return false;
     }
@@ -162,7 +162,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const data = await response.json();
             
             if (!response.ok) {
-                showMonthYearError(data.error || 'Error fetching statistics');
+                showMonthYearError(data.error);
                 return;
             }
             
@@ -263,22 +263,22 @@ document.addEventListener('DOMContentLoaded', async function() {
         let html = '';
         
         // Table header
-        html += '╔' + '═'.repeat(86) + '╗\n';
-        const headerText = `${i18n.monthly_stats?.observer_overview} ${monthName} ${year}`;
-        const headerPadding = Math.max(0, Math.floor((86 - headerText.length) / 2));
-        html += '║' + ' '.repeat(headerPadding) + headerText + ' '.repeat(86 - headerPadding - headerText.length) + '║\n';
-        html += '╠════╦══════════╦══════════╦══════════╦══════════╦══════════╦════════════╦═════════════╣\n';
-        html += '║KKGG║ 1   3   5║   7   9  ║11  13  15║  17  19  ║21  23  25║  27  29  31║ 1) 2) 3) 4) ║\n';
-        html += '║    ║   2   4  ║ 6   8  10║  12  14  ║16  18  20║  22  24  ║26  28  30  ║             ║\n';
-        html += '╠════╬══════════╬══════════╬══════════╬══════════╬══════════╬════════════╬═════════════╣\n';
+        html += '╔' + '═'.repeat(106) + '╗\n';
+        const headerText = `${i18n.monthly_stats.observer_overview} ${monthName} ${year}`;
+        const headerPadding = Math.max(0, Math.floor((106 - headerText.length) / 2));
+        html += '║' + ' '.repeat(headerPadding) + headerText + ' '.repeat(106 - headerPadding - headerText.length) + '║\n';
+        html += '╠══════════════════════════╦══════════╦══════════╦══════════╦══════════╦══════════╦════════════╦═════════════╣\n';
+        html += '║KK Name                   ║ 1   3   5║   7   9  ║11  13  15║  17  19  ║21  23  25║  27  29  31║ 1) 2) 3) 4) ║\n';
+        html += '║                          ║   2   4  ║ 6   8  10║  12  14  ║16  18  20║  22  24  ║26  28  30  ║             ║\n';
+        html += '╠══════════════════════════╬══════════╬══════════╬══════════╬══════════╬══════════╬════════════╬═════════════╣\n';
         
         // Data rows
         let rowCount = 0;
         for (const obs of observers) {
             const kk = obs.kk.toString().padStart(2, '0');
-            const gg = obs.region === 39 ? '//' : obs.region.toString().padStart(2, '0');
+            const name = `${obs.vname || ''} ${obs.nname || ''}`.trim();
             
-            html += '║' + kk + gg + '║';
+            html += '║' + kk + ' ' + name.padEnd(20).substring(0, 20) + '║';
             
             // Days 1-31 in groups of 5
             for (let day = 1; day <= 31; day++) {
@@ -311,14 +311,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             // Add separator every 5 rows (but not at the end)
             if (rowCount % 5 === 0 && rowCount < observers.length) {
-                html += '╠════╬══════════╬══════════╬══════════╬══════════╬══════════╬════════════╬═════════════╣\n';
+                html += '╠══════════════════════════╬══════════╬══════════╬══════════╬══════════╬══════════╬════════════╬═════════════╣\n';
             }
         }
         
         // Table footer
-        html += '╠════╩══════════╩══════════╩══════════╩══════════╩══════════╩═════════════╩════════════╣\n';
-        html += '║  1) = EE (Sonne)   2) = Tage (Sonne)   3) = Tage (Mond)   4) = Tage (gesamt)         ║\n';
-        html += '╚' + '═'.repeat(86) + '╝\n\n';
+        html += '╠══════════════════════════╩══════════╩══════════╩══════════╩══════════╩══════════╩════════════╩═════════════╣\n';
+        html += '║  1) = EE (Sonne)   2) = Tage (Sonne)   3) = Tage (Mond)   4) = Tage (gesamt)                   ║\n';
+        html += '╚' + '═'.repeat(106) + '╝\n\n';
         
         return html;
     }
@@ -406,7 +406,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!rareHalos || rareHalos.length === 0) {
             // No rare halos - show message
             html += '    ╠' + '═'.repeat(77) + '╣\n';
-            const noneText = (i18n.monthly_stats?.rare_halos_none || 'No occurrences above EE 12.').replace('{month}', monthName);
+            const noneText = (i18n.monthly_stats?.rare_halos_none).replace('{month}', monthName);
             const nonePadding = Math.max(0, Math.floor((77 - noneText.length) / 2));
             html += '    ║' + ' '.repeat(nonePadding) + noneText + ' '.repeat(77 - nonePadding - noneText.length) + '║\n';
             html += '    ╚' + '═'.repeat(77) + '╝\n\n';
@@ -706,7 +706,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 labels: days,
                 datasets: [
                     {
-                        label: i18n.monthly_stats?.activity_real || 'real',
+                        label: i18n.monthly_stats?.activity_real,
                         data: realData,
                         borderColor: '#dc3545',  // Red
                         backgroundColor: 'rgba(220, 53, 69, 0.1)',
@@ -718,7 +718,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         pointBackgroundColor: '#dc3545'
                     },
                     {
-                        label: i18n.monthly_stats?.activity_relative || 'rel.',
+                        label: i18n.monthly_stats?.activity_relative,
                         data: relativeData,
                         borderColor: '#28a745',  // Green
                         backgroundColor: 'rgba(40, 167, 69, 0.1)',
@@ -750,7 +750,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     x: {
                         title: {
                             display: true,
-                            text: i18n.monthly_stats?.x_axis || 'Datum',
+                            text: i18n.monthly_stats?.x_axis,
                             font: { size: 12, weight: 'bold' }
                         },
                         ticks: {
@@ -760,7 +760,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     y: {
                         title: {
                             display: true,
-                            text: i18n.monthly_stats?.y_axis || 'Aktivität',
+                            text: i18n.monthly_stats?.y_axis,
                             font: { size: 12, weight: 'bold' }
                         },
                         beginAtZero: true

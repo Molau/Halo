@@ -110,13 +110,13 @@ class ObservationForm {
         if (this.customTitle) {
             title = this.customTitle;
         } else if (this.mode === 'edit') {
-            title = this.i18n?.menus?.observations?.modify_observation || 'Beobachtung verändern';
+            title = this.i18n?.menus?.observations?.modify_observation;
         } else if (this.mode === 'delete') {
-            title = this.i18n?.menus?.observations?.delete_question || 'Beobachtung löschen';
+            title = this.i18n?.menus?.observations?.delete_question;
         } else if (this.mode === 'view') {
-            title = this.i18n?.menus?.observations?.display || 'Beobachtung anzeigen';
+            title = this.i18n?.menus?.observations?.display;
         } else {
-            title = this.i18n?.menus?.observations?.add_observation || 'Beobachtung hinzufügen';
+            title = this.i18n?.menus?.observations?.add_observation;
         }
         
         const titleWithCounter = (this.mode === 'edit' || this.mode === 'delete' || this.mode === 'view') && this.currentNum && this.totalNum
@@ -151,14 +151,14 @@ class ObservationForm {
                             <div class="alert alert-danger mt-2" id="obs-form-error" style="display:none;"></div>
                         </div>
                         <div class="modal-footer py-1">
-                            ${this.mode === 'view' ? `<button type="button" class="btn btn-secondary btn-sm" id="btn-obs-form-prev" ${this.currentNum === 1 ? 'disabled' : ''}>${this.i18n?.common?.previous || 'Zurück'}</button>` : ''}
-                            ${this.mode === 'view' ? `<button type="button" class="btn btn-secondary btn-sm" id="btn-obs-form-next" ${this.currentNum === this.totalNum ? 'disabled' : ''}>${this.i18n?.common?.next || 'Weiter'}</button>` : ''}
-                            ${this.mode === 'view' ? `<button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal">${this.i18n?.common?.ok || 'OK'}</button>` : ''}
-                            ${this.mode !== 'view' ? `<button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${this.i18n?.common?.cancel || 'Abbrechen'}</button>` : ''}
-                            ${(this.mode === 'edit' || this.mode === 'delete') ? `<button type="button" class="btn btn-outline-primary btn-sm" id="btn-obs-form-no">${this.i18n?.observers?.no || 'Nein'}</button>` : ''}
-                            ${(this.mode === 'edit' || this.mode === 'delete') ? `<button type="button" class="btn btn-primary btn-sm" id="btn-obs-form-yes">${this.i18n?.observers?.yes || 'Ja'}</button>` : ''}
-                            ${this.mode === 'add' ? `<button type="button" class="btn btn-primary btn-sm" id="btn-obs-form-ok" disabled>${this.i18n?.common?.ok || 'OK'}</button>` : ''}
-                            ${(this.mode === 'edit' || this.mode === 'delete') ? `<button type="button" class="btn btn-primary btn-sm" id="btn-obs-form-ok" style="display:none;">${this.i18n?.common?.ok || 'OK'}</button>` : ''}
+                            ${this.mode === 'view' ? `<button type="button" class="btn btn-secondary btn-sm" id="btn-obs-form-prev" ${this.currentNum === 1 ? 'disabled' : ''}>${this.i18n?.common?.previous}</button>` : ''}
+                            ${this.mode === 'view' ? `<button type="button" class="btn btn-secondary btn-sm" id="btn-obs-form-next" ${this.currentNum === this.totalNum ? 'disabled' : ''}>${this.i18n?.common?.next}</button>` : ''}
+                            ${this.mode === 'view' ? `<button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal">${this.i18n?.common?.ok}</button>` : ''}
+                            ${this.mode !== 'view' ? `<button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${this.i18n?.common?.cancel}</button>` : ''}
+                            ${(this.mode === 'edit' || this.mode === 'delete') ? `<button type="button" class="btn btn-outline-primary btn-sm" id="btn-obs-form-no">${this.i18n?.observers?.no}</button>` : ''}
+                            ${(this.mode === 'edit' || this.mode === 'delete') ? `<button type="button" class="btn btn-primary btn-sm" id="btn-obs-form-yes">${this.i18n?.observers?.yes}</button>` : ''}
+                            ${this.mode === 'add' ? `<button type="button" class="btn btn-primary btn-sm" id="btn-obs-form-ok" disabled>${this.i18n?.common?.ok}</button>` : ''}
+                            ${(this.mode === 'edit' || this.mode === 'delete') ? `<button type="button" class="btn btn-primary btn-sm" id="btn-obs-form-ok" style="display:none;">${this.i18n?.common?.ok}</button>` : ''}
                         </div>
                     </div>
                 </div>
@@ -171,94 +171,93 @@ class ObservationForm {
     buildFormFields(observerOptions, yearOptions) {
         return `
             <div class="col-md-6">
-                <label class="form-label">KK - ${this.i18n?.fields?.observer || 'Beobachter'} <span class="text-danger">*</span></label>
+                <label class="form-label">KK - ${this.i18n?.fields?.observer} <span class="text-danger">*</span></label>
                 <select class="form-select form-select-sm" id="form-kk" required>
-                    <option value="">-- ${this.i18n?.fields?.select || 'Auswählen'} --</option>
+                    <option value="">-- ${this.i18n?.fields?.select} --</option>
                     ${observerOptions}
                 </select>
             </div>
             <div class="col-md-6">
-                <label class="form-label">O - ${this.i18n?.fields?.object || 'Objekt'} <span class="text-danger">*</span></label>
+                <label class="form-label">O - ${this.i18n?.fields?.object} <span class="text-danger">*</span></label>
                 <select class="form-select form-select-sm" id="form-o" required>
-                    <option value="">-- ${this.i18n?.fields?.select || 'Auswählen'} --</option>
-                    <option value="1">1 - ${this.i18n?.object_types?.['1'] || 'Sonnenhalo'}</option>
-                    <option value="2">2 - ${this.i18n?.object_types?.['2'] || 'Mondhalo'}</option>
-                    <option value="3">3 - ${this.i18n?.object_types?.['3'] || 'Planetenhalo'}</option>
-                    <option value="4">4 - ${this.i18n?.object_types?.['4'] || 'Sternhalo'}</option>
-                    <option value="5">5 - ${this.i18n?.object_types?.['5'] || 'Halo um irdische Lichtquelle'}</option>
+                    <option value="">-- ${this.i18n?.fields?.select} --</option>
+                    <option value="1">1 - ${this.i18n?.object_types?.['1']}</option>
+                    <option value="2">2 - ${this.i18n?.object_types?.['2']}</option>
+                    <option value="3">3 - ${this.i18n?.object_types?.['3']}</option>
+                    <option value="4">4 - ${this.i18n?.object_types?.['4']}</option>
+                    <option value="5">5 - ${this.i18n?.object_types?.['5']}</option>
                 </select>
             </div>
             <div class="col-md-4">
-                <label class="form-label">JJ - ${this.i18n?.fields?.year || 'Jahr'} <span class="text-danger">*</span></label>
+                <label class="form-label">JJ - ${this.i18n?.fields?.year} <span class="text-danger">*</span></label>
                 <select class="form-select form-select-sm" id="form-jj" required>
-                    <option value="">-- ${this.i18n?.fields?.select || 'Auswählen'} --</option>
+                    <option value="">-- ${this.i18n?.fields?.select} --</option>
                     ${yearOptions}
                 </select>
             </div>
             <div class="col-md-4">
-                <label class="form-label">MM - ${this.i18n?.fields?.month || 'Monat'} <span class="text-danger">*</span></label>
+                <label class="form-label">MM - ${this.i18n?.fields?.month} <span class="text-danger">*</span></label>
                 <select class="form-select form-select-sm" id="form-mm" required>
-                    <option value="">-- ${this.i18n?.fields?.select || 'Auswählen'} --</option>
+                    <option value="">-- ${this.i18n?.fields?.select} --</option>
                     ${Array.from({length: 12}, (_, i) => {
                         const monthNum = i + 1;
-                        const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
-                        const monthName = monthNames[i] || '';
+                        const monthName = this.i18n.months[monthNum];
                         return `<option value="${monthNum}">${String(monthNum).padStart(2, '0')} - ${monthName}</option>`;
                     }).join('')}
                 </select>
             </div>
             <div class="col-md-4">
-                <label class="form-label">TT - ${this.i18n?.fields?.day || 'Tag'} <span class="text-danger">*</span></label>
+                <label class="form-label">TT - ${this.i18n?.fields?.day} <span class="text-danger">*</span></label>
                 <select class="form-select form-select-sm" id="form-tt" required>
-                    <option value="">-- ${this.i18n?.fields?.select || 'Auswählen'} --</option>
+                    <option value="">-- ${this.i18n?.fields?.select} --</option>
                     ${Array.from({length: 31}, (_, i) => `<option value="${i+1}">${String(i+1).padStart(2, '0')}</option>`).join('')}
                 </select>
             </div>
             <div class="col-md-4">
-                <label class="form-label">g - ${this.i18n?.fields?.observing_area || 'Beobachtungsort'} <span class="text-danger">*</span></label>
+                <label class="form-label">g - ${this.i18n?.fields?.observing_area } <span class="text-danger">*</span></label>
                 <select class="form-select form-select-sm" id="form-g" required>
-                    <option value="">-- ${this.i18n?.fields?.select || 'Auswählen'} --</option>
-                    <option value="0">0 - ${this.i18n?.location_types?.['0'] || 'Hauptbeobachtungsort'}</option>
-                    <option value="1">1 - ${this.i18n?.location_types?.['1'] || 'Anderer Ort'}</option>
-                    <option value="2">2 - ${this.i18n?.location_types?.['2'] || 'Nebenbeobachtungsort'}</option>
+                    <option value="">-- ${this.i18n?.fields?.select } --</option>
+                    <option value="0">0 - ${this.i18n?.location_types?.['0']}</option>
+                    <option value="1">1 - ${this.i18n?.location_types?.['1']}</option>
+                    <option value="2">2 - ${this.i18n?.location_types?.['2']}</option>
                 </select>
             </div>
             <div class="col-md-2">
-                <label class="form-label">ZS - ${this.i18n?.fields?.hour || 'Stunde'}</label>
+                <label class="form-label">ZS - ${this.i18n?.fields?.hour}</label>
                 <select class="form-select form-select-sm" id="form-zs">
                     <option value="">--</option>
                     ${Array.from({length: 24}, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')}</option>`).join('')}
                 </select>
             </div>
             <div class="col-md-2">
-                <label class="form-label">ZM - ${this.i18n?.fields?.minute || 'Minute'}</label>
+                <label class="form-label">ZM - ${this.i18n?.fields?.minute}</label>
                 <select class="form-select form-select-sm" id="form-zm">
                     <option value="">--</option>
                     ${Array.from({length: 60}, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')}</option>`).join('')}
                 </select>
             </div>
             <div class="col-md-4">
-                <label class="form-label">d - ${this.i18n?.fields?.cirrus_density || 'Dichte'}</label>
+                <label class="form-label">d - ${this.i18n?.fields?.cirrus_density}</label>
                 <select class="form-select form-select-sm" id="form-d">
-                    <option value="-1">-- ${this.i18n?.fields?.not_specified || 'keine Angabe'} --</option>
-                    <option value="0">0 - ${this.i18n?.cirrus_density?.['0'] || 'dünner Cirrus'}</option>
-                    <option value="1">1 - ${this.i18n?.cirrus_density?.['1'] || 'normaler Cirrus'}</option>
-                    <option value="2">2 - ${this.i18n?.cirrus_density?.['2'] || 'dichter Cirrus'}</option>
-                    <option value="4">4 - ${this.i18n?.cirrus_density?.['4'] || 'Reif'}</option>
-                    <option value="5">5 - ${this.i18n?.cirrus_density?.['5'] || 'Schneedecke'}</option>
-                    <option value="6">6 - ${this.i18n?.cirrus_density?.['6'] || 'Eisnebel'}</option>
-                    <option value="7">7 - ${this.i18n?.cirrus_density?.['7'] || 'Fallstreifen'}</option>
+                    <option value="-1">-- ${this.i18n?.fields?.not_specified} --</option>
+                    <option value="0">0 - ${this.i18n?.cirrus_density?.['0']}</option>
+                    <option value="1">1 - ${this.i18n?.cirrus_density?.['1'] }</option>
+                    <option value="2">2 - ${this.i18n?.cirrus_density?.['2']}</option>
+                    <option value="4">4 - ${this.i18n?.cirrus_density?.['4']}</option>
+                    <option value="5">5 - ${this.i18n?.cirrus_density?.['5']}</option>
+                    <option value="6">6 - ${this.i18n?.cirrus_density?.['6']}</option>
+                    <option value="7">7 - ${this.i18n?.cirrus_density?.['7']}</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">DD - ${this.i18n?.fields?.duration || 'Dauer'}</label>
+                <label class="form-label">DD - ${this.i18n?.fields?.duration}</label>
                 <select class="form-select form-select-sm" id="form-dd">
                     <option value="-1">--</option>
                     ${Array.from({length: 100}, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')}</option>`).join('')}
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">N - ${this.i18n?.fields?.cloud_cover || 'Bedeckung'}</label>
+                <label class="form-label">N - ${this.i18n?.fields?.cloud_cover}</label>
                 <select class="form-select form-select-sm" id="form-n">
                     <option value="-1">--</option>
                     ${Array.from({length: 10}, (_, i) => {
@@ -268,7 +267,7 @@ class ObservationForm {
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">C - ${this.i18n?.fields?.cirrus_type || 'Cirrustyp'}</label>
+                <label class="form-label">C - ${this.i18n?.fields?.cirrus_type}</label>
                 <select class="form-select form-select-sm" id="form-C">
                     <option value="-1">--</option>
                     ${Array.from({length: 8}, (_, i) => {
@@ -278,7 +277,7 @@ class ObservationForm {
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">c - ${this.i18n?.fields?.low_clouds || 'tiefe Bewölkung'}</label>
+                <label class="form-label">c - ${this.i18n?.fields?.low_clouds}</label>
                 <select class="form-select form-select-sm" id="form-c">
                     <option value="-1">--</option>
                     ${Array.from({length: 10}, (_, i) => {
@@ -288,14 +287,14 @@ class ObservationForm {
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">EE - ${this.i18n?.fields?.phenomenon || 'Haloart'} <span class="text-danger">*</span></label>
+                <label class="form-label">EE - ${this.i18n?.fields?.phenomenon} <span class="text-danger">*</span></label>
                 <select class="form-select form-select-sm" id="form-ee" required>
-                    <option value="">-- ${this.i18n?.fields?.select || 'Auswählen'} --</option>
+                    <option value="">-- ${this.i18n?.fields?.select} --</option>
                     ${this.buildHaloTypeOptions()}
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">H - ${this.i18n?.fields?.brightness || 'Helligkeit'}</label>
+                <label class="form-label">H - ${this.i18n?.fields?.brightness}</label>
                 <select class="form-select form-select-sm" id="form-h">
                     <option value="-1">--</option>
                     ${Array.from({length: 4}, (_, i) => {
@@ -305,7 +304,7 @@ class ObservationForm {
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">F - ${this.i18n?.fields?.color || 'Farbe'}</label>
+                <label class="form-label">F - ${this.i18n?.fields?.color}</label>
                 <select class="form-select form-select-sm" id="form-F">
                     <option value="-1">--</option>
                     ${Array.from({length: 6}, (_, i) => {
@@ -315,15 +314,15 @@ class ObservationForm {
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">V - ${this.i18n?.fields?.completeness || 'Vollständigkeit'}</label>
+                <label class="form-label">V - ${this.i18n?.fields?.completeness}</label>
                 <select class="form-select form-select-sm" id="form-v">
                     <option value="-1">--</option>
-                    <option value="1">1 - ${this.i18n?.completeness?.['1'] || 'unvollständig'}</option>
-                    <option value="2">2 - ${this.i18n?.completeness?.['2'] || 'vollständig'}</option>
+                    <option value="1">1 - ${this.i18n?.completeness?.['1']}</option>
+                    <option value="2">2 - ${this.i18n?.completeness?.['2']}</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">f - ${this.i18n?.fields?.weather_front || 'Witterungsfront'}</label>
+                <label class="form-label">f - ${this.i18n?.fields?.weather_front}</label>
                 <select class="form-select form-select-sm" id="form-weather_front">
                     <option value="-1">--</option>
                     ${Array.from({length: 9}, (_, i) => {
@@ -333,7 +332,7 @@ class ObservationForm {
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">zz - ${this.i18n?.fields?.precipitation || 'Niederschlag'}</label>
+                <label class="form-label">zz - ${this.i18n?.fields?.precipitation}</label>
                 <select class="form-select form-select-sm" id="form-zz">
                     <option value="-1">--</option>
                     ${Array.from({length: 99}, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')}</option>`).join('')}
@@ -341,9 +340,9 @@ class ObservationForm {
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">GG - ${this.i18n?.fields?.region || 'Gebiet'} <span class="text-danger">*</span></label>
+                <label class="form-label">GG - ${this.i18n?.fields?.region} <span class="text-danger">*</span></label>
                 <select class="form-select form-select-sm" id="form-gg" required>
-                    <option value="">-- ${this.i18n?.fields?.select || 'Auswählen'} --</option>
+                    <option value="">-- ${this.i18n?.fields?.select} --</option>
                     ${this.buildRegionOptions()}
                 </select>
             </div>
@@ -367,11 +366,11 @@ class ObservationForm {
                 </div>
             </div>
             <div class="col-12">
-                <label class="form-label">${this.i18n?.fields?.sectors || 'Sektoren'}</label>
+                <label class="form-label">${this.i18n?.fields?.sectors}</label>
                 <input type="text" class="form-control form-control-sm" id="form-sectors" maxlength="15">
             </div>
             <div class="col-12">
-                <label class="form-label">${this.i18n?.fields?.remarks || 'Bemerkungen'}</label>
+                <label class="form-label">${this.i18n?.fields?.remarks}</label>
                 <input type="text" class="form-control form-control-sm" id="form-remarks" maxlength="60">
             </div>
         `;
@@ -380,17 +379,17 @@ class ObservationForm {
     buildHaloTypeOptions() {
         let html = '';
         for (let i = 1; i <= 77; i++) {
-            const label = this.i18n?.halo_types?.[i.toString()] || '';
+            const label = this.i18n.halo_types[i.toString()];
             html += `<option value="${i}">${String(i).padStart(2, '0')} - ${label}</option>`;
         }
-        html += `<option value="99">99 - ${this.i18n?.halo_types?.['99'] || 'unbekannt'}</option>`;
+        html += `<option value="99">99 - ${this.i18n.halo_types['99']}</option>`;
         return html;
     }
     
     buildRegionOptions() {
         const regions = [1,2,3,4,5,6,7,8,9,10,11,16,17,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39];
         return regions.map(gg => {
-            const label = this.i18n?.geographic_regions?.[gg.toString()] || '';
+            const label = this.i18n.geographic_regions[gg.toString()];
             return `<option value="${gg}">${String(gg).padStart(2, '0')} - ${label}</option>`;
         }).join('');
     }
@@ -551,7 +550,7 @@ class ObservationForm {
                     
                     if (okBtn) {
                         okBtn.style.display = 'block';
-                        okBtn.textContent = this.i18n?.common?.ok || 'OK';
+                        okBtn.textContent = this.i18n?.common?.ok;
                         okBtn.className = 'btn btn-primary btn-sm';
                         checkRequired();
                     }

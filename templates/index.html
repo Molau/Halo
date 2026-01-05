@@ -33,5 +33,16 @@
     <script src="{{ url_for('static', filename='js/filter-dialog.js') }}?v={{ static_version }}"></script>
     <script src="{{ url_for('static', filename='js/observation-form.js') }}?v={{ static_version }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}?v={{ static_version }}"></script>
+    
+    <script>
+        // Clear menu highlights on main page (with delay to ensure DOM is ready)
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                if (typeof clearMenuHighlights === 'function') {
+                    clearMenuHighlights();
+                }
+            }, 50);
+        });
+    </script>
 </body>
 </html>

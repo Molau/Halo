@@ -239,7 +239,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
                 console.error('API error:', errorData);
-                throw new Error(errorData.error || 'Failed to fetch report');
+                throw new Error(errorData.error);
             }
             
             const data = await response.json();
@@ -254,7 +254,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         } catch (error) {
             console.error('Error generating report:', error);
-            const errorMsg = error.message || i18n.ui?.messages?.error;
+            const errorMsg = i18n.ui.messages.error;
             alert(errorMsg);
         } finally {
             applySpinner.style.display = 'none';

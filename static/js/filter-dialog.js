@@ -38,10 +38,17 @@ class FilterDialog {
     
     async loadObserversData() {
         try {
+            console.log('Loading observers from /api/observers');
             const response = await fetch('/api/observers');
+            console.log('Observers API response status:', response.status);
             if (response.ok) {
                 const data = await response.json();
+                console.log('Observers API response data:', data);
                 this.observersData = data.observers || [];
+                console.log('Loaded', this.observersData.length, 'observers');
+                if (this.observersData.length > 0) {
+                    console.log('First observer:', this.observersData[0]);
+                }
             }
         } catch (error) {
             console.warn('Could not load observers:', error);
@@ -248,15 +255,22 @@ class FilterDialog {
         let observers = [];
         
         if (this.observersData && Array.isArray(this.observersData)) {
-            observers = this.observersData.map(obs => ({
-                kk: parseInt(obs.KK || obs.kk),
-                name: `${obs.VName || ''} ${obs.NName || ''}`.trim()
-            })).sort((a,b) => a.kk - b.kk);
+            console.log('Using observersData from API:', this.observersData.length, 'observers');
+            observers = this.observersData.map(obs => {
+                console.log('Observer object:', obs);
+                return {
+                    kk: parseInt(obs.KK || obs.kk),
+                    name: `${obs.VName || ''} ${obs.NName || ''}`.trim()
+                };
+            }).sort((a,b) => a.kk - b.kk);
         } else if (window.haloData && window.haloData.observers) {
+            console.log('Using observersData from window.haloData');
             observers = window.haloData.observers.map(obs => ({
                 kk: parseInt(obs.KK || obs.kk),
                 name: `${obs.VName || ''} ${obs.NName || ''}`.trim()
             })).sort((a,b) => a.kk - b.kk);
+        } else {
+            console.log('No observer data available');
         }
         
         observers.forEach(obs => {

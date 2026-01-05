@@ -36,6 +36,12 @@ main {
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
 
+/* Disabled select options styling */
+select option:disabled {
+    color: #999999;
+    background-color: white;
+}
+
 /* Active menu item */
 .nav-link.active {
     font-weight: bold;
@@ -107,6 +113,41 @@ footer {
 .table thead.bg-primary td {
     background-color: var(--primary-color) !important;
     color: #fff !important;
+}
+
+/* Analysis results table with blue background matching Pascal DOS original */
+.analysis-table {
+    margin-top: 1rem;
+}
+
+.analysis-table thead {
+    background-color: #5555ff !important;
+    color: white !important;
+}
+
+.analysis-table thead th {
+    background-color: #5555ff !important;
+    color: white !important;
+    border-color: #3333dd !important;
+}
+
+.analysis-table tbody tr {
+    background-color: #f8f9fa;
+}
+
+.analysis-table tbody tr:nth-child(even) {
+    background-color: #e9ecef;
+}
+
+.analysis-results h4 {
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+}
+
+.analysis-results .restrictions {
+    margin-bottom: 1rem;
+    font-style: italic;
+    color: #666;
 }
 
 /* Responsive */

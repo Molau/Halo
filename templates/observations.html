@@ -17,10 +17,12 @@
     <script>
         // Mark observations menu as active
         document.addEventListener('DOMContentLoaded', () => {
-            const obsMenu = document.querySelector('a.menu-title[data-bs-toggle="dropdown"]');
-            const menus = document.querySelectorAll('.menu-title');
-            // Find Beobachtungen/Observations menu (3rd menu item, index 2)
-            if (menus[2]) menus[2].classList.add('active');
+            // Add small delay to ensure header is fully rendered
+            setTimeout(() => {
+                const menus = document.querySelectorAll('.menu-title');
+                // Find Beobachtungen/Observations menu (3rd menu item, index 2)
+                if (menus[2]) menus[2].classList.add('active');
+            }, 50);
         });
     </script>
 

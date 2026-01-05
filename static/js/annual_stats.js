@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         // No data loaded - show same warning as monthly_report
-        const msg = i18n.dialogs?.no_data?.message || i18n.observations?.no_file_loaded || 'No observations loaded.';
+        const msg = i18n.dialogs.no_data.message;
         showWarningModal(msg);
         return false;
     }
@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const data = await response.json();
             
             if (!response.ok) {
-                showYearError(data.error || i18n.annual_stats.error_fetching);
+                showYearError(i18n.annual_stats.error_fetching);
                 return;
             }
             

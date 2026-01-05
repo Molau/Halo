@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="spinner-border text-primary mb-3" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
-                        <p class="mb-0">${message || 'Daten werden geladen...'}</p>
+                        <p class="mb-0">${message}</p>
                     </div>
                 </div>
             </div>
@@ -111,7 +111,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
                 if (data.total > 0 && data.file) {
                     // Data is loaded on server, fetch all observations
-                    console.log('[DEBUG init] Server has', data.total, 'observations, loading all...');
                     const fullResponse = await fetch('/api/observations?limit=200000');
                     if (fullResponse.ok) {
                         const fullData = await fullResponse.json();
@@ -121,7 +120,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         window.haloData.observations = fullData.observations;
                         window.haloData.fileName = fullData.file;
                         window.haloData.isLoaded = true;
-                        console.log('[DEBUG init] Loaded', window.haloData.observations.length, 'observations into window.haloData');
                     }
                 }
             }
@@ -277,20 +275,20 @@ document.addEventListener('DOMContentLoaded', function() {
         if (filteredObservations.length > 0) {
             const startIndex = (currentPage - 1) * pageSize;
             const endIndex = Math.min(startIndex + pageSize, filteredObservations.length);
-            const rowText = ui.messages.row || 'Row';
-            const ofText = ui.messages.of || 'of';
+            const rowText = ui.messages.row;
+            const ofText = ui.messages.of;
             pageInfo.textContent = `${rowText} ${startIndex + 1}-${endIndex} ${ofText} ${filteredObservations.length}`;
         }
         
         // Update record count if displayed
         if (recordCount && filteredObservations.length > 0) {
-            recordCount.textContent = `${filteredObservations.length} ${ui.file_info.observations_count || 'observations'}`;
+            recordCount.textContent = `${filteredObservations.length} ${ui.file_info.observations_count}`;
         }
         
         // Update exit button text
         const exitText = document.getElementById('exit-text');
         if (exitText) {
-            exitText.textContent = ui.buttons.exit || 'Beenden';
+            exitText.textContent = ui.buttons.exit;
         }
     }
     
@@ -321,15 +319,15 @@ document.addEventListener('DOMContentLoaded', function() {
             // Sync with global data store
             if (window.haloData) {
                 window.haloData.observations = allObservations;
-                window.haloData.fileName = obsData.file || 'HALO.HAL';
+                window.haloData.fileName = obsData.file;
                 window.haloData.isLoaded = true;
             }
             
             applyFiltersInternal();
-            updateFileInfo(obsData.file || 'HALO.HAL', allObservations.length);
+            updateFileInfo(obsData.file, allObservations.length);
         } catch (error) {
             console.error('Error loading observations:', error);
-            compactTbody.textContent = 'Fehler beim Laden der Daten';
+            compactTbody.textContent = i18n.ui.messages.error_loading;
         }
     }
     
@@ -349,7 +347,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Expose function globally so it can be called when language switches
     window.updateFileInfoLanguage = function() {
         if (allObservations.length > 0) {
-            const fileName = document.getElementById('file-name')?.textContent || 'HALO.HAL';
+            const fileName = document.getElementById('file-name')?.textContent;
             updateFileInfo(fileName, allObservations.length);
         }
     };
@@ -419,19 +417,21 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (window.haloData && window.haloData.observers && Array.isArray(window.haloData.observers)) {
             observers = window.haloData.observers.map(obs => ({
-                k: parseInt(obs.KK),
-                name: `${obs.VName || ''} ${obs.NName || ''}`.trim()
-            })).sort((a,b) => a.k - b.k);
+                KK: parseInt(obs.KK),
+                VName: obs.VName || '',
+                NName: obs.NName || ''
+            })).sort((a,b) => a.KK - b.KK);
         } else {
             // Fallback: extract from observations
             const uniqueK = [...new Set(allObservations.map(o => o.k))];
-            observers = uniqueK.sort((a,b) => a-b).map(k => ({ k: k, name: '' }));
+            observers = uniqueK.sort((a,b) => a-b).map(k => ({ KK: k, VName: '', NName: '' }));
         }
         
         observers.forEach(obs => {
             const option = document.createElement('option');
             option.value = obs.KK;
-            option.textContent = `${String(obs.KK).padStart(2, '0')} ${obs.name}`;
+            const name = `${obs.VName} ${obs.NName}`.trim();
+            option.textContent = `${String(obs.KK).padStart(2, '0')} ${name}`;
             filter1SelectElem.appendChild(option);
         });
     }
@@ -452,7 +452,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function populateHaloTypeSelect() {
-        const unknown = i18n && i18n.ui ? i18n.ui.filter_dialog.unknown : 'Unknown';
+        const unknown = i18n.ui.filter_dialog.unknown;
         filter2SelectElem.innerHTML = '';
         if (i18n && i18n.halo_types) {
             for (let i = 1; i <= 99; i++) {
@@ -504,12 +504,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (filterCriterion1 !== 'none') {
             if (filterCriterion1 === 'observer') {
                 if (!filter1SelectElem.value || filter1SelectElem.value === '') {
-                    showWarning(i18n && i18n.ui ? i18n.ui.messages.filter_value_required || 'Bitte geben Sie einen Filterwert ein!' : 'Bitte geben Sie einen Filterwert ein!');
+                    showWarning(i18n.ui.messages.filter_value_required);
                     return;
                 }
             } else if (filterCriterion1 === 'region') {
                 if (!filter1SelectElem.value || filter1SelectElem.value === '') {
-                    showWarning(i18n && i18n.ui ? i18n.ui.messages.filter_value_required || 'Bitte geben Sie einen Filterwert ein!' : 'Bitte geben Sie einen Filterwert ein!');
+                    showWarning(i18n.ui.messages.filter_value_required);
                     return;
                 }
             }
@@ -519,12 +519,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (filterCriterion2 !== 'none') {
             if (filterCriterion2 === 'date' || filterCriterion2 === 'month' || filterCriterion2 === 'year') {
                 if (!filter2Value.value.trim()) {
-                    showWarning(i18n && i18n.ui ? i18n.ui.messages.filter_value_required || 'Bitte geben Sie einen Filterwert ein!' : 'Bitte geben Sie einen Filterwert ein!');
+                    showWarning(i18n.ui.messages.filter_value_required);
                     return;
                 }
             } else if (filterCriterion2 === 'halo-type') {
                 if (!filter2SelectElem.value || filter2SelectElem.value === '') {
-                    showWarning(i18n && i18n.ui ? i18n.ui.messages.filter_value_required || 'Bitte geben Sie einen Filterwert ein!' : 'Bitte geben Sie einen Filterwert ein!');
+                    showWarning(i18n.ui.messages.filter_value_required);
                     return;
                 }
             }
@@ -911,8 +911,8 @@ document.addEventListener('DOMContentLoaded', function() {
         compactTbody.textContent = lines.join('\n');
         
         // Update pagination info
-        const pageText = i18n && i18n.ui ? i18n.ui.messages.page || 'Page' : 'Page';
-        const ofText = i18n && i18n.ui ? i18n.ui.messages.of : 'of';
+        const pageText = i18n.ui.messages.page;
+        const ofText = i18n.ui.messages.of;
         compactPageInfo.textContent = `${pageText} ${currentPage} ${ofText} ${maxPage}`;
         
         // Update button states
@@ -922,7 +922,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btnLastPage.disabled = currentPage === maxPage;
         
         // Update record count at bottom
-        const rowText = i18n && i18n.ui ? i18n.ui.messages.row : 'Row';
+        const rowText = i18n.ui.messages.row;
         pageInfo.textContent = `${rowText} ${startIndex + 1}-${endIndex} ${ofText} ${filteredObservations.length}`;
     }
     
@@ -943,31 +943,14 @@ document.addEventListener('DOMContentLoaded', function() {
         showDetailRecord();
     }
     
+    
     function showDetailRecord() {
-        if (currentDetailIndex < 0 || currentDetailIndex >= filteredObservations.length) return;
-        
-        const obs = filteredObservations[currentDetailIndex];
-        
-        // TODO: Implement langausgabe() from H_BEOBNG.PAS lines 25-200
-        // For now, show basic details
-        let html = '<div class="detail-field"><strong>Beobachter:</strong> ' + obs.KK + '</div>';
-        html += '<div class="detail-field"><strong>Datum:</strong> ' + obs.TT + '.' + obs.MM + '.' + obs.JJ + '</div>';
-        html += '<div class="detail-field"><strong>Haloart:</strong> ' + String(obs.EE).padStart(2, '0');
-        if (i18n && i18n.halo_types) {
-            html += ' - ' + (i18n.halo_types[obs.EE] || 'Unbekannt');
-        }
-        html += '</div>';
-        
-        detailContent.innerHTML = html;
-        const ofText = i18n && i18n.ui ? i18n.ui.messages.of : 'of';
-        document.getElementById('detail-counter').textContent = `${currentDetailIndex + 1} ${ofText} ${filteredObservations.length}`;
+        // This fallback display is removed - use showObservationFormForView() instead for modal display
+        // See main.js showDisplaySingleObservations() for proper implementation
     }
     
     function navigateDetail(direction) {
-        currentDetailIndex += direction;
-        if (currentDetailIndex < 0) currentDetailIndex = 0;
-        if (currentDetailIndex >= filteredObservations.length) currentDetailIndex = filteredObservations.length - 1;
-        showDetailRecord();
+        // Navigation is handled by showObservationFormForView() in main.js
     }
     
     async function goToPage(page) {
