@@ -14,7 +14,9 @@
     "close": "Close",
     "print": "Print",
     "save": "Save",
-    "chart": "Chart"
+    "chart": "Chart",
+    "bar_chart": "Bar Chart",
+    "line_chart": "Line Chart"
   },
   "welcome": {
     "title": "Welcome to HALO Analysis Program",
@@ -424,7 +426,8 @@
       "title": "No Data",
       "message": "No data loaded! Please load a file first."
     },
-    "analysis_title": "Analysis"
+    "analysis_title": "Analysis",
+    "chart_title": "Chart"
   },
   "menu_titles": {
     "file": "File",

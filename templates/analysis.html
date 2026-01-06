@@ -24,7 +24,7 @@
         @media print {
             /* Set page margins */
             @page {
-                margin: 1.5cm;
+                margin: 0cm;
             }
             
             /* Remove top margin from body */
@@ -33,21 +33,44 @@
                 padding: 0 !important;
             }
             
-            /* Hide everything except modal content */
-            body > *:not(#resultModal) {
+            /* Hide main page content */
+            .container-fluid, #results-area, #param-dialog {
                 display: none !important;
             }
             
-            /* Hide header, footer, and modal chrome */
+            /* Hide header, footer, modal chrome, and backdrop */
             header, footer, .modal-header, .modal-footer, .btn-close,
-            nav, .navbar {
+            nav, .navbar, .modal-backdrop {
                 display: none !important;
             }
             
-            /* Show modals as regular content */
+            /* Hide chart modals by default */
+            #chartModal, #chart3DModal {
+                display: none !important;
+            }
+            
+            /* Show results modal by default */
             #resultModal {
                 position: static !important;
                 display: block !important;
+            }
+            
+            /* When chart modal has 'show' class, display it and hide results */
+            #chartModal.show {
+                position: static !important;
+                display: block !important;
+            }
+            
+            #chart3DModal.show {
+                position: static !important;
+                display: block !important;
+            }
+            
+            #chartModal.show ~ #resultModal,
+            #chart3DModal.show ~ #resultModal,
+            body:has(#chartModal.show) #resultModal,
+            body:has(#chart3DModal.show) #resultModal {
+                display: none !important;
             }
             
             .modal {
@@ -59,6 +82,7 @@
                 max-width: 100% !important;
                 width: 100% !important;
                 margin: 0 !important;
+                padding: 0 !important;
                 max-height: none !important;
                 height: auto !important;
             }
@@ -66,6 +90,8 @@
             .modal-content {
                 border: none !important;
                 box-shadow: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
             
             .modal-body {
@@ -73,6 +99,7 @@
                 max-height: none !important;
                 padding: 0 !important;
                 margin: 0 !important;
+                background-color: white !important;
             }
             
             /* Override scrollable */
@@ -1413,14 +1440,14 @@
                 </div>
 
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" id="btn-cancel-param">
+                    <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-cancel-param">
                         {% if lang() == 'de' %}
                         Abbrechen
                         {% else %}
                         Cancel
                         {% endif %}
                     </button>
-                    <button type="button" class="btn btn-primary" id="btn-apply-param">
+                    <button type="button" class="btn btn-primary btn-sm px-3" id="btn-apply-param">
                         {% if lang() == 'de' %}
                         OK
                         {% else %}
@@ -1435,6 +1462,8 @@
     {% include 'footer.html' %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script src="{{ url_for('static', filename='js/analysis.js') }}"></script>
 </body>

@@ -141,8 +141,8 @@ function showConfirmDialog(title, message, onConfirm, onCancel) {
                         ${message}
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18nStrings.common?.cancel}</button>
-                        <button type="button" class="btn btn-primary" id="confirm-yes-${modalId}">${i18nStrings.common?.ok}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common?.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="confirm-yes-${modalId}">${i18nStrings.common?.ok}</button>
                     </div>
                 </div>
             </div>
@@ -1768,8 +1768,8 @@ async function showModifyObservationsDialog() {
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
-                        <button type="button" class="btn btn-primary" id="btn-modify-ok">${i18nStrings.common.ok}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="btn-modify-ok">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -3181,8 +3181,8 @@ async function showActiveObserversDialog() {
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
-                            <button type="button" class="btn btn-primary" id="btn-active-ok">${i18nStrings.common.ok}</button>
+                            <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                            <button type="button" class="btn btn-primary btn-sm px-3" id="btn-active-ok">${i18nStrings.common.ok}</button>
                         </div>
                     </div>
                 </div>
@@ -3248,8 +3248,8 @@ async function showStartupFileDialog() {
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
-                            <button type="button" class="btn btn-primary" id="btn-startup-ok">${i18nStrings.common.ok}</button>
+                            <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                            <button type="button" class="btn btn-primary btn-sm px-3" id="btn-startup-ok">${i18nStrings.common.ok}</button>
                         </div>
                     </div>
                 </div>

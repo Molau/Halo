@@ -14,20 +14,41 @@
         @media print {
             /* Set page margins */
             @page {
-                margin: 1.5cm;
+                margin: 0cm;
             }
             
-            /* Hide header, footer, and modal chrome */
+            /* Remove all body margins and padding */
+            body {
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            
+            /* Hide header, footer, modal chrome, and backdrop */
             header, footer, .modal-header, .modal-footer, .btn-close,
-            nav, .navbar {
+            nav, .navbar, .modal-backdrop {
                 display: none !important;
             }
             
-            /* Show modals as regular content */
-            #results-modal,
+            /* Hide chart modal by default when printing stats */
             #chart-modal {
+                display: none !important;
+            }
+            
+            /* Show results modal by default */
+            #results-modal {
                 position: static !important;
                 display: block !important;
+            }
+            
+            /* When chart modal has 'show' class, display it and hide results */
+            #chart-modal.show {
+                position: static !important;
+                display: block !important;
+            }
+            
+            #chart-modal.show ~ #results-modal,
+            body:has(#chart-modal.show) #results-modal {
+                display: none !important;
             }
             
             .modal {
@@ -39,6 +60,7 @@
                 max-width: 100% !important;
                 width: 100% !important;
                 margin: 0 !important;
+                padding: 0 !important;
                 max-height: none !important;
                 height: auto !important;
             }
@@ -46,13 +68,21 @@
             .modal-content {
                 border: none !important;
                 box-shadow: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
             
             .modal-body {
                 overflow: visible !important;
                 max-height: none !important;
-                padding: 20px 0 !important;
+                padding: 0 !important;
                 margin: 0 !important;
+                background-color: white !important;
+            }
+            
+            /* White background for stats content */
+            #stats-content {
+                background-color: white !important;
             }
             
             /* Ensure title is visible */
@@ -135,9 +165,9 @@
                     </div>
                     <div class="modal-footer d-flex justify-content-end gap-2">
                         <button type="button" id="btn-stats-chart" class="btn btn-secondary btn-sm px-4">{{ g.i18n.get('common.chart') or 'Grafik' }}</button>
-                        <button type="button" id="btn-stats-ok" class="btn btn-primary btn-sm px-4">{{ g.i18n.get('common.ok') }}</button>
                         <button type="button" id="btn-stats-print" class="btn btn-secondary btn-sm px-4">{{ g.i18n.get('common.print') }}</button>
                         <button type="button" id="btn-stats-save" class="btn btn-secondary btn-sm px-4">{{ g.i18n.get('common.save') }}</button>
+                        <button type="button" id="btn-stats-ok" class="btn btn-primary btn-sm px-4">{{ g.i18n.get('common.ok') }}</button>
                     </div>
                 </div>
             </div>
@@ -158,7 +188,8 @@
                     </div>
                     <div class="modal-footer gap-2">
                         <button type="button" id="btn-chart-print" class="btn btn-secondary btn-sm px-4">{{ g.i18n.get('common.print') }}</button>
-                        <button type="button" id="btn-chart-close" class="btn btn-primary btn-sm px-4" data-bs-dismiss="modal">{{ g.i18n.get('common.close') or 'Close' }}</button>
+                        <button type="button" id="btn-chart-save" class="btn btn-secondary btn-sm px-4">{{ g.i18n.get('common.save') }}</button>
+                        <button type="button" id="btn-chart-close" class="btn btn-primary btn-sm px-4" data-bs-dismiss="modal">{{ g.i18n.get('common.ok') }}</button>
                     </div>
                 </div>
             </div>

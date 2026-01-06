@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                             <p>${message}</p>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">${i18n.common.ok}</button>
+                            <button type="button" class="btn btn-primary btn-sm px-4" data-bs-dismiss="modal">${i18n.common.ok}</button>
                         </div>
                     </div>
                 </div>

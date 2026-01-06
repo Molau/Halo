@@ -1216,8 +1216,6 @@ def get_monthly_stats() -> Dict[str, Any]:
         
         observer_list.append({
             'kk': kk,
-            'vname': active_observers[kk][1] if kk in active_observers and len(active_observers[kk]) > 1 else '',
-            'nname': active_observers[kk][2] if kk in active_observers and len(active_observers[kk]) > 2 else '',
             'region': data['region'],
             'days': days_dict,
             'total_solar': data['total_solar'],
@@ -2611,19 +2609,13 @@ def analyze_observations() -> Dict[str, Any]:
         if params.get('filter1'):
             filter1 = params['filter1']
             filter1_value = params.get('filter1_value', '')
-            print(f"Applying filter1: {filter1} = {filter1_value} (type: {type(filter1_value)})")
-            print(f"Before filter1: {len(filtered_obs)} observations")
             filtered_obs = _apply_filter(filtered_obs, filter1, filter1_value, params, 'filter1')
-            print(f"After filter1: {len(filtered_obs)} observations")
         
         # Apply filter2 if specified
         if params.get('filter2'):
             filter2 = params['filter2']
             filter2_value = params.get('filter2_value', '')
-            print(f"Applying filter2: {filter2} = {filter2_value} (type: {type(filter2_value)})")
-            print(f"Before filter2: {len(filtered_obs)} observations")
             filtered_obs = _apply_filter(filtered_obs, filter2, filter2_value, params, 'filter2')
-            print(f"After filter2: {len(filtered_obs)} observations")
         
         # Apply param1 range filter if needed
         param1 = params.get('param1')
@@ -3369,6 +3361,9 @@ def _group_by_two_parameters(observations, param1_name, param2_name, all_params)
         # Special handling for ZZ (time) - use ZS (hour) field
         if param1_name == 'ZZ':
             val1 = getattr(obs, 'ZS', None)
+            # ZS=-1 means time not specified - skip this observation for time analysis
+            if val1 == -1:
+                continue
         elif param1_name == 'SH':
             if obs.O != 1 or obs.g == 1:
                 val1 = None
@@ -3380,6 +3375,9 @@ def _group_by_two_parameters(observations, param1_name, param2_name, all_params)
         
         if param2_name == 'ZZ':
             val2 = getattr(obs, 'ZS', None)
+            # ZS=-1 means time not specified - skip this observation for time analysis
+            if val2 == -1:
+                continue
         elif param2_name == 'SH':
             if obs.O != 1 or obs.g == 1:
                 val2 = None

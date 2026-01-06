@@ -33,7 +33,11 @@
     "cancel": "Abbrechen",
     "ok": "OK",
     "close": "Schließen",
-    "print": "Drucken",    "save": "Speichern",    "chart": "Grafik"
+    "print": "Drucken",
+    "save": "Speichern",
+    "chart": "Grafik",
+    "bar_chart": "Balkengrafik",
+    "line_chart": "Liniengrafik"
   },
   "welcome": {
     "title": "Willkommen beim HALO Auswerteprogramm",
@@ -134,8 +138,8 @@
       "graphic": "grafisch"
     },
     "graphic_type": {
-      "line": "Liniendiagramm",
-      "bar": "Balkendiagramm"
+      "line": "Liniengrafik",
+      "bar": "Balkengrafik"
     },
     "output_target": {
       "screen": "Bildschirm",
@@ -414,7 +418,8 @@
       "title": "Keine Daten",
       "message": "Keine Daten geladen! Bitte laden Sie zuerst eine Datei."
     },
-    "analysis_title": "Auswertung"
+    "analysis_title": "Auswertung",
+    "chart_title": "Diagramm"
   },
   "menu_titles": {
     "file": "Datei",

@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                             <p>${message}</p>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">${i18n.common.ok}</button>
+                            <button type="button" class="btn btn-primary btn-sm px-4" data-bs-dismiss="modal">${i18n.common.ok}</button>
                         </div>
                     </div>
                 </div>
@@ -263,22 +263,22 @@ document.addEventListener('DOMContentLoaded', async function() {
         let html = '';
         
         // Table header
-        html += '╔' + '═'.repeat(106) + '╗\n';
-        const headerText = `${i18n.monthly_stats.observer_overview} ${monthName} ${year}`;
-        const headerPadding = Math.max(0, Math.floor((106 - headerText.length) / 2));
-        html += '║' + ' '.repeat(headerPadding) + headerText + ' '.repeat(106 - headerPadding - headerText.length) + '║\n';
-        html += '╠══════════════════════════╦══════════╦══════════╦══════════╦══════════╦══════════╦════════════╦═════════════╣\n';
-        html += '║KK Name                   ║ 1   3   5║   7   9  ║11  13  15║  17  19  ║21  23  25║  27  29  31║ 1) 2) 3) 4) ║\n';
-        html += '║                          ║   2   4  ║ 6   8  10║  12  14  ║16  18  20║  22  24  ║26  28  30  ║             ║\n';
-        html += '╠══════════════════════════╬══════════╬══════════╬══════════╬══════════╬══════════╬════════════╬═════════════╣\n';
+        html += '╔' + '═'.repeat(86) + '╗\n';
+        const headerText = `${i18n.monthly_stats?.observer_overview} ${monthName} ${year}`;
+        const headerPadding = Math.max(0, Math.floor((86 - headerText.length) / 2));
+        html += '║' + ' '.repeat(headerPadding) + headerText + ' '.repeat(86 - headerPadding - headerText.length) + '║\n';
+        html += '╠════╦══════════╦══════════╦══════════╦══════════╦══════════╦════════════╦═════════════╣\n';
+        html += '║KKGG║ 1   3   5║   7   9  ║11  13  15║  17  19  ║21  23  25║  27  29  31║ 1) 2) 3) 4) ║\n';
+        html += '║    ║   2   4  ║ 6   8  10║  12  14  ║16  18  20║  22  24  ║26  28  30  ║             ║\n';
+        html += '╠════╬══════════╬══════════╬══════════╬══════════╬══════════╬════════════╬═════════════╣\n';
         
         // Data rows
         let rowCount = 0;
         for (const obs of observers) {
             const kk = obs.kk.toString().padStart(2, '0');
-            const name = `${obs.vname || ''} ${obs.nname || ''}`.trim();
+            const gg = obs.region === 39 ? '//' : obs.region.toString().padStart(2, '0');
             
-            html += '║' + kk + ' ' + name.padEnd(20).substring(0, 20) + '║';
+            html += '║' + kk + gg + '║';
             
             // Days 1-31 in groups of 5
             for (let day = 1; day <= 31; day++) {
@@ -311,14 +311,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             // Add separator every 5 rows (but not at the end)
             if (rowCount % 5 === 0 && rowCount < observers.length) {
-                html += '╠══════════════════════════╬══════════╬══════════╬══════════╬══════════╬══════════╬════════════╬═════════════╣\n';
+                html += '╠════╬══════════╬══════════╬══════════╬══════════╬══════════╬════════════╬═════════════╣\n';
             }
         }
         
         // Table footer
-        html += '╠══════════════════════════╩══════════╩══════════╩══════════╩══════════╩══════════╩════════════╩═════════════╣\n';
-        html += '║  1) = EE (Sonne)   2) = Tage (Sonne)   3) = Tage (Mond)   4) = Tage (gesamt)                   ║\n';
-        html += '╚' + '═'.repeat(106) + '╝\n\n';
+        html += '╠════╩══════════╩══════════╩══════════╩══════════╩══════════╩═════════════╩════════════╣\n';
+        html += '║  1) = EE (Sonne)   2) = Tage (Sonne)   3) = Tage (Mond)   4) = Tage (gesamt)         ║\n';
+        html += '╚' + '═'.repeat(86) + '╝\n\n';
         
         return html;
     }
@@ -467,18 +467,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         let html = '';
         
         // Table header
-        html += '    ╔' + '═'.repeat(86) + '╗\n';
+        html += '╔' + '═'.repeat(86) + '╗\n';
         const headerText = `${i18n.monthly_stats?.activity_title} ${monthName} ${year}`;
         const headerPadding = Math.max(0, Math.floor((86 - headerText.length) / 2));
-        html += '    ║' + ' '.repeat(headerPadding) + headerText + ' '.repeat(86 - headerPadding - headerText.length) + '║\n';
-        html += '    ╠═════╦════════════════════════╦════════════════════════╦════════════════════════╦═════╣\n';
+        html += '║' + ' '.repeat(headerPadding) + headerText + ' '.repeat(86 - headerPadding - headerText.length) + '║\n';
+        html += '╠═════╦════════════════════════╦════════════════════════╦════════════════════════╦═════╣\n';
         
         // First table: Days 1-16
-        html += '    ║ Tag ║  1.   2.   3.   4.   5.║  6.   7.   8.   9.  10.║ 11.  12.  13.  14.  15.║ 16. ║\n';
-        html += '    ╠═════╬════════════════════════╬════════════════════════╬════════════════════════╬═════╣\n';
+        html += '║ Tag ║  1.   2.   3.   4.   5.║  6.   7.   8.   9.  10.║ 11.  12.  13.  14.  15.║ 16. ║\n';
+        html += '╠═════╬════════════════════════╬════════════════════════╬════════════════════════╬═════╣\n';
         
         // Real activity row (days 1-16)
-        html += '    ║ real║';
+        html += '║ real║';
         for (let d = 1; d <= 16; d++) {
             const val = activityReal[d] || 0;
             const valStr = val.toFixed(1);
@@ -494,10 +494,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         html += '\n';
         
         // Separator
-        html += '    ╠═════╬════════════════════════╬════════════════════════╬════════════════════════╬═════╣\n';
+        html += '╠═════╬════════════════════════╬════════════════════════╬════════════════════════╬═════╣\n';
         
         // Relative activity row (days 1-16)
-        html += '    ║ rel.║';
+        html += '║ rel.║';
         for (let d = 1; d <= 16; d++) {
             const val = activityRelative[d] || 0;
             const valStr = val.toFixed(1);
@@ -511,15 +511,15 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         }
         html += '\n';
-        html += '    ╚═════╩════════════════════════╩════════════════════════╩════════════════════════╩═════╝\n';
+        html += '╚═════╩════════════════════════╩════════════════════════╩════════════════════════╩═════╝\n';
         
         // Second table: Days 17-31 with total
-        html += '    ╔═════╦═══════════════════╦════════════════════════╦════════════════════════╦════╦═════╗\n';
-        html += '    ║ Tag ║ 17.  18.  19.  20.║ 21.  22.  23.  24.  25.║ 26.  27.  28.  29.  30.║ 31.║ ges ║\n';
-        html += '    ╠═════╬═══════════════════╬════════════════════════╬════════════════════════╬════╬═════╣\n';
+        html += '╔═════╦═══════════════════╦════════════════════════╦════════════════════════╦════╦═════╗\n';
+        html += '║ Tag ║ 17.  18.  19.  20.║ 21.  22.  23.  24.  25.║ 26.  27.  28.  29.  30.║ 31.║ ges ║\n';
+        html += '╠═════╬═══════════════════╬════════════════════════╬════════════════════════╬════╬═════╣\n';
         
         // Real activity row (days 17-31)
-        html += '    ║ real║';
+        html += '║ real║';
         for (let d = 17; d <= 31; d++) {
             const val = activityReal[d] || 0;
             const valStr = val.toFixed(1);
@@ -536,10 +536,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         html += totalRealStr.padStart(5, ' ') + '║\n';
         
         // Separator
-        html += '    ╠═════╬═══════════════════╬════════════════════════╬════════════════════════╬════╬═════╣\n';
+        html += '╠═════╬═══════════════════╬════════════════════════╬════════════════════════╬════╬═════╣\n';
         
         // Relative activity row (days 17-31)
-        html += '    ║ rel.║';
+        html += '║ rel.║';
         for (let d = 17; d <= 31; d++) {
             const val = activityRelative[d] || 0;
             const valStr = val.toFixed(1);
@@ -555,7 +555,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const totalRelStr = (activityTotals.relative || 0).toFixed(1);
         html += totalRelStr.padStart(5, ' ') + '║\n';
         
-        html += '    ╚═════╩═══════════════════╩════════════════════════╩════════════════════════╩════╩═════╝\n\n';
+        html += '╚═════╩═══════════════════╩════════════════════════╩════════════════════════╩════╩═════╝\n\n';
         
         return html;
     }
@@ -803,6 +803,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             };
         }
         
+        // Wire up chart save button
+        const btnChartSave = document.getElementById('btn-chart-save');
+        if (btnChartSave) {
+            btnChartSave.onclick = () => {
+                saveChart();
+            };
+        }
+        
         // Wire up chart close button to return to stats
         const btnChartClose = document.getElementById('btn-chart-close');
         if (btnChartClose) {
@@ -853,6 +861,44 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         return text;
+    }
+
+    // Save chart as PNG
+    function saveChart() {
+        if (!currentStatsData) return;
+        
+        const data = currentStatsData;
+        const monthShort = i18n.months_short?.[data.mm] || String(data.mm).padStart(2, '0');
+        const jjPadded = String(data.jj).padStart(2, '0');
+        const filename = `${monthShort.toLowerCase()}19${jjPadded}.png`;
+        
+        const canvas = document.getElementById('activity-chart');
+        if (!canvas) return;
+        
+        // Create a new canvas with white background
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        const ctx = tempCanvas.getContext('2d');
+        
+        // Fill with white background
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+        
+        // Draw the original canvas on top
+        ctx.drawImage(canvas, 0, 0);
+        
+        // Convert canvas to blob and download
+        tempCanvas.toBlob((blob) => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 'image/png');
     }
 
     // Initialize

@@ -181,7 +181,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                             <p>${message}</p>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">${i18n.common.ok}</button>
+                            <button type="button" class="btn btn-primary btn-sm px-4" data-bs-dismiss="modal">${i18n.common.ok}</button>
                         </div>
                     </div>
                 </div>
@@ -1576,9 +1576,11 @@ document.addEventListener('DOMContentLoaded', async function() {
                         <div class="modal-body" id="resultModalBody" style="overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 200px);">
                         </div>
                         <div class="modal-footer d-flex justify-content-end gap-2">
-                            <button type="button" id="btn-result-ok" class="btn btn-primary btn-sm px-4">${i18n.button.ok}</button>
+                            <button type="button" id="btn-result-bar-chart" class="btn btn-secondary btn-sm px-4">${i18n.button.bar_chart}</button>
+                            <button type="button" id="btn-result-line-chart" class="btn btn-secondary btn-sm px-4">${i18n.button.line_chart}</button>
                             <button type="button" id="btn-result-print" class="btn btn-secondary btn-sm px-4">${i18n.button.print}</button>
                             <button type="button" id="btn-result-save" class="btn btn-secondary btn-sm px-4">${i18n.button.save}</button>
+                            <button type="button" id="btn-result-ok" class="btn btn-primary btn-sm px-4">${i18n.button.ok}</button>
                         </div>
                     </div>
                 </div>
@@ -1605,6 +1607,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Setup result modal button handlers
     function setupResultModalHandlers(modal) {
         const btnOk = document.getElementById('btn-result-ok');
+        const btnBarChart = document.getElementById('btn-result-bar-chart');
+        const btnLineChart = document.getElementById('btn-result-line-chart');
         const btnPrint = document.getElementById('btn-result-print');
         const btnSave = document.getElementById('btn-result-save');
         
@@ -1614,6 +1618,26 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const modalInstance = bootstrap.Modal.getInstance(modal);
                 if (modalInstance) modalInstance.hide();
                 window.location.href = '/';
+            };
+        }
+        
+        // Bar Chart button
+        if (btnBarChart) {
+            btnBarChart.onclick = () => {
+                console.log('Bar chart button clicked');
+                console.log('lastAnalysisResult:', lastAnalysisResult);
+                console.log('lastAnalysisParams:', lastAnalysisParams);
+                showBarChart();
+            };
+        }
+        
+        // Line Chart button
+        if (btnLineChart) {
+            btnLineChart.onclick = () => {
+                console.log('Line chart button clicked');
+                console.log('lastAnalysisResult:', lastAnalysisResult);
+                console.log('lastAnalysisParams:', lastAnalysisParams);
+                showLineChart();
             };
         }
         
@@ -1657,6 +1681,530 @@ document.addEventListener('DOMContentLoaded', async function() {
             };
         }
     }
+    
+    // Show bar chart for analysis result
+    function showBarChart() {
+        if (!lastAnalysisResult || !lastAnalysisParams) return;
+
+        const result = lastAnalysisResult;
+        const params = lastAnalysisParams;
+        const data = result.data;
+        
+        // Build title with parameter names and filters
+        const param1Name = i18n.analysis_dialog.param_names[params.param1];
+        const param2Name = params.param2 ? i18n.analysis_dialog.param_names[params.param2] : null;
+        let titleText;
+        
+        if (param2Name) {
+            titleText = `Parameter: ${param1Name} ${i18n.analysis_results.and} ${param2Name}`;
+        } else {
+            titleText = `Parameter: ${param1Name}`;
+        }
+        
+        // Add filter restrictions to title
+        const restrictions = [];
+        if (params.filter1) {
+            const filterName = i18n.analysis_dialog.param_names[params.filter1];
+            const displayValue = params.filter1_display;
+            restrictions.push(`${filterName} = ${displayValue}`);
+        }
+        if (params.filter2) {
+            const filterName = i18n.analysis_dialog.param_names[params.filter2];
+            const displayValue = params.filter2_display;
+            restrictions.push(`${filterName} = ${displayValue}`);
+        }
+        if (restrictions.length > 0) {
+            titleText += `\n${i18n.analysis_results.restrictions}: ${restrictions.join(', ')}`;
+        }
+        
+        if (!params.param2) {
+            // 1-parameter analysis: simple 2D bar chart using Chart.js
+            // data is an array of {key: value, count: number}
+            const labels = data.map(item => formatParamValue(params.param1, item.key));
+            const counts = data.map(item => item.count);
+            
+            const datasets = [{
+                label: i18n.analysis_results.count,
+                data: counts,
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }];
+            
+            showChart2D(titleText, labels, datasets, 'bar');
+        } else {
+            // 2-parameter analysis: 3D bar chart using Plotly.js
+            show3DBarChart(titleText, data, params);
+        }
+    }
+    
+    // Show 3D bar chart using Plotly.js
+    function show3DBarChart(titleText, data, params) {
+        const param1Values = Object.keys(data).sort((a, b) => {
+            const numA = parseFloat(a);
+            const numB = parseFloat(b);
+            if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+            return a.localeCompare(b);
+        });
+        
+        const param2Values = new Set();
+        Object.values(data).forEach(row => {
+            Object.keys(row).forEach(col => param2Values.add(col));
+        });
+        const param2ValuesArray = Array.from(param2Values).sort((a, b) => {
+            const numA = parseFloat(a);
+            const numB = parseFloat(b);
+            if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+            return a.localeCompare(b);
+        });
+        
+        // Create individual bars using mesh3d for each data point
+        const traces = [];
+        
+        param1Values.forEach((p1Val, i) => {
+            param2ValuesArray.forEach((p2Val, j) => {
+                const count = data[p1Val][p2Val] || 0;
+                if (count === 0) return; // Skip empty bars
+                
+                const x0 = j - 0.4;
+                const x1 = j + 0.4;
+                const y0 = i - 0.4;
+                const y1 = i + 0.4;
+                const z0 = 0;
+                const z1 = count;
+                
+                // Create a box (bar) using mesh3d
+                traces.push({
+                    type: 'mesh3d',
+                    x: [x0, x0, x1, x1, x0, x0, x1, x1],
+                    y: [y0, y1, y1, y0, y0, y1, y1, y0],
+                    z: [z0, z0, z0, z0, z1, z1, z1, z1],
+                    i: [7, 0, 0, 0, 4, 4, 6, 6, 4, 0, 3, 2],
+                    j: [3, 4, 1, 2, 5, 6, 5, 2, 0, 1, 6, 3],
+                    k: [0, 7, 2, 3, 6, 7, 1, 1, 5, 5, 7, 6],
+                    opacity: 0.8,
+                    color: count,
+                    colorscale: 'Viridis',
+                    showscale: false,
+                    hovertemplate: 
+                        formatParamValue(params.param1, p1Val) + '<br>' +
+                        formatParamValue(params.param2, p2Val) + '<br>' +
+                        i18n.analysis_results.count + ': ' + count +
+                        '<extra></extra>',
+                    showlegend: false
+                });
+            });
+        });
+        
+        // Add one trace for the colorbar
+        const allCounts = [];
+        param1Values.forEach(p1Val => {
+            param2ValuesArray.forEach(p2Val => {
+                const count = data[p1Val][p2Val] || 0;
+                if (count > 0) allCounts.push(count);
+            });
+        });
+        
+        traces.push({
+            type: 'scatter3d',
+            x: [null],
+            y: [null],
+            z: [null],
+            mode: 'markers',
+            marker: {
+                size: 0,
+                color: allCounts,
+                colorscale: 'Viridis',
+                showscale: true,
+                colorbar: {
+                    title: i18n.analysis_results.count
+                }
+            },
+            showlegend: false,
+            hoverinfo: 'skip'
+        });
+        
+        const layout = {
+            title: {
+                text: titleText,
+                font: { size: 16 }
+            },
+            scene: {
+                xaxis: { 
+                    title: i18n.analysis_dialog.param_names[params.param2],
+                    tickvals: param2ValuesArray.map((_, i) => i),
+                    ticktext: param2ValuesArray.map(v => formatParamValue(params.param2, v))
+                },
+                yaxis: { 
+                    title: i18n.analysis_dialog.param_names[params.param1],
+                    tickvals: param1Values.map((_, i) => i),
+                    ticktext: param1Values.map(v => formatParamValue(params.param1, v))
+                },
+                zaxis: { 
+                    title: i18n.analysis_results.count
+                },
+                camera: {
+                    eye: { x: 1.5, y: 1.5, z: 1.3 }
+                }
+            },
+            autosize: true,
+            margin: { l: 0, r: 0, b: 0, t: 60 }
+        };
+        
+        const config = {
+            responsive: true,
+            displayModeBar: true,
+            displaylogo: false,
+            modeBarButtonsToRemove: ['pan3d', 'select3d', 'lasso3d']
+        };
+        
+        show3DChartModal(traces, layout, config, 'bar');
+    }
+    
+    // Show 3D chart in a modal using Plotly
+    function show3DChartModal(traces, layout, config, chartType) {
+        // Remove any existing chart modal
+        let oldModal = document.getElementById('chart3DModal');
+        if (oldModal) {
+            oldModal.remove();
+        }
+        
+        // Determine chart title based on type
+        const chartTitle = chartType === 'line' ? i18n.button.line_chart : i18n.button.bar_chart;
+        
+        // Create fresh modal
+        const chartModal = document.createElement('div');
+        chartModal.id = 'chart3DModal';
+        chartModal.className = 'modal fade';
+        chartModal.setAttribute('tabindex', '-1');
+        chartModal.setAttribute('data-bs-backdrop', 'true');
+        chartModal.setAttribute('data-bs-keyboard', 'true');
+        chartModal.style.zIndex = '10000';
+        chartModal.innerHTML = `
+            <div class="modal-dialog modal-xl modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">${chartTitle}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body" style="height: 600px;">
+                        <div id="plotly3DChart" style="width: 100%; height: 100%;"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm px-4" onclick="window.print()">${i18n.common.print}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-4" id="btn-save-3d-chart">${i18n.common.save}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-4" data-bs-dismiss="modal">${i18n.common.ok}</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(chartModal);
+        
+        // Show modal
+        const modalInstance = new bootstrap.Modal(chartModal);
+        modalInstance.show();
+        
+        // Prevent ESC key from propagating to parent modal
+        chartModal.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                e.stopPropagation();
+            }
+        });
+        
+        // Create chart after modal is shown
+        chartModal.addEventListener('shown.bs.modal', () => {
+            // Set focus to this modal to capture ESC key
+            chartModal.focus();
+            
+            Plotly.newPlot('plotly3DChart', traces, layout, config);
+            
+            // Setup save button handler
+            document.getElementById('btn-save-3d-chart').onclick = () => {
+                const filename = chartType === 'line' ? 'analysis_line_chart' : 'analysis_bar_chart';
+                Plotly.downloadImage('plotly3DChart', {
+                    format: 'png',
+                    width: 1200,
+                    height: 800,
+                    filename: filename
+                });
+            };
+        }, { once: true });
+        
+        // Clean up on hide
+        chartModal.addEventListener('hidden.bs.modal', () => {
+            Plotly.purge('plotly3DChart');
+        }, { once: true });
+    }
+    
+    // Show 2D chart in a modal using Chart.js
+    function showChart2D(titleText, labels, datasets, chartTypeParam) {
+        // Remove any existing chart modal
+        let oldModal = document.getElementById('chartModal');
+        if (oldModal) {
+            oldModal.remove();
+        }
+        
+        // Determine chart title based on type
+        const chartTitle = chartTypeParam === 'line' ? i18n.button.line_chart : i18n.button.bar_chart;
+        
+        // Create fresh modal
+        const chartModal = document.createElement('div');
+        chartModal.id = 'chartModal';
+        chartModal.className = 'modal fade';
+        chartModal.setAttribute('tabindex', '-1');
+        chartModal.setAttribute('data-bs-backdrop', 'true');
+        chartModal.setAttribute('data-bs-keyboard', 'true');
+        chartModal.style.zIndex = '10000';
+        chartModal.innerHTML = `
+            <div class="modal-dialog modal-xl modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">${chartTitle}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <canvas id="analysisChart"></canvas>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm px-4" onclick="window.print()">${i18n.common.print}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-4" id="btn-save-2d-chart">${i18n.common.save}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-4" data-bs-dismiss="modal">${i18n.common.ok}</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(chartModal);
+        
+        // Show modal
+        const modalInstance = new bootstrap.Modal(chartModal);
+        modalInstance.show();
+        
+        // Prevent ESC key from propagating to parent modal
+        chartModal.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                e.stopPropagation();
+            }
+        });
+        
+        // Create chart after modal is shown
+        chartModal.addEventListener('shown.bs.modal', () => {
+            // Set focus to this modal to capture ESC key
+            chartModal.focus();
+            
+            const ctx = document.getElementById('analysisChart').getContext('2d');
+            
+            // Destroy existing chart if any
+            if (window.analysisChartInstance) {
+                window.analysisChartInstance.destroy();
+            }
+            
+            // Create new chart
+            window.analysisChartInstance = new Chart(ctx, {
+                type: chartTypeParam,
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: titleText.split('\n'),
+                            font: { size: 14 }
+                        },
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'category',
+                            title: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: i18n.analysis_results.count
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Setup save button handler
+            document.getElementById('btn-save-2d-chart').onclick = () => {
+                const canvas = document.getElementById('analysisChart');
+                const filename = chartTypeParam === 'line' ? 'analysis_line_chart.png' : 'analysis_bar_chart.png';
+                
+                // Create a temporary canvas with white background
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = canvas.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                
+                // Fill white background
+                tempCtx.fillStyle = 'white';
+                tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                
+                // Draw the chart on top
+                tempCtx.drawImage(canvas, 0, 0);
+                
+                // Convert to blob and download
+                tempCanvas.toBlob((blob) => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }, 'image/png');
+            };
+        }, { once: true });
+    }
+    
+    // Show line chart for analysis result
+    function showLineChart() {
+        if (!lastAnalysisResult || !lastAnalysisParams) return;
+
+        const result = lastAnalysisResult;
+        const params = lastAnalysisParams;
+        const data = result.data;
+        
+        // Build title with parameter names and filters
+        const param1Name = i18n.analysis_dialog.param_names[params.param1];
+        const param2Name = params.param2 ? i18n.analysis_dialog.param_names[params.param2] : null;
+        let titleText;
+        
+        if (param2Name) {
+            titleText = `Parameter: ${param1Name} ${i18n.analysis_results.and} ${param2Name}`;
+        } else {
+            titleText = `Parameter: ${param1Name}`;
+        }
+        
+        // Add filter restrictions to title
+        const restrictions = [];
+        if (params.filter1) {
+            const filterName = i18n.analysis_dialog.param_names[params.filter1];
+            const displayValue = params.filter1_display;
+            restrictions.push(`${filterName} = ${displayValue}`);
+        }
+        if (params.filter2) {
+            const filterName = i18n.analysis_dialog.param_names[params.filter2];
+            const displayValue = params.filter2_display;
+            restrictions.push(`${filterName} = ${displayValue}`);
+        }
+        if (restrictions.length > 0) {
+            titleText += `\n${i18n.analysis_results.restrictions}: ${restrictions.join(', ')}`;
+        }
+        
+        if (!params.param2) {
+            // 1-parameter analysis: simple 2D line chart using Chart.js
+            // data is an array of {key: value, count: number}
+            const labels = data.map(item => formatParamValue(params.param1, item.key));
+            const counts = data.map(item => item.count);
+            
+            const datasets = [{
+                label: i18n.analysis_results.count,
+                data: counts,
+                borderColor: 'rgba(54, 162, 235, 1)',
+                backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true
+            }];
+            
+            showChart2D(titleText, labels, datasets, 'line');
+        } else {
+            // 2-parameter analysis: 3D surface chart using Plotly.js
+            show3DSurfaceChart(titleText, data, params);
+        }
+    }
+    
+    // Show 3D surface chart using Plotly.js
+    function show3DSurfaceChart(titleText, data, params) {
+        const param1Values = Object.keys(data).sort((a, b) => {
+            const numA = parseFloat(a);
+            const numB = parseFloat(b);
+            if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+            return a.localeCompare(b);
+        });
+        
+        const param2Values = new Set();
+        Object.values(data).forEach(row => {
+            Object.keys(row).forEach(col => param2Values.add(col));
+        });
+        const param2ValuesArray = Array.from(param2Values).sort((a, b) => {
+            const numA = parseFloat(a);
+            const numB = parseFloat(b);
+            if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+            return a.localeCompare(b);
+        });
+        
+        // Build Z matrix for surface plot
+        const zMatrix = [];
+        param1Values.forEach(p1Val => {
+            const row = [];
+            param2ValuesArray.forEach(p2Val => {
+                row.push(data[p1Val][p2Val] || 0);
+            });
+            zMatrix.push(row);
+        });
+        
+        const trace = {
+            type: 'surface',
+            x: param2ValuesArray.map(v => formatParamValue(params.param2, v)),
+            y: param1Values.map(v => formatParamValue(params.param1, v)),
+            z: zMatrix,
+            colorscale: 'Viridis',
+            showscale: true,
+            colorbar: {
+                title: i18n.analysis_results.count
+            },
+            hovertemplate: 
+                i18n.analysis_dialog.param_names[params.param1] + ': %{y}<br>' +
+                i18n.analysis_dialog.param_names[params.param2] + ': %{x}<br>' +
+                i18n.analysis_results.count + ': %{z}<br>' +
+                '<extra></extra>'
+        };
+        
+        const layout = {
+            title: {
+                text: titleText,
+                font: { size: 16 }
+            },
+            scene: {
+                xaxis: { 
+                    title: i18n.analysis_dialog.param_names[params.param2]
+                },
+                yaxis: { 
+                    title: i18n.analysis_dialog.param_names[params.param1]
+                },
+                zaxis: { 
+                    title: i18n.analysis_results.count
+                },
+                camera: {
+                    eye: { x: 1.5, y: 1.5, z: 1.3 }
+                }
+            },
+            autosize: true,
+            margin: { l: 0, r: 0, b: 0, t: 60 }
+        };
+        
+        const config = {
+            responsive: true,
+            displayModeBar: true,
+            displaylogo: false,
+            modeBarButtonsToRemove: ['pan3d', 'select3d', 'lasso3d']
+        };
+        
+        show3DChartModal([trace], layout, config, 'line');
+    }
+    
     
     // Save analysis result to CSV file
     function saveAnalysisResult() {
