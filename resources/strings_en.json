@@ -61,6 +61,17 @@
     "degrees_label": "Degrees",
     "minutes_label": "Minutes",
     "error_kk_exists": "This observer code already exists!",
+    "error_observation_exists": "This observation already exists!",
+    "select_observations": "Select Observations",
+    "select_criterion": "By which criterion should observations be selected?",
+    "select_action": "Should these observations be kept or deleted?",
+    "select_keep": "Keep",
+    "select_delete": "Delete",
+    "select_no_filter": "Please select a filter criterion!",
+    "select_no_filename": "Please enter a filename!",
+    "select_processing": "Filtering observations...",
+    "select_success": "Successfully saved",
+    "new_filename": "New filename",
     "error_invalid_kk": "Invalid observer code (01-99)",
     "error_missing_required": "Please fill in all required fields!",
     "success_added": "Observer successfully added",
@@ -78,9 +89,6 @@
     "pagination_prev": "Previous Page",
     "pagination_next": "Next Page",
     "pagination_last": "Last Page",
-    "records_label": "records",
-    "row_range_prefix": "Row",
-    "row_range_of": "of",
     "loading_error": "Error loading observers.",
     "yes": "Yes",
     "no": "No"
@@ -104,8 +112,6 @@
       "save": "Save",
       "save_as": "Save as",
       "transfer": "Transfer",
-      "export": "Export",
-      "import": "Import",
       "open": "Open...",
       "print": "Print",
       "exit": "Exit"
@@ -142,6 +148,12 @@
       "input_mode_menu": "Menu inputs",
       "input_mode_number": "Number inputs",
       "input_mode_changed": "Input mode has been changed.",
+      "output_type": "Output Format",
+      "output_type_title": "Output Format Setting",
+      "output_type_question": "Which output format do you prefer?",
+      "output_type_html": "HTML Tables",
+      "output_type_pseudo": "Pseudographics",
+      "output_type_changed": "Output format has been changed.",
       "data_dir_prompt": "Please enter the data directory:",
       "data_dir_changed": "Data directory has been changed."
     },
@@ -402,18 +414,26 @@
     },
     "loading": {
       "loading_file": "Loading file",
-      "loading": "Loading..."
+      "loading": "Loading...",
+      "merging_file": "Merging file"
     },
     "success": {
       "loaded_from": "from",
-      "geladen": "loaded"
+      "geladen": "loaded",
+      "hinzugefuegt": "added from"
     },
     "file_error": {
       "error_loading_file": "Error loading file"
     },
     "unsaved_changes": {
+      "title": "Unsaved Changes",
       "message": "You have unsaved changes. Do you really want to continue?"
     },
+    "file_exists": {
+      "title": "File Exists",
+      "message": "The file already exists. Overwrite?"
+    },
+    "save_failed": "Failed to save file",
     "autosave_recovery": {
       "title": "Auto-Recovery",
       "message": "An unsaved file was found:",

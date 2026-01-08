@@ -1,6 +1,6 @@
 // Annual Statistics (Jahresstatistik) functionality
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('Annual Statistics page loaded');
+
 
     let i18n = null;
     let currentStatsData = null; // Store current stats data for save/print
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             const i18nResponse = await fetch(`/api/i18n/${lang}`);
             i18n = await i18nResponse.json();
-            console.log('i18n loaded:', i18n);
+
         } catch (error) {
             console.error('Error loading i18n:', error);
             i18n = { monthly_stats: {}, ui: { messages: {} } };
@@ -170,7 +170,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             currentStatsData = data;
             
             // Debug: log the data
-            console.log('Annual stats data:', data);
+
             
             // Close filter dialog
             const modal = bootstrap.Modal.getInstance(filterDialog);

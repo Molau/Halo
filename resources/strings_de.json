@@ -88,6 +88,17 @@
     "degrees_label": "Grad",
     "minutes_label": "Minuten",
     "error_kk_exists": "Diese Kennzahl ist bereits vergeben!",
+    "error_observation_exists": "Diese Beobachtung existiert bereits!",
+    "select_observations": "Beobachtungen selektieren",
+    "select_criterion": "Wonach sollen die Beobachtungen ausgewählt werden?",
+    "select_action": "Sollen diese Beobachtungen erhalten bleiben oder gelöscht werden?",
+    "select_keep": "Erhalten",
+    "select_delete": "Löschen",
+    "select_no_filter": "Bitte wählen Sie ein Filterkriterium!",
+    "select_no_filename": "Bitte geben Sie einen Dateinamen ein!",
+    "select_processing": "Beobachtungen werden gefiltert...",
+    "select_success": "Erfolgreich gespeichert",
+    "new_filename": "Neuer Dateiname",
     "error_invalid_kk": "Ungültige Kennzahl (01-99)",
     "error_missing_required": "Bitte füllen Sie alle Pflichtfelder aus!",
     "success_added": "Beobachter erfolgreich hinzugefügt",
@@ -120,8 +131,6 @@
       "save": "Speichern",
       "save_as": "Speichern unter",
       "transfer": "Übertragen",
-      "export": "Exportieren",
-      "import": "Importieren",
       "change_dir": "Verzeichniswechsel"
     },
     "transfer": {
@@ -168,6 +177,12 @@
       "input_mode_menu": "Menüeingaben",
       "input_mode_number": "Zahleneingaben",
       "input_mode_changed": "Eingabeart wurde geändert.",
+      "output_type": "Ausgabeart",
+      "output_type_title": "Einstellung der Ausgabeart",
+      "output_type_question": "Welche Ausgabeart bevorzugen Sie?",
+      "output_type_html": "HTML-Tabellen",
+      "output_type_pseudo": "Pseudografik",
+      "output_type_changed": "Ausgabeart wurde geändert.",
       "data_dir_prompt": "Geben Sie bitte das Datenverzeichnis ein:",
       "data_dir_changed": "Datenverzeichnis wurde geändert."
     },
@@ -394,18 +409,26 @@
     },
     "loading": {
       "loading_file": "Lade Datei",
-      "loading": "Loading..."
+      "loading": "Loading...",
+      "merging_file": "Verbinde Datei"
     },
     "success": {
       "loaded_from": "aus",
-      "geladen": "geladen"
+      "geladen": "geladen",
+      "hinzugefuegt": "hinzugefügt aus"
     },
     "file_error": {
       "error_loading_file": "Fehler beim Laden der Datei"
     },
     "unsaved_changes": {
+      "title": "Ungespeicherte Änderungen",
       "message": "Sie haben ungespeicherte Änderungen. Möchten Sie wirklich fortfahren?"
     },
+    "file_exists": {
+      "title": "Datei existiert",
+      "message": "Die Datei existiert bereits. Überschreiben?"
+    },
+    "save_failed": "Fehler beim Speichern der Datei",
     "autosave_recovery": {
       "title": "Automatische Wiederherstellung",
       "message": "Es wurde eine ungesicherte Datei gefunden:",

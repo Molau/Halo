@@ -1,6 +1,6 @@
 // Monthly Report (Monatsmeldung) functionality
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('Monthly Report page loaded');
+
 
     let i18n = null;
     let allObservers = [];
@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             const i18nResponse = await fetch(`/api/i18n/${lang}`);
             i18n = await i18nResponse.json();
-            console.log('i18n loaded:', i18n);
+
             
             // Update UI text
             updateUIText();
@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (response.ok) {
                 const data = await response.json();
                 allObservers = data.observers || [];
-                console.log('Loaded', allObservers.length, 'observer records');
+
                 populateObserverSelect();
             }
         } catch (error) {
@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (response.ok) {
                 const data = await response.json();
                 fixedObserver = data.observer || '';
-                console.log('Fixed observer:', fixedObserver);
+
             }
         } catch (error) {
             console.error('Error loading fixed observer:', error);
@@ -162,7 +162,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const fixedKK = parseInt(fixedObserver);
             if (observerMap.has(fixedKK)) {
                 observerSelect.value = fixedKK;
-                console.log('Pre-selected fixed observer:', fixedKK);
+
             }
         }
     }
@@ -243,7 +243,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
             
             const data = await response.json();
-            console.log('Report data received:', data);
+
             
             // Close filter dialog
             const modal = bootstrap.Modal.getInstance(filterDialog);

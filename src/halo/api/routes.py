@@ -290,6 +290,12 @@ def add_observation() -> Dict[str, Any]:
 
         observations = current_app.config.get('OBSERVATIONS') or []
         
+        # Check for duplicate observation using spaeter() comparison
+        for existing in observations:
+            if _spaeter(obs, existing) == 0:
+                # All key fields match - this is a duplicate
+                return jsonify({'error': 'duplicate', 'message': 'Observation already exists'}), 409
+        
         # Find correct insertion position using spaeter() comparison
         insert_pos = len(observations)
         for i, existing in enumerate(observations):
@@ -345,6 +351,182 @@ def get_observation(obs_id: int) -> Dict[str, Any]:
     """Get single observation by ID."""
     # TODO: Implement observation retrieval by ID
     return jsonify({'error': 'Not implemented yet'}), 501
+
+
+@api_blueprint.route('/observations/save', methods=['POST'])
+def save_observations() -> Dict[str, Any]:
+    """Save filtered observations to a new file.
+    
+    Used by Datei -> Selektieren to save filtered observation list.
+    """
+    from flask import current_app, request
+    import os
+    
+    data = request.get_json() or {}
+    filename = data.get('filename', '')
+    observations_data = data.get('observations', [])
+    overwrite = data.get('overwrite', False)
+    
+    if not filename:
+        return jsonify({'error': 'Filename is required'}), 400
+    
+    # Ensure .CSV extension
+    if not filename.upper().endswith('.CSV'):
+        filename += '.CSV'
+    
+    # Convert observation dicts to Observation objects
+    from halo.models.types import Observation
+    observations = []
+    for obs_dict in observations_data:
+        obs = Observation()
+        for field in ['KK','O','JJ','MM','TT','GG','ZS','ZM','DD','d','N','C','c','EE','H','F','V','f','zz','g','HO','HU']:
+            if field in obs_dict and obs_dict[field] is not None:
+                setattr(obs, field, obs_dict[field])
+        obs.sectors = obs_dict.get('sectors', '') or ''
+        obs.remarks = obs_dict.get('remarks', '') or ''
+        observations.append(obs)
+    
+    # Write to file
+    datapath = Path(__file__).parent.parent.parent.parent / 'data'
+    filepath = datapath / filename
+    
+    # Check if file exists
+    if filepath.exists() and not overwrite:
+        return jsonify({'success': False, 'exists': True, 'filename': filename}), 200
+    
+    try:
+        ObservationCSV.write_observations(filepath, observations)
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'count': len(observations)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@api_blueprint.route('/observations/filter', methods=['POST'])
+def filter_observations() -> Dict[str, Any]:
+    """
+    Filter observations server-side for Datei -> Selektieren.
+    Handles ALL filter types: KK, MM, TT, ZZ, SH, GG, O, EE, DD, N, C, H, F, V.
+    
+    Request body:
+        - filter_type: Parameter to filter by (KK, MM, TT, ZZ, SH, etc.)
+        - action: 'keep' or 'delete'
+        - value: Filter value (for single-value filters like KK, GG, O, etc.)
+        - from/to: Range values (for ZZ, SH)
+        - month/year: For MM filter
+        - day/month/year: For TT filter
+        - sh_time: For SH filter ('min', 'mean', 'max')
+    
+    Returns:
+        JSON object with:
+        - filtered_observations: List of filtered observation objects
+        - kept_count: Number of observations kept
+        - deleted_count: Number of observations deleted
+    """
+    from flask import current_app
+    from halo.io.csv_handler import ObservationCSV
+    
+    try:
+        params = request.get_json()
+        filter_type = params.get('filter_type')
+        action = params.get('action', 'keep')
+        
+        # Load current observations from session
+        observations = current_app.config.get('OBSERVATIONS', [])
+        if not observations:
+            return jsonify({'error': 'No observations loaded'}), 400
+        
+        # Load observers for SH filtering (already loaded in app config)
+        observers_list = current_app.config.get('OBSERVERS', [])
+        
+        # Filter observations based on type
+        matching_obs = []
+        
+        if filter_type == 'KK':
+            value = int(params.get('value'))
+            matching_obs = [obs for obs in observations if obs.KK == value]
+            
+        elif filter_type == 'MM':
+            month = int(params.get('month'))
+            year = int(params.get('year'))
+            year_2digit = year % 100  # Convert to 2-digit
+            matching_obs = [obs for obs in observations if obs.MM == month and obs.JJ == year_2digit]
+            
+        elif filter_type == 'TT':
+            day = int(params.get('day'))
+            month = int(params.get('month'))
+            year = int(params.get('year'))
+            year_2digit = year % 100  # Convert to 2-digit
+            matching_obs = [obs for obs in observations if obs.TT == day and obs.MM == month and obs.JJ == year_2digit]
+            
+        elif filter_type == 'ZZ':
+            from_hour = int(params.get('from_hour'))
+            from_minute = int(params.get('from_minute'))
+            to_hour = int(params.get('to_hour'))
+            to_minute = int(params.get('to_minute'))
+            from_time = from_hour * 60 + from_minute
+            to_time = to_hour * 60 + to_minute
+            for obs in observations:
+                if obs.ZS is not None and obs.ZS != -1 and obs.ZM is not None and obs.ZM != -1:
+                    obs_time = obs.ZS * 60 + obs.ZM
+                    if from_time <= obs_time <= to_time:
+                        matching_obs.append(obs)
+                        
+        elif filter_type == 'SH':
+            sh_from = int(params.get('from', -90))
+            sh_to = int(params.get('to', 90))
+            sh_time = params.get('sh_time', 'mean')
+            for obs in observations:
+                altitude = _calculate_observation_solar_altitude(obs, observers_list, sh_time)
+                if altitude is not None and sh_from <= altitude <= sh_to:
+                    matching_obs.append(obs)
+        
+        elif filter_type == 'JJ':
+            # Year - convert 4-digit to 2-digit
+            value = int(params.get('value'))
+            year_2digit = value % 100
+            matching_obs = [obs for obs in observations if obs.JJ == year_2digit]
+                    
+        else:
+            # Simple value match for other parameters (GG, O, EE, DD, N, C, H, F, V)
+            value = int(params.get('value'))
+            attr = filter_type
+            matching_obs = [obs for obs in observations if getattr(obs, attr, None) == value]
+        
+        # Apply action (keep or delete)
+        if action == 'keep':
+            filtered_obs = matching_obs
+        else:  # action == 'delete'
+            filtered_obs = [obs for obs in observations if obs not in matching_obs]
+        
+        kept_count = len(filtered_obs)
+        deleted_count = len(observations) - kept_count
+        
+        # Convert observations to dicts for JSON response
+        filtered_dicts = []
+        for obs in filtered_obs:
+            obs_dict = {
+                'KK': obs.KK, 'O': obs.O, 'JJ': obs.JJ, 'MM': obs.MM, 'TT': obs.TT,
+                'g': obs.g, 'ZS': obs.ZS, 'ZM': obs.ZM, 'd': obs.d,
+                'DD': obs.DD, 'N': obs.N, 'C': obs.C, 'c': obs.c,
+                'EE': obs.EE, 'GG': obs.GG, 'H': obs.H, 'F': obs.F, 'V': obs.V,
+                'f': obs.f, 'zz': obs.zz, 'HO': obs.HO, 'HU': obs.HU,
+                'SE': obs.sectors, 'Bem': obs.remarks
+            }
+            filtered_dicts.append(obs_dict)
+        
+        return jsonify({
+            'success': True,
+            'filtered_observations': filtered_dicts,
+            'kept_count': kept_count,
+            'deleted_count': deleted_count
+        })
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @api_blueprint.route('/statistics', methods=['GET'])
@@ -494,6 +676,73 @@ def upload_file() -> Dict[str, Any]:
             'filename': file.filename,
             'count': len(observations),
             'message': f'{len(observations)} Beobachtungen geladen!'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@api_blueprint.route('/file/merge', methods=['POST'])
+def merge_file() -> Dict[str, Any]:
+    """Merge observations from uploaded file with currently loaded file - implements 'Datei -> Verbinden'."""
+    from flask import current_app
+    from io import StringIO
+    
+    # Check if a file is already loaded
+    if not current_app.config.get('LOADED_FILE'):
+        return jsonify({'error': 'No file loaded. Please load a file first.'}), 400
+    
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    if not file.filename.lower().endswith('.csv'):
+        return jsonify({'error': 'Only CSV files are supported'}), 400
+    
+    try:
+        # Read file content directly into memory (HALO CSV is latin-1)
+        content = file.read().decode('latin-1')
+        file_object = StringIO(content)
+        
+        # Parse CSV directly from memory
+        new_observations = ObservationCSV.read_observations_from_stream(file_object)
+        
+        # Get currently loaded observations
+        current_observations = current_app.config.get('OBSERVATIONS', [])
+        
+        # Create a set of existing observation keys for duplicate detection
+        # Key format: KK-O-JJ-MM-TT-EE-GG (matches observation unique identifier)
+        existing_keys = set()
+        for obs in current_observations:
+            key = f"{obs.KK}-{obs.O}-{obs.JJ:02d}-{obs.MM:02d}-{obs.TT:02d}-{obs.EE:02d}-{obs.GG:02d}"
+            existing_keys.add(key)
+        
+        # Add observations from new file that don't already exist
+        added_count = 0
+        for obs in new_observations:
+            key = f"{obs.KK}-{obs.O}-{obs.JJ:02d}-{obs.MM:02d}-{obs.TT:02d}-{obs.EE:02d}-{obs.GG:02d}"
+            if key not in existing_keys:
+                current_observations.append(obs)
+                existing_keys.add(key)
+                added_count += 1
+        
+        # Sort observations using spaeter() equivalent
+        from functools import cmp_to_key
+        current_observations = sorted(current_observations, key=cmp_to_key(_spaeter))
+        
+        # Update app config
+        current_app.config['OBSERVATIONS'] = current_observations
+        # Mark as dirty only if at least one observation was added
+        if added_count > 0:
+            current_app.config['DIRTY'] = True
+        
+        return jsonify({
+            'success': True,
+            'added_count': added_count,
+            'total_count': len(current_observations),
+            'message': f'{added_count} neue Beobachtungen hinzugefügt!'
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -782,6 +1031,38 @@ def inputmode() -> Dict[str, Any]:
         return jsonify({
             'mode': mode,
             'display': 'lang' if mode == 'M' else 'kurz'
+        })
+
+
+@api_blueprint.route('/config/outputmode', methods=['GET', 'POST'])
+def outputmode() -> Dict[str, Any]:
+    """Get or set Ausgabeart (output format) - NEW FEATURE not in original software"""
+    from flask import current_app, request
+    
+    if request.method == 'POST':
+        data = request.get_json()
+        mode = data.get('mode', 'P')
+        
+        if mode not in ['H', 'P']:
+            return jsonify({'error': 'Invalid mode. Must be H or P'}), 400
+        
+        current_app.config['OUTPUT_MODE'] = mode
+        # Persist setting
+        from pathlib import Path
+        root_path = Path(__file__).parent.parent.parent.parent
+        from halo.services.settings import Settings
+        Settings.save_key(current_app.config, root_path, 'OUTPUT_MODE', mode)
+        
+        return jsonify({
+            'success': True,
+            'mode': mode,
+            'display': 'HTML-Tabellen' if mode == 'H' else 'Pseudografik'
+        })
+    else:
+        mode = current_app.config.get('OUTPUT_MODE', 'P')
+        return jsonify({
+            'mode': mode,
+            'display': 'HTML-Tabellen' if mode == 'H' else 'Pseudografik'
         })
 
 

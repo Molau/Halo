@@ -35,6 +35,7 @@ def create_app(config=None):
         'SECRET_KEY': 'dev-secret-key-change-in-production',
         'JSON_AS_ASCII': False,  # Support Unicode characters (umlauts)
         'INPUT_MODE': 'N',  # Default: N=Number entry, M=Menu entry
+        'OUTPUT_MODE': 'P',  # Default: P=Pseudografik, H=HTML-Tabellen
         'LOADED_FILE': None,
         'OBSERVATIONS': [],
         'OBSERVERS': [],  # Observer metadata from halobeo.csv

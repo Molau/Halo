@@ -1,6 +1,6 @@
 // Observations page functionality - Exact translation from H_BEOBNG.PAS zeibeobachtung()
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOMContentLoaded triggered in observations.js');
+
     let currentPage = 1;
     const pageSize = 50;  // Pascal shows 50 rows at a time (zeile variable)
     let allObservations = [];
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Elements
     const filterDialog = document.getElementById('filter-dialog');
     
-    console.log('filterDialog:', filterDialog);
+
     const btnApplyFilter = document.getElementById('btn-apply-filter');
     const btnCancelFilter = document.getElementById('btn-cancel-filter');
     const compactView = document.getElementById('compact-view');
@@ -87,10 +87,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const filter2SelectElem = document.getElementById('filter-2-select');
     const btnExitObservations = document.getElementById('btn-exit-observations');
     
-    console.log('DOM elements loaded:');
-    console.log('filterCriterion2Select:', filterCriterion2Select);
-    console.log('filter2SelectElem:', filter2SelectElem);
-    console.log('filter2Input:', filter2Input);
+
+
+
+
 
     // Pagination buttons
     const btnFirstPage = document.getElementById('btn-first-page');
@@ -179,10 +179,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     filterCriterion1Select.addEventListener('change', handleFilter1Change);
     filterCriterion2Select.addEventListener('change', (e) => {
-        console.log('filterCriterion2Select change event fired! value:', e.target.value);
+
         handleFilter2Change();
     });
-    console.log('Event listeners attached. filterCriterion2Select:', filterCriterion2Select);
+
     
     document.getElementById('btn-prev-detail').addEventListener('click', () => navigateDetail(-1));
     document.getElementById('btn-next-detail').addEventListener('click', () => navigateDetail(1));
@@ -377,7 +377,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function handleFilter2Change() {
         const value = filterCriterion2Select.value;
-        console.log('handleFilter2Change called with value:', value);
+
         
         if (value === 'none') {
             filter2Input.style.display = 'none';
@@ -465,28 +465,28 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function populateRegionSelect() {
-        console.log('populateRegionSelect called');
+
         filter2SelectElem.innerHTML = '';
-        console.log('i18n:', i18n);
-        console.log('i18n.geographic_regions:', i18n ? i18n.geographic_regions : 'N/A');
+
+
         
         if (i18n && i18n.geographic_regions) {
-            console.log('Populating region select...');
+
             for (let i = 1; i <= 39; i++) {
                 const regionName = i18n.geographic_regions[String(i)];
-                console.log(`Region ${i}: ${regionName}`);
+
                 // Skip empty regions
                 if (regionName && regionName.trim()) {
                     const option = document.createElement('option');
                     option.value = i;
                     option.textContent = `${String(i).padStart(2, '0')} - ${regionName}`;
                     filter2SelectElem.appendChild(option);
-                    console.log(`Added region option: ${option.textContent}`);
+
                 }
             }
-            console.log('Total options added:', filter2SelectElem.options.length);
+
         } else {
-            console.log('i18n or geographic_regions not available');
+
         }
     }
     
@@ -592,22 +592,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Process filters after modal is fully hidden
                 setTimeout(async () => {
                     try {
-                        console.log('[DEBUG applyFilters] window.haloData:', window.haloData);
-                        console.log('[DEBUG applyFilters] allObservations.length:', allObservations.length);
+
+
                         
                         if (window.haloData && window.haloData.isLoaded) {
-                            console.log('[DEBUG applyFilters] Loading from window.haloData, count:', window.haloData.observations.length);
+
                             allObservations = window.haloData.observations;
                             await applyFiltersInternal();
                             updateFileInfo(window.haloData.fileName, allObservations.length);
                         } else if (allObservations.length === 0) {
-                            console.log('[DEBUG applyFilters] Calling loadObservations()');
+
                             await loadObservations();
                         } else {
-                            console.log('[DEBUG applyFilters] Using existing allObservations');
+
                             await applyFiltersInternal();
                         }
-                        console.log('[DEBUG applyFilters] After filtering, filteredObservations.length:', filteredObservations.length);
+
                     } catch (error) {
                         console.error('Error applying filters:', error);
                     } finally {
@@ -685,15 +685,15 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const response = await fetch('/api/config/inputmode');
             const config = await response.json();
-            console.log('[DEBUG] INPUT_MODE config:', config);
+
             displayMode = config.mode === 'M' ? 'lang' : 'kurz';
-            console.log('[DEBUG] displayMode set to:', displayMode);
+
         } catch (error) {
             console.error('Error loading config:', error);
             displayMode = 'kurz';  // Default to compact on error
         }
         
-        console.log('[DEBUG] Calling display function for mode:', displayMode);
+
         if (displayMode === 'kurz') {
             displayCompactView();
         } else {

@@ -1,6 +1,6 @@
 // Analysis (Auswertung) functionality
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('Analysis page loaded');
+
 
     let i18n = null;
     let observers = [];
@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             const i18nResponse = await fetch(`/api/i18n/${lang}`);
             i18n = await i18nResponse.json();
-            console.log('i18n loaded:', i18n);
+
         } catch (error) {
             console.error('Error loading i18n:', error);
             i18n = { analysis_dialog: {}, common: {} };
@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const response = await fetch('/api/observers/list');
             const data = await response.json();
             observers = data.observers;
-            console.log('Observers loaded:', observers.length);
+
         } catch (error) {
             console.error('Error loading observers:', error);
             observers = [];
@@ -1458,7 +1458,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         // Log configuration
-        console.log('Analysis configuration:', selectedParams);
+
         
         // Close the parameter dialog
         const modalInstance = bootstrap.Modal.getInstance(paramDialog);
@@ -1480,7 +1480,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
             
             const result = await response.json();
-            console.log('Analysis result:', result);
+
             
             // Display the result
             displayAnalysisResult(result, selectedParams);
@@ -1624,9 +1624,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Bar Chart button
         if (btnBarChart) {
             btnBarChart.onclick = () => {
-                console.log('Bar chart button clicked');
-                console.log('lastAnalysisResult:', lastAnalysisResult);
-                console.log('lastAnalysisParams:', lastAnalysisParams);
+
+
+
                 showBarChart();
             };
         }
@@ -1634,9 +1634,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Line Chart button
         if (btnLineChart) {
             btnLineChart.onclick = () => {
-                console.log('Line chart button clicked');
-                console.log('lastAnalysisResult:', lastAnalysisResult);
-                console.log('lastAnalysisParams:', lastAnalysisParams);
+
+
+
                 showLineChart();
             };
         }
@@ -2353,12 +2353,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     /*
     function exportAnalysisResult() {
         // TODO: Implement export functionality
-        console.log('Export analysis result');
+
     }
     
     function importAnalysisResult() {
         // TODO: Implement import functionality
-        console.log('Import analysis result');
+
     }
     */
     

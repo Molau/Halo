@@ -110,13 +110,13 @@ class ObservationForm {
         if (this.customTitle) {
             title = this.customTitle;
         } else if (this.mode === 'edit') {
-            title = this.i18n?.menus?.observations?.modify_observation;
+            title = this.i18n.observations.modify_observation;
         } else if (this.mode === 'delete') {
-            title = this.i18n?.menus?.observations?.delete_question;
+            title = this.i18n.observations.delete_question;
         } else if (this.mode === 'view') {
-            title = this.i18n?.menus?.observations?.display;
+            title = this.i18n.observations.display;
         } else {
-            title = this.i18n?.menus?.observations?.add_observation;
+            title = this.i18n.observations.add_observation;
         }
         
         const titleWithCounter = (this.mode === 'edit' || this.mode === 'delete' || this.mode === 'view') && this.currentNum && this.totalNum
@@ -153,7 +153,7 @@ class ObservationForm {
                         <div class="modal-footer py-1">
                             ${this.mode === 'view' ? `<button type="button" class="btn btn-secondary btn-sm" id="btn-obs-form-prev" ${this.currentNum === 1 ? 'disabled' : ''}>${this.i18n?.common?.previous}</button>` : ''}
                             ${this.mode === 'view' ? `<button type="button" class="btn btn-secondary btn-sm" id="btn-obs-form-next" ${this.currentNum === this.totalNum ? 'disabled' : ''}>${this.i18n?.common?.next}</button>` : ''}
-                            ${this.mode === 'view' ? `<button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal">${this.i18n?.common?.ok}</button>` : ''}
+                            ${this.mode === 'view' ? `<button type="button" class="btn btn-primary btn-sm" id="btn-obs-form-ok-view">${this.i18n?.common?.ok}</button>` : ''}
                             ${this.mode !== 'view' ? `<button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${this.i18n?.common?.cancel}</button>` : ''}
                             ${(this.mode === 'edit' || this.mode === 'delete') ? `<button type="button" class="btn btn-outline-primary btn-sm" id="btn-obs-form-no">${this.i18n?.observers?.no}</button>` : ''}
                             ${(this.mode === 'edit' || this.mode === 'delete') ? `<button type="button" class="btn btn-primary btn-sm" id="btn-obs-form-yes">${this.i18n?.observers?.yes}</button>` : ''}
@@ -590,6 +590,7 @@ class ObservationForm {
         // View mode navigation buttons
         const nextBtn = document.getElementById('btn-obs-form-next');
         const prevBtn = document.getElementById('btn-obs-form-prev');
+        const okViewBtn = document.getElementById('btn-obs-form-ok-view');
         
         if (nextBtn && this.mode === 'view') {
             nextBtn.addEventListener('click', () => {
@@ -606,6 +607,14 @@ class ObservationForm {
                     e.preventDefault();
                     nextBtn.click();
                 }
+            });
+        }
+        
+        // OK button in view mode should close and return to main (like ESC/Cancel)
+        if (okViewBtn && this.mode === 'view') {
+            okViewBtn.addEventListener('click', () => {
+                this.modal.hide();
+                // Don't set navigating - let the hidden handler call onCancelBtn
             });
         }
         
@@ -675,18 +684,18 @@ class ObservationForm {
     }
     
     enableAllFields() {
-        console.log('[FORM DEBUG] enableAllFields called, fields:', Object.keys(this.fields));
+
         Object.values(this.fields).forEach(field => {
             if (field && field.id !== 'form-gg') {
-                console.log(`[FORM DEBUG] Enabling field: ${field.id}`);
+
                 field.disabled = false;
             } else if (field) {
-                console.log(`[FORM DEBUG] Skipping GG field: ${field.id}`);
+
             }
         });
         // GG field auto-filled based on g value
         const g = parseInt(this.fields.g.value);
-        console.log(`[FORM DEBUG] g value: ${g}, GG will be ${g !== 0 && g !== 2 ? 'enabled' : 'disabled'}`);
+
         if (g !== 0 && g !== 2) {
             this.fields.gg.disabled = false;
         }

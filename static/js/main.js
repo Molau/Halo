@@ -26,7 +26,7 @@ function saveHaloDataToSession() {
                 fileName: window.haloData.fileName,
                 isLoaded: window.haloData.isLoaded,
                 isDirty: window.haloData.isDirty,
-                count: window.haloData.observations?.length || 0
+                count: window.haloData.observations.length || 0
             };
             sessionStorage.setItem('haloData', JSON.stringify(metadata));
         } catch (e) {
@@ -92,9 +92,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Check for edit debug logs from previous operation
     const editLogs = sessionStorage.getItem('lastEditLogs');
     if (editLogs) {
-        console.log('=== EDIT DEBUG LOGS FROM PREVIOUS OPERATION ===');
-        console.log(editLogs);
-        console.log('=== END EDIT DEBUG LOGS ===');
+
+
+
         sessionStorage.removeItem('lastEditLogs');
     }
 });
@@ -127,8 +127,10 @@ async function loadObserverCodes() {
 }
 
 // Show Bootstrap confirmation dialog instead of browser confirm()
-function showConfirmDialog(title, message, onConfirm, onCancel) {
+function showConfirmDialog(title, message, onConfirm, onCancel, buttonLabels = null) {
     const modalId = 'confirm-modal-' + Math.random().toString(36).substr(2, 9);
+    const cancelLabel = buttonLabels?.cancel || i18nStrings.common.cancel;
+    const confirmLabel = buttonLabels?.confirm || i18nStrings.common.ok;
     const modalHtml = `
         <div class="modal fade" id="${modalId}" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
@@ -141,8 +143,8 @@ function showConfirmDialog(title, message, onConfirm, onCancel) {
                         ${message}
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common?.cancel}</button>
-                        <button type="button" class="btn btn-primary btn-sm px-3" id="confirm-yes-${modalId}">${i18nStrings.common?.ok}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${cancelLabel}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="confirm-yes-${modalId}">${confirmLabel}</button>
                     </div>
                 </div>
             </div>
@@ -211,7 +213,7 @@ function setupMenuHandlers() {
 
 // Handle menu actions
 function handleMenuAction(action) {
-    console.log('Menu action:', action);
+
     
     switch(action) {
         // File menu
@@ -223,6 +225,14 @@ function handleMenuAction(action) {
             highlightFileMenu();
             showLoadFileDialog();
             break;
+        case 'select':
+            highlightFileMenu();
+            showSelectDialog();
+            break;
+        case 'merge':
+            highlightFileMenu();
+            showMergeFileDialog();
+            break;
         case 'save':
             highlightFileMenu();
             showSaveFileDialog();
@@ -231,10 +241,7 @@ function handleMenuAction(action) {
             highlightFileMenu();
             showSaveAsDialog();
             break;
-        case 'export':
-            highlightFileMenu();
-            window.location.href = '/api/observations?format=csv';
-            break;
+        
             
         // Observations menu
         case 'obs-display':
@@ -278,6 +285,10 @@ function handleMenuAction(action) {
             highlightSettingsMenu();
             showEingabeartDialog();
             break;
+        case 'settings-ausgabeart':
+            highlightSettingsMenu();
+            showAusgabeartDialog();
+            break;
         case 'settings-active-observers':
             highlightSettingsMenu();
             showActiveObserversDialog();
@@ -315,8 +326,8 @@ function handleMenuAction(action) {
         // Exit menu
         case 'exit':
             showConfirmDialog(
-                i18nStrings.exit?.title,
-                i18nStrings.exit?.confirm_exit,
+                i18nStrings.exit.title,
+                i18nStrings.exit.confirm_exit,
                 () => window.close()
             );
             break;
@@ -348,7 +359,7 @@ async function showAddObservationDialog() {
 async function showAddObservationDialogNumeric() {
     // Check if a file is loaded
     if (!window.haloData.isLoaded) {
-        showWarningModal(i18nStrings.observations?.no_file_loaded);
+        showWarningModal(i18nStrings.observations.no_file_loaded);
         return;
     }
     
@@ -476,14 +487,14 @@ async function showAddObservationDialogNumeric() {
         const inSectorField = eing.length >= 35 && eing.length < 50;
         let candidate = eing + (inSectorField ? ch.toLowerCase() : ch);
         
-        console.log(`[DEBUG] Key pressed: '${ch}', eing.length: ${eing.length}, candidate.length: ${candidate.length}`);
+
         
         // Auto-fill GG when g=0 or g=2 (after zz complete at position 28)
         if (candidate.length === 28) {
             const g = parseInt(candidate.slice(9,10),10);
-            console.log(`[DEBUG] Checking GG auto-fill: g=${g}, candidate.length=${candidate.length}`);
+
             if (g === 0 || g === 2) {
-                console.log(`[DEBUG] GG auto-fill triggered! g=${g}`);
+
                 
                 // First validate and add the character the user just typed
                 const result = validateNumericProgress(candidate, observerCodes);
@@ -518,15 +529,15 @@ async function showAddObservationDialogNumeric() {
                     .then(response => response.json())
                     .then(data => {
                         const observer = data.observer;
-                        console.log(`[DEBUG] Observer found for ${kk} at ${mm}/${jj}:`, observer);
+
                         
                         if (observer) {
                             // Get region - use GH for main site (g=0), GN for secondary site (g=2)
                             let gg = g === 0 ? observer.GH : observer.GN;
-                            console.log(`[DEBUG] Observer geographic region field: ${gg}`);
+
                             if (gg !== null && gg !== undefined) {
                                 gg = String(gg).padStart(2,'0');
-                                console.log(`[DEBUG] Adding GG: ${gg}`);
+
                                 // Auto-fill the GG field
                                 eing = eing + gg;
                                 input.value = eing;
@@ -534,7 +545,7 @@ async function showAddObservationDialogNumeric() {
                                 
                                 // Auto-fill 8HHHH sun pillar altitude field after GG
                                 const ee = parseInt(eing.slice(20,22),10);
-                                console.log(`[DEBUG] Auto-filling 8HHHH for EE=${ee}`);
+
                                 if (ee === 8) {
                                     // EE 08: user enters 2 digits, then // auto-filled → 8??//
                                     eing = eing + '8';
@@ -555,14 +566,14 @@ async function showAddObservationDialogNumeric() {
                                 // Sectors are only needed for incomplete (V=1) circular halos
                                 const v = parseInt(eing.slice(24,25),10);
                                 const circularHalos = new Set([1,7,12,31,32,33,34,35,36,40]);
-                                console.log(`[DEBUG] Auto-filling sectors: EE=${ee}, V=${v}, isCircular=${circularHalos.has(ee)}`);
+
                                 
                                 if (v === 1 && circularHalos.has(ee)) {
                                     // Incomplete circular halo: user will enter sectors (do nothing)
-                                    console.log(`[DEBUG] Incomplete circular halo - user will enter sectors`);
+
                                 } else {
                                     // Complete halo or non-circular: auto-fill 15 spaces
-                                    console.log(`[DEBUG] Auto-filling 15 spaces for sectors`);
+
                                     eing = eing + '               ';
                                     input.value = eing;
                                     renderNumericGuide(eing);
@@ -624,13 +635,13 @@ async function showAddObservationDialogNumeric() {
                 const sectorStart = 35;
                 const posInSector = eing.length - sectorStart;
                 
-                console.log(`[DEBUG] Space trigger: posInSector=${posInSector}, mod 2=${posInSector % 2}`);
+
                 // Only allow space at odd length (ends with letter)
                 if (posInSector % 2 === 1) {
                     // Valid end position - fill rest with spaces to complete 15-char sector field
                     // Sector field is positions 35-49 (15 chars), remarks start at position 50
                     const spacesNeeded = (35 + 15) - eing.length;
-                    console.log(`[DEBUG] Completing sector field with ${spacesNeeded} spaces (eing.length=${eing.length})`);
+
                     candidate = eing + ' '.repeat(spacesNeeded);
                 }
             }
@@ -670,6 +681,14 @@ async function showAddObservationDialogNumeric() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(obs)
             });
+            
+            if (resp.status === 409) {
+                // Duplicate observation
+                errEl.textContent = i18nStrings.observers.error_observation_exists;
+                errEl.style.display = 'block';
+                return;
+            }
+            
             if (!resp.ok) throw new Error(i18nStrings.observations.error_adding);
             
             const addedObs = await resp.json();
@@ -711,7 +730,7 @@ async function showAddObservationDialogNumeric() {
 async function showAddObservationDialogMenu() {
     // Check if a file is loaded
     if (!window.haloData.isLoaded) {
-        showWarningModal(i18nStrings.menus?.observations?.no_file_loaded);
+        showWarningModal(i18nStrings.menus.observations.no_file_loaded);
         return;
     }
 
@@ -723,7 +742,7 @@ async function showAddObservationDialogMenu() {
         observers = data.observers;
     } catch (e) {
         console.error(e);
-        alert(i18nStrings.observations.error_loading_observers);
+        showWarningModal(i18nStrings.observations.error_loading_observers);
         return;
     }
     
@@ -737,7 +756,7 @@ async function showAddObservationDialogMenu() {
         console.error('Error loading fixed observer:', e);
     }
 
-    const title = i18nStrings.observations?.add_observation;
+    const title = i18nStrings.observations.add_observation;
     
     // Build observer options with fixed observer pre-selected
     const observerOptions = observers.map(obs => {
@@ -763,181 +782,181 @@ async function showAddObservationDialogMenu() {
                     <div class="modal-body py-2">
                         <div class="row g-2">
                             <div class="col-md-6">
-                                <label class="form-label">KK - ${i18nStrings.fields?.observer} <span class="text-danger">*</span></label>
+                                <label class="form-label">KK - ${i18nStrings.fields.observer} <span class="text-danger">*</span></label>
                                 <select class="form-select form-select-sm" id="menu-kk" required>
-                                    <option value="">-- ${i18nStrings.fields?.select} --</option>
+                                    <option value="">-- ${i18nStrings.fields.select} --</option>
                                     ${observerOptions}
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">O - ${i18nStrings.fields?.object} <span class="text-danger">*</span></label>
+                                <label class="form-label">O - ${i18nStrings.fields.object} <span class="text-danger">*</span></label>
                                 <select class="form-select form-select-sm" id="menu-o" required>
-                                    <option value="">-- ${i18nStrings.fields?.select} --</option>
-                                    <option value="1">1 - ${i18nStrings.object_types?.['1']}</option>
-                                    <option value="2">2 - ${i18nStrings.object_types?.['2']}</option>
-                                    <option value="3">3 - ${i18nStrings.object_types?.['3']}</option>
-                                    <option value="4">4 - ${i18nStrings.object_types?.['4']}</option>
-                                    <option value="5">5 - ${i18nStrings.object_types?.['5']}</option>
+                                    <option value="">-- ${i18nStrings.fields.select} --</option>
+                                    <option value="1">1 - ${i18nStrings.object_types['1']}</option>
+                                    <option value="2">2 - ${i18nStrings.object_types['2']}</option>
+                                    <option value="3">3 - ${i18nStrings.object_types['3']}</option>
+                                    <option value="4">4 - ${i18nStrings.object_types['4']}</option>
+                                    <option value="5">5 - ${i18nStrings.object_types['5']}</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">JJ - ${i18nStrings.fields?.year} <span class="text-danger">*</span></label>
+                                <label class="form-label">JJ - ${i18nStrings.fields.year} <span class="text-danger">*</span></label>
                                 <select class="form-select form-select-sm" id="menu-jj" required>
-                                    <option value="">-- ${i18nStrings.fields?.select} --</option>
+                                    <option value="">-- ${i18nStrings.fields.select} --</option>
                                     ${yearOptions}
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">MM - ${i18nStrings.fields?.month} <span class="text-danger">*</span></label>
+                                <label class="form-label">MM - ${i18nStrings.fields.month} <span class="text-danger">*</span></label>
                                 <select class="form-select form-select-sm" id="menu-mm" required>
-                                    <option value="">-- ${i18nStrings.fields?.select} --</option>
+                                    <option value="">-- ${i18nStrings.fields.select} --</option>
                                     ${Array.from({length: 12}, (_, i) => `<option value="${i+1}">${String(i+1).padStart(2, '0')}</option>`).join('')}
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">TT - ${i18nStrings.fields?.day} <span class="text-danger">*</span></label>
+                                <label class="form-label">TT - ${i18nStrings.fields.day} <span class="text-danger">*</span></label>
                                 <select class="form-select form-select-sm" id="menu-tt" required>
-                                    <option value="">-- ${i18nStrings.fields?.select} --</option>
+                                    <option value="">-- ${i18nStrings.fields.select} --</option>
                                     ${Array.from({length: 31}, (_, i) => `<option value="${i+1}">${String(i+1).padStart(2, '0')}</option>`).join('')}
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">g - ${i18nStrings.fields?.observing_area} <span class="text-danger">*</span></label>
+                                <label class="form-label">g - ${i18nStrings.fields.observing_area} <span class="text-danger">*</span></label>
                                 <select class="form-select form-select-sm" id="menu-g" required>
-                                    <option value="">-- ${i18nStrings.fields?.select} --</option>
-                                    <option value="0">0 - ${i18nStrings.location_types?.['0']}</option>
-                                    <option value="1">1 - ${i18nStrings.location_types?.['1']}</option>
-                                    <option value="2">2 - ${i18nStrings.location_types?.['2']}</option>
+                                    <option value="">-- ${i18nStrings.fields.select} --</option>
+                                    <option value="0">0 - ${i18nStrings.location_types['0']}</option>
+                                    <option value="1">1 - ${i18nStrings.location_types['1']}</option>
+                                    <option value="2">2 - ${i18nStrings.location_types['2']}</option>
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">ZS - ${i18nStrings.fields?.hour}</label>
+                                <label class="form-label">ZS - ${i18nStrings.fields.hour}</label>
                                 <select class="form-select form-select-sm" id="menu-zs">
                                     <option value="">--</option>
                                     ${Array.from({length: 24}, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')}</option>`).join('')}
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">ZM - ${i18nStrings.fields?.minute}</label>
+                                <label class="form-label">ZM - ${i18nStrings.fields.minute}</label>
                                 <select class="form-select form-select-sm" id="menu-zm">
                                     <option value="">--</option>
                                     ${Array.from({length: 60}, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')}</option>`).join('')}
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">d - ${i18nStrings.fields?.cirrus_density}</label>
+                                <label class="form-label">d - ${i18nStrings.fields.cirrus_density}</label>
                                 <select class="form-select form-select-sm" id="menu-d">
-                                    <option value="-1">-- ${i18nStrings.fields?.not_specified} --</option>
-                                    <option value="0">0 - ${i18nStrings.cirrus_density?.['0']}</option>
-                                    <option value="1">1 - ${i18nStrings.cirrus_density?.['1']}</option>
-                                    <option value="2">2 - ${i18nStrings.cirrus_density?.['2']}</option>
-                                    <option value="4">4 - ${i18nStrings.cirrus_density?.['4']}</option>
-                                    <option value="5">5 - ${i18nStrings.cirrus_density?.['5']}</option>
-                                    <option value="6">6 - ${i18nStrings.cirrus_density?.['6']}</option>
-                                    <option value="7">7 - ${i18nStrings.cirrus_density?.['7']}</option>
+                                    <option value="-1">-- ${i18nStrings.fields.not_specified} --</option>
+                                    <option value="0">0 - ${i18nStrings.cirrus_density['0']}</option>
+                                    <option value="1">1 - ${i18nStrings.cirrus_density['1']}</option>
+                                    <option value="2">2 - ${i18nStrings.cirrus_density['2']}</option>
+                                    <option value="4">4 - ${i18nStrings.cirrus_density['4']}</option>
+                                    <option value="5">5 - ${i18nStrings.cirrus_density['5']}</option>
+                                    <option value="6">6 - ${i18nStrings.cirrus_density['6']}</option>
+                                    <option value="7">7 - ${i18nStrings.cirrus_density['7']}</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">DD - ${i18nStrings.fields?.duration}</label>
+                                <label class="form-label">DD - ${i18nStrings.fields.duration}</label>
                                 <select class="form-select form-select-sm" id="menu-dd">
                                     <option value="-1">--</option>
                                     ${Array.from({length: 100}, (_, i) => `<option value="${i}">${i * 10} min</option>`).join('')}
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">N - ${i18nStrings.fields?.cloud_cover}</label>
+                                <label class="form-label">N - ${i18nStrings.fields.cloud_cover}</label>
                                 <select class="form-select form-select-sm" id="menu-n">
-                                    <option value="-1">-- ${i18nStrings.fields?.not_specified} --</option>
+                                    <option value="-1">-- ${i18nStrings.fields.not_specified} --</option>
                                     ${Array.from({length: 10}, (_, i) => {
-                                        const label = i18nStrings.cloud_cover?.[i.toString()];
+                                        const label = i18nStrings.cloud_cover[i.toString()];
                                         return `<option value="${i}">${i} - ${label}</option>`;
                                     }).join('')}
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">C - ${i18nStrings.fields?.cirrus_type}</label>
+                                <label class="form-label">C - ${i18nStrings.fields.cirrus_type}</label>
                                 <select class="form-select form-select-sm" id="menu-C">
-                                    <option value="-1">-- ${i18nStrings.fields?.not_specified} --</option>
+                                    <option value="-1">-- ${i18nStrings.fields.not_specified} --</option>
                                     ${Array.from({length: 8}, (_, i) => {
-                                        const label = i18nStrings.cirrus_types?.[i.toString()];
+                                        const label = i18nStrings.cirrus_types[i.toString()];
                                         return `<option value="${i}">${i} - ${label}</option>`;
                                     }).join('')}
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">c - ${i18nStrings.fields?.low_clouds}</label>
+                                <label class="form-label">c - ${i18nStrings.fields.low_clouds}</label>
                                 <select class="form-select form-select-sm" id="menu-c">
-                                    <option value="-1">-- ${i18nStrings.fields?.not_specified} --</option>
+                                    <option value="-1">-- ${i18nStrings.fields.not_specified} --</option>
                                     ${Array.from({length: 10}, (_, i) => {
-                                        const label = i18nStrings.low_clouds?.[i.toString()];
+                                        const label = i18nStrings.low_clouds[i.toString()];
                                         return `<option value="${i}">${i} - ${label}</option>`;
                                     }).join('')}
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">EE - ${i18nStrings.fields?.phenomenon} <span class="text-danger">*</span></label>
+                                <label class="form-label">EE - ${i18nStrings.fields.phenomenon} <span class="text-danger">*</span></label>
                                 <select class="form-select form-select-sm" id="menu-ee" required>
-                                    <option value="">-- ${i18nStrings.fields?.select} --</option>
+                                    <option value="">-- ${i18nStrings.fields.select} --</option>
                                     ${Array.from({length: 77}, (_, i) => {
                                         const ee = i + 1;
-                                        const label = i18nStrings.halo_types?.[ee.toString()];
+                                        const label = i18nStrings.halo_types[ee.toString()];
                                         return `<option value="${ee}">${String(ee).padStart(2, '0')} - ${label}</option>`;
                                     }).join('')}
-                                    <option value="99">99 - ${i18nStrings.halo_types?.['99']}</option>
+                                    <option value="99">99 - ${i18nStrings.halo_types['99']}</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">H - ${i18nStrings.fields?.brightness}</label>
+                                <label class="form-label">H - ${i18nStrings.fields.brightness}</label>
                                 <select class="form-select form-select-sm" id="menu-h">
-                                    <option value="-1">-- ${i18nStrings.fields?.not_specified} --</option>
+                                    <option value="-1">-- ${i18nStrings.fields.not_specified} --</option>
                                     ${Array.from({length: 4}, (_, i) => {
-                                        const label = i18nStrings.brightness?.[i.toString()];
+                                        const label = i18nStrings.brightness[i.toString()];
                                         return `<option value="${i}">${i} - ${label}</option>`;
                                     }).join('')}
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">F - ${i18nStrings.fields?.color}</label>
+                                <label class="form-label">F - ${i18nStrings.fields.color}</label>
                                 <select class="form-select form-select-sm" id="menu-f">
-                                    <option value="-1">-- ${i18nStrings.fields?.not_specified} --</option>
+                                    <option value="-1">-- ${i18nStrings.fields.not_specified} --</option>
                                     ${Array.from({length: 6}, (_, i) => {
-                                        const label = i18nStrings.color?.[i.toString()];
+                                        const label = i18nStrings.color[i.toString()];
                                         return `<option value="${i}">${i} - ${label}</option>`;
                                     }).join('')}
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">V - ${i18nStrings.fields?.completeness}</label>
+                                <label class="form-label">V - ${i18nStrings.fields.completeness}</label>
                                 <select class="form-select form-select-sm" id="menu-v">
-                                    <option value="-1">-- ${i18nStrings.fields?.not_specified} --</option>
-                                    <option value="1">1 - ${i18nStrings.completeness?.['1']}</option>
-                                    <option value="2">2 - ${i18nStrings.completeness?.['2']}</option>
+                                    <option value="-1">-- ${i18nStrings.fields.not_specified} --</option>
+                                    <option value="1">1 - ${i18nStrings.completeness['1']}</option>
+                                    <option value="2">2 - ${i18nStrings.completeness['2']}</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">f - ${i18nStrings.fields?.weather_front}</label>
+                                <label class="form-label">f - ${i18nStrings.fields.weather_front}</label>
                                 <select class="form-select form-select-sm" id="menu-f">
-                                    <option value="-1">-- ${i18nStrings.fields?.not_specified} --</option>
+                                    <option value="-1">-- ${i18nStrings.fields.not_specified} --</option>
                                     ${Array.from({length: 9}, (_, i) => {
-                                        const label = i18nStrings.weather_front?.[i.toString()];
+                                        const label = i18nStrings.weather_front[i.toString()];
                                         return `<option value="${i}">${i} - ${label}</option>`;
                                     }).join('')}
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">zz - ${i18nStrings.fields?.precipitation}</label>
+                                <label class="form-label">zz - ${i18nStrings.fields.precipitation}</label>
                                 <select class="form-select form-select-sm" id="menu-zz">
-                                    <option value="-1">-- ${i18nStrings.fields?.not_specified} --</option>
+                                    <option value="-1">-- ${i18nStrings.fields.not_specified} --</option>
                                     ${Array.from({length: 99}, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')} h</option>`).join('')}
-                                    <option value="99">99 - ${i18nStrings.precipitation?.['99']}</option>
+                                    <option value="99">99 - ${i18nStrings.precipitation['99']}</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">GG - ${i18nStrings.fields?.region} <span class="text-danger">*</span></label>
+                                <label class="form-label">GG - ${i18nStrings.fields.region} <span class="text-danger">*</span></label>
                                 <select class="form-select form-select-sm" id="menu-gg" required>
-                                    <option value="">-- ${i18nStrings.fields?.select} --</option>
+                                    <option value="">-- ${i18nStrings.fields.select} --</option>
                                     ${[1,2,3,4,5,6,7,8,9,10,11,16,17,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39].map(gg => {
-                                        const label = i18nStrings.geographic_regions?.[gg.toString()];
+                                        const label = i18nStrings.geographic_regions[gg.toString()];
                                         return `<option value="${gg}">${String(gg).padStart(2, '0')} - ${label}</option>`;
                                     }).join('')}
                                 </select>
@@ -961,19 +980,19 @@ async function showAddObservationDialogMenu() {
                                 </div>
                             </div>
                             <div class="col-12">
-                                <label class="form-label">${i18nStrings.fields?.sectors} (${i18nStrings.fields?.max_15_chars})</label>
+                                <label class="form-label">${i18nStrings.fields.sectors} (${i18nStrings.fields.max_15_chars})</label>
                                 <input type="text" class="form-control form-control-sm" id="menu-sectors" maxlength="15">
                             </div>
                             <div class="col-12">
-                                <label class="form-label">${i18nStrings.fields?.remarks} (${i18nStrings.fields?.max_60_chars})</label>
+                                <label class="form-label">${i18nStrings.fields.remarks} (${i18nStrings.fields.max_60_chars})</label>
                                 <input type="text" class="form-control form-control-sm" id="menu-remarks" maxlength="60">
                             </div>
                         </div>
                         <div class="alert alert-danger mt-2" id="menu-obs-error" style="display:none;"></div>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${i18nStrings.common?.cancel}</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-add-obs-menu-ok" disabled>${i18nStrings.common?.ok}</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-add-obs-menu-ok" disabled>${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -1024,51 +1043,51 @@ async function showAddObservationDialogMenu() {
     // Auto-fill GG when g is selected
     async function autoFillGG() {
         const g = parseInt(fields.g.value);
-        console.log('[DEBUG autoFillGG] Called with g:', g);
-        console.log('[DEBUG autoFillGG] KK:', fields.kk.value, 'JJ:', fields.jj.value, 'MM:', fields.mm.value);
+
+
         
         if (g === 0 || g === 2) {
             // Auto-fill GG based on observer and date
             const kk = fields.kk.value;
             const jjRaw = fields.jj.value;
             const mm = fields.mm.value;
-            console.log('[DEBUG autoFillGG] g is 0 or 2, checking if we have KK/JJ/MM');
+
             if (kk && jjRaw && mm) {
                 // Convert year to 2-digit format (126 -> 26, 86 -> 86)
                 const jj = parseInt(jjRaw) % 100;
                 const url = `/api/observers?kk=${kk}&jj=${jj}&mm=${mm}`;
-                console.log('[DEBUG autoFillGG] Fetching observer data from API:', url);
+
                 try {
                     const resp = await fetch(url);
-                    console.log('[DEBUG autoFillGG] API response status:', resp.status);
+
                     if (resp.ok) {
                         const data = await resp.json();
-                        console.log('[DEBUG autoFillGG] API data received:', data);
-                        console.log('[DEBUG autoFillGG] data.observer:', data.observer);
+
+
                         if (data.observer) {
-                            console.log('[DEBUG autoFillGG] data.observer.GH:', data.observer.GH);
-                            console.log('[DEBUG autoFillGG] data.observer.GN:', data.observer.GN);
+
+
                         }
                         if (data.observer && data.observer.GH !== undefined && data.observer.GN !== undefined) {
                             const gg = g === 0 ? data.observer.GH : data.observer.GN;
-                            console.log('[DEBUG autoFillGG] Setting GG to:', gg, '(g=', g, ')');
+
                             fields.gg.value = gg;
                             fields.gg.disabled = true;
                             checkRequired();
                         } else {
-                            console.log('[DEBUG autoFillGG] GH or GN not in data.observer');
+
                         }
                     } else {
-                        console.log('[DEBUG autoFillGG] API response not OK');
+
                     }
                 } catch (e) {
                     console.error('[DEBUG autoFillGG] Error fetching observer GG:', e);
                 }
             } else {
-                console.log('[DEBUG autoFillGG] Missing KK, JJ, or MM');
+
             }
         } else {
-            console.log('[DEBUG autoFillGG] g is not 0 or 2, clearing GG');
+
             fields.gg.disabled = false;
             fields.gg.value = '';
         }
@@ -1208,6 +1227,16 @@ async function showAddObservationDialogMenu() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(obs)
             });
+            
+            if (resp.status === 409) {
+                // Duplicate observation
+                const errEl = document.getElementById('menu-error-message');
+                if (errEl) {
+                    errEl.textContent = i18nStrings.observers.error_observation_exists;
+                    errEl.style.display = 'block';
+                }
+                return;
+            }
             
             if (!resp.ok) throw new Error(i18nStrings.observations.error_adding);
             
@@ -1448,28 +1477,28 @@ function validateNumericProgress(s, observerCodes) {
         const circularHalos = new Set([1,7,12,31,32,33,34,35,36,40]);
         const char = s[len-1];
         
-        console.log(`[SECTOR DEBUG] len=${len}, v=${v}, ee=${ee}, char='${char}', isCircular=${circularHalos.has(ee)}`);
+
         
         if (v === 1 && circularHalos.has(ee)) {
             // User enters sector notation using shared validator
             const sectorStart = 35;
             const sectorField = s.slice(sectorStart, len);
             
-            console.log(`[SECTOR DEBUG] sectorField='${sectorField}'`);
+
             
             // Use shared validation function
             const result = validateSectorInput(sectorField, false);
             
             if (!result.valid) {
-                console.log(`[SECTOR DEBUG] Validation failed: ${result.error}`);
+
                 return { ok: false };
             }
             
-            console.log(`[SECTOR DEBUG] Validation passed`);
+
             return { ok: true };
         } else {
             // Auto-filled spaces
-            console.log(`[SECTOR DEBUG] Auto-filled space expected`);
+
             return { ok: char === ' ' };
         }
     }
@@ -1552,15 +1581,15 @@ function setupLanguageSwitcher() {
     
     // Set initial button states based on current language
     if (currentLanguage === 'de') {
-        deBtn?.classList.remove('btn-outline-light');
-        deBtn?.classList.add('btn-light');
-        enBtn?.classList.remove('btn-light');
-        enBtn?.classList.add('btn-outline-light');
+        deBtn.classList.remove('btn-outline-light');
+        deBtn.classList.add('btn-light');
+        enBtn.classList.remove('btn-light');
+        enBtn.classList.add('btn-outline-light');
     } else {
-        enBtn?.classList.remove('btn-outline-light');
-        enBtn?.classList.add('btn-light');
-        deBtn?.classList.remove('btn-light');
-        deBtn?.classList.add('btn-outline-light');
+        enBtn.classList.remove('btn-outline-light');
+        enBtn.classList.add('btn-light');
+        deBtn.classList.remove('btn-light');
+        deBtn.classList.add('btn-outline-light');
     }
     
     if (deBtn) {
@@ -1622,8 +1651,6 @@ function updateMenuText() {
         updateDropdownItem('merge', i18nStrings.menus.file.merge);
         updateDropdownItem('save', i18nStrings.menus.file.save);
         updateDropdownItem('save-as', i18nStrings.menus.file.save_as);
-        updateDropdownItem('export', i18nStrings.menus.file.export);
-        updateDropdownItem('import', i18nStrings.menus.file.import);
         updateDropdownItem('obs-add', i18nStrings.observations.add);
         updateDropdownItem('obs-modify', i18nStrings.observations.modify);
         updateDropdownItem('obs-delete', i18nStrings.observations.delete);
@@ -1636,10 +1663,10 @@ function updateMenuText() {
         updateDropdownItem('output-monthly-report', i18nStrings.output.monthly_report);
         updateDropdownItem('output-monthly-stats', i18nStrings.output.monthly_stats);
         updateDropdownItem('output-yearly-stats', i18nStrings.output.yearly_stats);
-        updateDropdownItem('settings-fixed-observer', i18nStrings.menus?.settings?.fixed_observer);
-        updateDropdownItem('settings-eingabeart', i18nStrings.menus?.settings?.input_type);
-        updateDropdownItem('settings-datenpfad', i18nStrings.menus?.settings?.data_dir);
-        if (i18nStrings.menus?.settings?.active_observers) {
+        updateDropdownItem('settings-fixed-observer', i18nStrings.menus.settings.fixed_observer);
+        updateDropdownItem('settings-eingabeart', i18nStrings.menus.settings.input_type);
+        updateDropdownItem('settings-datenpfad', i18nStrings.menus.settings.data_dir);
+        if (i18nStrings.menus.settings.active_observers) {
             updateDropdownItem('settings-active-observers', i18nStrings.menus.settings.active_observers);
         }
         // Update link text for observations (has href, not data-action)
@@ -1659,8 +1686,6 @@ function updateMenuText() {
         updateDropdownItem('merge', i18nStrings.menus.file.merge);
         updateDropdownItem('save', i18nStrings.menus.file.save);
         updateDropdownItem('save-as', i18nStrings.menus.file.save_as);
-        updateDropdownItem('export', i18nStrings.menus.file.export);
-        updateDropdownItem('import', i18nStrings.menus.file.import);
         updateDropdownItem('obs-add', i18nStrings.observations.add);
         updateDropdownItem('obs-modify', i18nStrings.observations.modify);
         updateDropdownItem('obs-delete', i18nStrings.observations.delete);
@@ -1673,10 +1698,10 @@ function updateMenuText() {
         updateDropdownItem('output-monthly-report', i18nStrings.output.monthly_report);
         updateDropdownItem('output-monthly-stats', i18nStrings.output.monthly_stats);
         updateDropdownItem('output-yearly-stats', i18nStrings.output.yearly_stats);
-        updateDropdownItem('settings-fixed-observer', i18nStrings.menus?.settings?.fixed_observer);
-        updateDropdownItem('settings-eingabeart', i18nStrings.menus?.settings?.input_type);
-        updateDropdownItem('settings-datenpfad', i18nStrings.menus?.settings?.data_dir);
-        if (i18nStrings.menus?.settings?.active_observers) {
+        updateDropdownItem('settings-fixed-observer', i18nStrings.menus.settings.fixed_observer);
+        updateDropdownItem('settings-eingabeart', i18nStrings.menus.settings.input_type);
+        updateDropdownItem('settings-datenpfad', i18nStrings.menus.settings.data_dir);
+        if (i18nStrings.menus.settings.active_observers) {
             updateDropdownItem('settings-active-observers', i18nStrings.menus.settings.active_observers);
         }
         // Update link text for observations (has href, not data-action)
@@ -1738,15 +1763,15 @@ function showHelp() {
 async function showModifyObservationsDialog() {
     // Check if data is loaded
     if (!window.haloData || !window.haloData.isLoaded || !window.haloData.observations || window.haloData.observations.length === 0) {
-        showWarningModal(i18nStrings.dialogs?.no_data?.message);
+        showWarningModal(i18nStrings.dialogs.no_data.message);
         return;
     }
     
     // Step 1: Ask user to select type (Einzelbeobachtungen or Beobachtungsgruppen)
-    const title = i18nStrings.menus?.observations?.modify_type_title;
-    const einzelText = i18nStrings.menus?.observations?.modify_single;
-    const gruppenText = i18nStrings.menus?.observations?.modify_groups;
-    const questionText = i18nStrings.menus?.observations?.modify_type_question;
+    const title = i18nStrings.menus.observations.modify_type_title;
+    const einzelText = i18nStrings.menus.observations.modify_single;
+    const gruppenText = i18nStrings.menus.observations.modify_groups;
+    const questionText = i18nStrings.menus.observations.modify_type_question;
     
     const modalHtml = `
         <div class="modal fade" id="modify-type-modal" tabindex="-1">
@@ -1802,7 +1827,7 @@ async function showModifyFilterDialog(modifyType) {
     filterDialog.show(
         (filterState) => {
             // onApply callback - filters have been applied
-            console.log('Filter applied for modify:', modifyType, filterState);
+
             
             if (modifyType === 'single') {
                 showModifySingleObservations(filterState);
@@ -1812,7 +1837,7 @@ async function showModifyFilterDialog(modifyType) {
         },
         () => {
             // onCancel callback - user cancelled
-            console.log('Modify dialog cancelled');
+
         }
     );
 }
@@ -1823,11 +1848,11 @@ async function showModifySingleObservations(filterState) {
     const filteredObs = applyFilterToObservations(filterState);
     
     if (filteredObs.length === 0) {
-        showWarningModal(i18nStrings.ui?.messages?.no_observations);
+        showWarningModal(i18nStrings.ui.messages.no_observations);
         return;
     }
     
-    console.log(`[DEBUG] Found ${filteredObs.length} observations to modify`);
+
     
     // Show observations one by one in edit form
     let currentIndex = 0;
@@ -1864,11 +1889,11 @@ async function showModifyGroupObservations(filterState) {
     const filteredObs = applyFilterToObservations(filterState);
     
     if (filteredObs.length === 0) {
-        showWarningModal(i18nStrings.ui?.messages?.no_observations);
+        showWarningModal(i18nStrings.ui.messages.no_observations);
         return;
     }
     
-    console.log(`[DEBUG] Found ${filteredObs.length} observations for group modification`);
+
     
     // Always show the menu-based modification form (regardless of current input mode)
     await showGroupModifyDialogMenu(filteredObs);
@@ -1883,11 +1908,11 @@ async function showGroupModifyDialogMenu(filteredObs) {
         observers = data.observers;
     } catch (e) {
         console.error(e);
-        alert(i18nStrings.observations.error_loading_observers);
+        showWarningModal(i18nStrings.observations.error_loading_observers);
         return;
     }
 
-    const title = i18nStrings.menus?.observations?.modify_groups;
+    const title = i18nStrings.menus.observations.modify_groups;
     
     // Build observer options - NO pre-selection
     const observerOptions = observers.map(obs => {
@@ -1906,188 +1931,188 @@ async function showGroupModifyDialogMenu(filteredObs) {
             <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content">
                     <div class="modal-header py-1">
-                        <h6 class="modal-title mb-0">${title} (${filteredObs.length} ${i18nStrings.ui?.messages?.observations})</h6>
+                        <h6 class="modal-title mb-0">${title} (${filteredObs.length} ${i18nStrings.ui.messages.observations})</h6>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body py-2">
-                        <p class="text-muted small mb-2">${i18nStrings.observations?.group_modify_info}</p>
+                        <p class="text-muted small mb-2">${i18nStrings.observations.group_modify_info}</p>
                         <div class="row g-2">
                             <div class="col-md-6">
-                                <label class="form-label">KK - ${i18nStrings.fields?.observer}</label>
+                                <label class="form-label">KK - ${i18nStrings.fields.observer}</label>
                                 <select class="form-select form-select-sm" id="group-kk">
-                                    <option value="">-- ${i18nStrings.fields?.not_specified} --</option>
+                                    <option value="">-- ${i18nStrings.fields.not_specified} --</option>
                                     ${observerOptions}
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">O - ${i18nStrings.fields?.object}</label>
+                                <label class="form-label">O - ${i18nStrings.fields.object}</label>
                                 <select class="form-select form-select-sm" id="group-o">
-                                    <option value="">-- ${i18nStrings.fields?.not_specified} --</option>
-                                    <option value="1">1 - ${i18nStrings.object_types?.['1']}</option>
-                                    <option value="2">2 - ${i18nStrings.object_types?.['2']}</option>
-                                    <option value="3">3 - ${i18nStrings.object_types?.['3']}</option>
-                                    <option value="4">4 - ${i18nStrings.object_types?.['4']}</option>
-                                    <option value="5">5 - ${i18nStrings.object_types?.['5']}</option>
+                                    <option value="">-- ${i18nStrings.fields.not_specified} --</option>
+                                    <option value="1">1 - ${i18nStrings.object_types['1']}</option>
+                                    <option value="2">2 - ${i18nStrings.object_types['2']}</option>
+                                    <option value="3">3 - ${i18nStrings.object_types['3']}</option>
+                                    <option value="4">4 - ${i18nStrings.object_types['4']}</option>
+                                    <option value="5">5 - ${i18nStrings.object_types['5']}</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">JJ - ${i18nStrings.fields?.year}</label>
+                                <label class="form-label">JJ - ${i18nStrings.fields.year}</label>
                                 <select class="form-select form-select-sm" id="group-jj">
-                                    <option value="">-- ${i18nStrings.fields?.not_specified} --</option>
+                                    <option value="">-- ${i18nStrings.fields.not_specified} --</option>
                                     ${yearOptions}
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">MM - ${i18nStrings.fields?.month}</label>
+                                <label class="form-label">MM - ${i18nStrings.fields.month}</label>
                                 <select class="form-select form-select-sm" id="group-mm">
-                                    <option value="">-- ${i18nStrings.fields?.not_specified} --</option>
+                                    <option value="">-- ${i18nStrings.fields.not_specified} --</option>
                                     ${Array.from({length: 12}, (_, i) => `<option value="${i+1}">${String(i+1).padStart(2, '0')}</option>`).join('')}
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">TT - ${i18nStrings.fields?.day}</label>
+                                <label class="form-label">TT - ${i18nStrings.fields.day}</label>
                                 <select class="form-select form-select-sm" id="group-tt">
-                                    <option value="">-- ${i18nStrings.fields?.not_specified} --</option>
+                                    <option value="">-- ${i18nStrings.fields.not_specified} --</option>
                                     ${Array.from({length: 31}, (_, i) => `<option value="${i+1}">${String(i+1).padStart(2, '0')}</option>`).join('')}
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">g - ${i18nStrings.fields?.observing_area}</label>
+                                <label class="form-label">g - ${i18nStrings.fields.observing_area}</label>
                                 <select class="form-select form-select-sm" id="group-g">
-                                    <option value="">-- ${i18nStrings.fields?.not_specified} --</option>
-                                    <option value="0">0 - ${i18nStrings.location_types?.['0']}</option>
-                                    <option value="1">1 - ${i18nStrings.location_types?.['1']}</option>
-                                    <option value="2">2 - ${i18nStrings.location_types?.['2']}</option>
+                                    <option value="">-- ${i18nStrings.fields.not_specified} --</option>
+                                    <option value="0">0 - ${i18nStrings.location_types['0']}</option>
+                                    <option value="1">1 - ${i18nStrings.location_types['1']}</option>
+                                    <option value="2">2 - ${i18nStrings.location_types['2']}</option>
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">ZS - ${i18nStrings.fields?.hour}</label>
+                                <label class="form-label">ZS - ${i18nStrings.fields.hour}</label>
                                 <select class="form-select form-select-sm" id="group-zs">
                                     <option value="">--</option>
                                     ${Array.from({length: 24}, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')}</option>`).join('')}
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">ZM - ${i18nStrings.fields?.minute}</label>
+                                <label class="form-label">ZM - ${i18nStrings.fields.minute}</label>
                                 <select class="form-select form-select-sm" id="group-zm">
                                     <option value="">--</option>
                                     ${Array.from({length: 60}, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')}</option>`).join('')}
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">d - ${i18nStrings.fields?.cirrus_density}</label>
+                                <label class="form-label">d - ${i18nStrings.fields.cirrus_density}</label>
                                 <select class="form-select form-select-sm" id="group-d">
-                                    <option value="">-- ${i18nStrings.fields?.not_specified} --</option>
-                                    <option value="0">0 - ${i18nStrings.cirrus_density?.['0']}</option>
-                                    <option value="1">1 - ${i18nStrings.cirrus_density?.['1']}</option>
-                                    <option value="2">2 - ${i18nStrings.cirrus_density?.['2']}</option>
-                                    <option value="4">4 - ${i18nStrings.cirrus_density?.['4']}</option>
-                                    <option value="5">5 - ${i18nStrings.cirrus_density?.['5']}</option>
-                                    <option value="6">6 - ${i18nStrings.cirrus_density?.['6']}</option>
-                                    <option value="7">7 - ${i18nStrings.cirrus_density?.['7']}</option>
+                                    <option value="">-- ${i18nStrings.fields.not_specified} --</option>
+                                    <option value="0">0 - ${i18nStrings.cirrus_density['0']}</option>
+                                    <option value="1">1 - ${i18nStrings.cirrus_density['1']}</option>
+                                    <option value="2">2 - ${i18nStrings.cirrus_density['2']}</option>
+                                    <option value="4">4 - ${i18nStrings.cirrus_density['4']}</option>
+                                    <option value="5">5 - ${i18nStrings.cirrus_density['5']}</option>
+                                    <option value="6">6 - ${i18nStrings.cirrus_density['6']}</option>
+                                    <option value="7">7 - ${i18nStrings.cirrus_density['7']}</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">DD - ${i18nStrings.fields?.duration}</label>
+                                <label class="form-label">DD - ${i18nStrings.fields.duration}</label>
                                 <select class="form-select form-select-sm" id="group-dd">
                                     <option value="">--</option>
                                     ${Array.from({length: 100}, (_, i) => `<option value="${i}">${i * 10} min</option>`).join('')}
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">N - ${i18nStrings.fields?.cloud_cover}</label>
+                                <label class="form-label">N - ${i18nStrings.fields.cloud_cover}</label>
                                 <select class="form-select form-select-sm" id="group-n">
-                                    <option value="">-- ${i18nStrings.fields?.not_specified} --</option>
+                                    <option value="">-- ${i18nStrings.fields.not_specified} --</option>
                                     ${Array.from({length: 10}, (_, i) => {
-                                        const label = i18nStrings.cloud_cover?.[i.toString()];
+                                        const label = i18nStrings.cloud_cover[i.toString()];
                                         return `<option value="${i}">${i} - ${label}</option>`;
                                     }).join('')}
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">C - ${i18nStrings.fields?.cirrus_type}</label>
+                                <label class="form-label">C - ${i18nStrings.fields.cirrus_type}</label>
                                 <select class="form-select form-select-sm" id="group-C">
-                                    <option value="">-- ${i18nStrings.fields?.not_specified} --</option>
+                                    <option value="">-- ${i18nStrings.fields.not_specified} --</option>
                                     ${Array.from({length: 8}, (_, i) => {
-                                        const label = i18nStrings.cirrus_types?.[i.toString()];
+                                        const label = i18nStrings.cirrus_types[i.toString()];
                                         return `<option value="${i}">${i} - ${label}</option>`;
                                     }).join('')}
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">c - ${i18nStrings.fields?.low_clouds}</label>
+                                <label class="form-label">c - ${i18nStrings.fields.low_clouds}</label>
                                 <select class="form-select form-select-sm" id="group-c">
-                                    <option value="">-- ${i18nStrings.fields?.not_specified} --</option>
+                                    <option value="">-- ${i18nStrings.fields.not_specified} --</option>
                                     ${Array.from({length: 10}, (_, i) => {
-                                        const label = i18nStrings.low_clouds?.[i.toString()];
+                                        const label = i18nStrings.low_clouds[i.toString()];
                                         return `<option value="${i}">${i} - ${label}</option>`;
                                     }).join('')}
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">EE - ${i18nStrings.fields?.phenomenon}</label>
+                                <label class="form-label">EE - ${i18nStrings.fields.phenomenon}</label>
                                 <select class="form-select form-select-sm" id="group-ee">
-                                    <option value="">-- ${i18nStrings.fields?.not_specified} --</option>
+                                    <option value="">-- ${i18nStrings.fields.not_specified} --</option>
                                     ${Array.from({length: 77}, (_, i) => {
                                         const ee = i + 1;
-                                        const label = i18nStrings.halo_types?.[ee.toString()];
+                                        const label = i18nStrings.halo_types[ee.toString()];
                                         return `<option value="${ee}">${String(ee).padStart(2, '0')} - ${label}</option>`;
                                     }).join('')}
-                                    <option value="99">99 - ${i18nStrings.halo_types?.['99']}</option>
+                                    <option value="99">99 - ${i18nStrings.halo_types['99']}</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">H - ${i18nStrings.fields?.brightness}</label>
+                                <label class="form-label">H - ${i18nStrings.fields.brightness}</label>
                                 <select class="form-select form-select-sm" id="group-h">
-                                    <option value="">-- ${i18nStrings.fields?.not_specified} --</option>
+                                    <option value="">-- ${i18nStrings.fields.not_specified} --</option>
                                     ${Array.from({length: 4}, (_, i) => {
-                                        const label = i18nStrings.brightness?.[i.toString()];
+                                        const label = i18nStrings.brightness[i.toString()];
                                         return `<option value="${i}">${i} - ${label}</option>`;
                                     }).join('')}
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">F - ${i18nStrings.fields?.color}</label>
+                                <label class="form-label">F - ${i18nStrings.fields.color}</label>
                                 <select class="form-select form-select-sm" id="group-f">
-                                    <option value="">-- ${i18nStrings.fields?.not_specified} --</option>
+                                    <option value="">-- ${i18nStrings.fields.not_specified} --</option>
                                     ${Array.from({length: 6}, (_, i) => {
-                                        const label = i18nStrings.color?.[i.toString()];
+                                        const label = i18nStrings.color[i.toString()];
                                         return `<option value="${i}">${i} - ${label}</option>`;
                                     }).join('')}
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">V - ${i18nStrings.fields?.completeness}</label>
+                                <label class="form-label">V - ${i18nStrings.fields.completeness}</label>
                                 <select class="form-select form-select-sm" id="group-v">
-                                    <option value="">-- ${i18nStrings.fields?.not_specified} --</option>
-                                    <option value="1">1 - ${i18nStrings.completeness?.['1']}</option>
-                                    <option value="2">2 - ${i18nStrings.completeness?.['2']}</option>
+                                    <option value="">-- ${i18nStrings.fields.not_specified} --</option>
+                                    <option value="1">1 - ${i18nStrings.completeness['1']}</option>
+                                    <option value="2">2 - ${i18nStrings.completeness['2']}</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">f - ${i18nStrings.fields?.weather_front}</label>
+                                <label class="form-label">f - ${i18nStrings.fields.weather_front}</label>
                                 <select class="form-select form-select-sm" id="group-wf">
-                                    <option value="">-- ${i18nStrings.fields?.not_specified} --</option>
+                                    <option value="">-- ${i18nStrings.fields.not_specified} --</option>
                                     ${Array.from({length: 9}, (_, i) => {
-                                        const label = i18nStrings.weather_front?.[i.toString()];
+                                        const label = i18nStrings.weather_front[i.toString()];
                                         return `<option value="${i}">${i} - ${label}</option>`;
                                     }).join('')}
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">zz - ${i18nStrings.fields?.precipitation}</label>
+                                <label class="form-label">zz - ${i18nStrings.fields.precipitation}</label>
                                 <select class="form-select form-select-sm" id="group-zz">
-                                    <option value="">-- ${i18nStrings.fields?.not_specified} --</option>
+                                    <option value="">-- ${i18nStrings.fields.not_specified} --</option>
                                     ${Array.from({length: 99}, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')} h</option>`).join('')}
                                     <option value="99">99</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">GG - ${i18nStrings.fields?.region}</label>
+                                <label class="form-label">GG - ${i18nStrings.fields.region}</label>
                                 <select class="form-select form-select-sm" id="group-gg">
-                                    <option value="">-- ${i18nStrings.fields?.not_specified} --</option>
+                                    <option value="">-- ${i18nStrings.fields.not_specified} --</option>
                                     ${[1,2,3,4,5,6,7,8,9,10,11,16,17,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39].map(gg => {
-                                        const label = i18nStrings.geographic_regions?.[gg.toString()];
+                                        const label = i18nStrings.geographic_regions[gg.toString()];
                                         return `<option value="${gg}">${String(gg).padStart(2, '0')} - ${label}</option>`;
                                     }).join('')}
                                 </select>
@@ -2111,18 +2136,18 @@ async function showGroupModifyDialogMenu(filteredObs) {
                                 </div>
                             </div>
                             <div class="col-12">
-                                <label class="form-label">${i18nStrings.fields?.sectors} (${i18nStrings.fields?.max_15_chars})</label>
+                                <label class="form-label">${i18nStrings.fields.sectors} (${i18nStrings.fields.max_15_chars})</label>
                                 <input type="text" class="form-control form-control-sm" id="group-sectors" maxlength="15">
                             </div>
                             <div class="col-12">
-                                <label class="form-label">${i18nStrings.fields?.remarks} (${i18nStrings.fields?.max_60_chars})</label>
+                                <label class="form-label">${i18nStrings.fields.remarks} (${i18nStrings.fields.max_60_chars})</label>
                                 <input type="text" class="form-control form-control-sm" id="group-remarks" maxlength="60">
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${i18nStrings.common?.cancel}</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-modify-group-ok">${i18nStrings.common?.ok}</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-modify-group-ok">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -2184,8 +2209,8 @@ async function showGroupModifyDialogMenu(filteredObs) {
 
 async function processBulkUpdate(filteredObs, updates) {
     try {
-        console.log(`[BULK UPDATE] Updating ${filteredObs.length} observations with:`, updates);
-        console.log('[BULK UPDATE] First 3 observations:', filteredObs.slice(0, 3));
+
+
         
         // For each observation: delete old, create modified, add back
         const modifiedObservations = [];
@@ -2196,7 +2221,7 @@ async function processBulkUpdate(filteredObs, updates) {
             modifiedObservations.push({original: obs, modified: modifiedObs});
         }
         
-        console.log('[BULK UPDATE] Starting delete phase...');
+
         // Delete all original observations from server
         for (const {original} of modifiedObservations) {
             const deleteResp = await fetch('/api/observations/delete', {
@@ -2208,11 +2233,11 @@ async function processBulkUpdate(filteredObs, updates) {
             if (!deleteResp.ok) {
                 console.error('[BULK UPDATE] Failed to delete observation:', original);
             } else {
-                console.log('[BULK UPDATE] Deleted:', original.KK, original.JJ, original.MM, original.TT);
+
             }
         }
         
-        console.log('[BULK UPDATE] Starting add phase...');
+
         // Add all modified observations
         for (const {modified} of modifiedObservations) {
             const addResp = await fetch('/api/observations', {
@@ -2221,27 +2246,29 @@ async function processBulkUpdate(filteredObs, updates) {
                 body: JSON.stringify(modified)
             });
             
-            if (!addResp.ok) {
+            if (addResp.status === 409) {
+                console.warn('[BULK UPDATE] Duplicate observation, skipping:', modified);
+            } else if (!addResp.ok) {
                 console.error('[BULK UPDATE] Failed to add modified observation:', modified);
             } else {
-                console.log('[BULK UPDATE] Added:', modified.KK, modified.JJ, modified.MM, modified.TT);
+
             }
         }
         
-        console.log('[BULK UPDATE] Reloading observations...');
+
         // Reload observations from server to get correct sorted order
         const obsResponse = await fetch('/api/observations?limit=200000');
         if (obsResponse.ok) {
             const data = await obsResponse.json();
             window.haloData.observations = data.observations;
             window.haloData.isDirty = true;
-            console.log('[BULK UPDATE] Reloaded', data.observations.length, 'observations, isDirty:', window.haloData.isDirty);
+
             updateFileInfoDisplay(window.haloData.fileName, window.haloData.observations.length);
         } else {
             console.error('[BULK UPDATE] Failed to reload observations');
         }
         
-        console.log('[BULK UPDATE] Showing success message');
+
         showMessage(`${filteredObs.length} Beobachtungen wurden erfolgreich geändert.`, 'success');
         
         // Reload the page to refresh all displays
@@ -2259,7 +2286,7 @@ async function processBulkUpdate(filteredObs, updates) {
 async function showDeleteObservationsDialog() {
     // Ensure data is loaded
     if (!window.haloData || !window.haloData.isLoaded || !window.haloData.observations || window.haloData.observations.length === 0) {
-        showWarningModal(i18nStrings.dialogs?.no_data?.message);
+        showWarningModal(i18nStrings.dialogs.no_data.message);
         return;
     }
 
@@ -2284,7 +2311,7 @@ async function showDeleteSingleObservations(filterState) {
     const filteredObs = applyFilterToObservations(filterState);
 
     if (filteredObs.length === 0) {
-        showWarningModal(i18nStrings.ui?.messages?.no_observations);
+        showWarningModal(i18nStrings.ui.messages.no_observations);
         return;
     }
 
@@ -2308,7 +2335,7 @@ async function showDeleteSingleObservations(filterState) {
                 }
 
                 // Log payload that will be sent to the API for easier debugging
-                console.log('[DELETE DEBUG] Sending delete payload:', obs);
+
 
                 // Delete on server
                 const resp = await fetch('/api/observations/delete', {
@@ -2347,7 +2374,7 @@ async function showDeleteSingleObservations(filterState) {
                 }, 1500);
             } catch (e) {
                 console.error('Error deleting observation:', e);
-                showErrorDialog((i18nStrings.common?.error) + ': ' + e.message);
+                showErrorDialog((i18nStrings.common.error) + ': ' + e.message);
                 setTimeout(() => {
                     window.location.href = '/';
                 }, 1500);
@@ -2367,13 +2394,13 @@ async function showDeleteSingleObservations(filterState) {
 
 // Confirmation dialog for deletion with default focus on No
 async function showDeleteConfirmDialog(obs, currentNum, totalNum, callback) {
-    console.log('[DELETE DIALOG DEBUG] i18nStrings:', i18nStrings);
-    console.log('[DELETE DIALOG DEBUG] delete_question:', i18nStrings.menus?.observations?.delete_question);
-    const questionText = i18nStrings.menus?.observations?.delete_question;
-    const yesText = i18nStrings.observers?.yes;
-    const noText = i18nStrings.observers?.no;
-    const cancelText = i18nStrings.common?.cancel;
-    console.log('[DELETE DIALOG DEBUG] Texts:', {questionText, yesText, noText, cancelText});
+
+
+    const questionText = i18nStrings.menus.observations.delete_question;
+    const yesText = i18nStrings.observers.yes;
+    const noText = i18nStrings.observers.no;
+    const cancelText = i18nStrings.common.cancel;
+
 
     const obsDisplay = formatObservationForDisplay(obs);
 
@@ -2479,10 +2506,10 @@ async function applyFilterToObservations(filterState) {
 
 // Show confirmation dialog asking if user wants to modify this observation
 async function showModifyConfirmDialog(obs, currentNum, totalNum, callback) {
-    const questionText = i18nStrings.menus?.observations?.modify_question;
-    const yesText = i18nStrings.observers?.yes;
-    const noText = i18nStrings.observers?.no;
-    const cancelText = i18nStrings.common?.cancel;
+    const questionText = i18nStrings.menus.observations.modify_question;
+    const yesText = i18nStrings.observers.yes;
+    const noText = i18nStrings.observers.no;
+    const cancelText = i18nStrings.common.cancel;
     
     // Format observation display
     const obsDisplay = formatObservationForDisplay(obs);
@@ -2561,21 +2588,21 @@ function formatObservationForDisplay(obs) {
     let html = '';
     
     // Observer
-    html += `<strong>${i18n?.fields?.observer}:</strong> ${obs.KK}<br>`;
+    html += `<strong>${i18n.fields.observer}:</strong> ${obs.KK}<br>`;
     
     // Object type
-    const objectType = i18n?.object_types?.[obs.O];
-    html += `<strong>${i18n?.fields?.object}:</strong> ${obs.O} - ${objectType}<br>`;
+    const objectType = i18n.object_types[obs.O];
+    html += `<strong>${i18n.fields.object}:</strong> ${obs.O} - ${objectType}<br>`;
     
     // Date
-    const monthName = i18n?.months?.[obs.MM] || obs.MM;
-    html += `<strong>${i18n?.fields?.year}:</strong> ${obs.JJ} `;
-    html += `<strong>${i18n?.fields?.month}:</strong> ${monthName} `;
-    html += `<strong>${i18n?.fields?.day}:</strong> ${obs.TT}<br>`;
+    const monthName = i18n.months[obs.MM];
+    html += `<strong>${i18n.fields.year}:</strong> ${obs.JJ} `;
+    html += `<strong>${i18n.fields.month}:</strong> ${monthName} `;
+    html += `<strong>${i18n.fields.day}:</strong> ${obs.TT}<br>`;
     
     // Location type (observing site)
-    const locType = i18n?.location_types?.[obs.g];
-    html += `<strong>${i18n?.fields?.observing_area}:</strong> ${locType}<br>`;
+    const locType = i18n.location_types[obs.g];
+    html += `<strong>${i18n.fields.observing_area}:</strong> ${locType}<br>`;
     
     // Time
     const timeStr = (obs.ZS !== null && obs.ZS !== -1 && obs.ZS !== 99) ? String(obs.ZS).padStart(2, '0') : '--';
@@ -2584,78 +2611,78 @@ function formatObservationForDisplay(obs) {
     
     // Duration (DD × 10 = minutes)
     if (obs.DD !== null && obs.DD !== -1) {
-        html += `<strong>${i18n?.fields?.duration}:</strong> ${obs.DD * 10} min<br>`;
+        html += `<strong>${i18n.fields.duration}:</strong> ${obs.DD * 10} min<br>`;
     }
     
     // Origin/Density
     if (obs.d !== null && obs.d !== -1) {
-        const origin = i18n?.origin_density?.[obs.d];
-        html += `<strong>${i18n?.fields?.origin}:</strong> ${origin}<br>`;
+        const origin = i18n.origin_density[obs.d];
+        html += `<strong>${i18n.fields.origin}:</strong> ${origin}<br>`;
     }
     
     // Cirrus density
     if (obs.N !== null && obs.N !== -1) {
-        const cirrusDens = i18n?.cirrus_density?.[obs.N];
-        html += `<strong>${i18n?.fields?.cirrus_density}:</strong> ${cirrusDens}<br>`;
+        const cirrusDens = i18n.cirrus_density[obs.N];
+        html += `<strong>${i18n.fields.cirrus_density}:</strong> ${cirrusDens}<br>`;
     }
     
     // Cloud cover
     if (obs.C !== null && obs.C !== -1) {
-        const cloudCover = i18n?.cloud_cover?.[obs.C];
-        html += `<strong>${i18n?.fields?.cloud_cover}:</strong> ${cloudCover}<br>`;
+        const cloudCover = i18n.cloud_cover[obs.C];
+        html += `<strong>${i18n.fields.cloud_cover}:</strong> ${cloudCover}<br>`;
     }
     
     // Cirrus type
     if (obs.C !== null && obs.C !== -1) {
-        const cirrusType = i18n?.cirrus_types?.[obs.C];
-        html += `<strong>${i18n?.fields?.cirrus_type}:</strong> ${cirrusType}<br>`;
+        const cirrusType = i18n.cirrus_types[obs.C];
+        html += `<strong>${i18n.fields.cirrus_type}:</strong> ${cirrusType}<br>`;
     }
     
     // Halo phenomenon
-    const haloType = i18n?.halo_types?.[obs.EE];
-    html += `<strong>${i18n?.fields?.phenomenon}:</strong> ${String(obs.EE).padStart(2, '0')} - ${haloType}<br>`;
+    const haloType = i18n.halo_types[obs.EE];
+    html += `<strong>${i18n.fields.phenomenon}:</strong> ${String(obs.EE).padStart(2, '0')} - ${haloType}<br>`;
     
     // Brightness
     if (obs.H !== null && obs.H !== -1) {
-        const brightness = i18n?.brightness?.[obs.H];
-        html += `<strong>${i18n?.fields?.brightness}:</strong> ${brightness}<br>`;
+        const brightness = i18n.brightness[obs.H];
+        html += `<strong>${i18n.fields.brightness}:</strong> ${brightness}<br>`;
     }
     
     // Color
     if (obs.F !== null && obs.F !== -1) {
-        const color = i18n?.color?.[obs.F];
-        html += `<strong>${i18n?.fields?.color}:</strong> ${color}<br>`;
+        const color = i18n.color[obs.F];
+        html += `<strong>${i18n.fields.color}:</strong> ${color}<br>`;
     }
     
     // Completeness
     if (obs.V !== null && obs.V !== -1) {
-        const complete = i18n?.completeness?.[obs.V];
-        html += `<strong>${i18n?.fields?.completeness}:</strong> ${complete}<br>`;
+        const complete = i18n.completeness[obs.V];
+        html += `<strong>${i18n.fields.completeness}:</strong> ${complete}<br>`;
     }
     
     // Weather front
     if (obs.f !== null && obs.f !== -1) {
-        const front = i18n?.weather_front?.[obs.f] || `${obs.f}`;
+        const front = i18n.weather_front[obs.f];
         html += `<strong>Front:</strong> ${front}<br>`;
     }
     
     // Precipitation
     if (obs.zz !== null && obs.zz !== -1 && obs.zz !== 99) {
-        html += `<strong>${i18n?.fields?.precipitation}:</strong> ${obs.zz} mm<br>`;
+        html += `<strong>${i18n.fields.precipitation}:</strong> ${obs.zz} mm<br>`;
     }
     
     // Geographic region
-    const region = i18n?.geographic_regions?.[obs.GG];
-    html += `<strong>${i18n?.fields?.region}:</strong> ${String(obs.GG).padStart(2, '0')} - ${region}<br>`;
+    const region = i18n.geographic_regions[obs.GG];
+    html += `<strong>${i18n.fields.region}:</strong> ${String(obs.GG).padStart(2, '0')} - ${region}<br>`;
     
     // Sectors
     if (obs.sectors && obs.sectors.trim()) {
-        html += `<strong>${i18n?.fields?.select_observer}:</strong> ${obs.sectors.trim()}<br>`;
+        html += `<strong>${i18n.fields.select_observer}:</strong> ${obs.sectors.trim()}<br>`;
     }
     
     // Remarks
     if (obs.remarks && obs.remarks.trim()) {
-        html += `<strong>${i18n?.fields?.remarks}:</strong> ${obs.remarks.trim()}<br>`;
+        html += `<strong>${i18n.fields.remarks}:</strong> ${obs.remarks.trim()}<br>`;
     }
     
     return html;
@@ -2686,7 +2713,7 @@ async function showObservationFormForEdit(obs, currentNum, totalNum, onModified,
                 logs.push(`[EDIT DEBUG] Deleting observation at index ${originalIndex}`);
                 const deleted = window.haloData.observations.splice(originalIndex, 1);
                 logs.push('[EDIT DEBUG] Deleted from client array: ' + JSON.stringify(deleted));
-                console.log(...logs);
+
             } else {
                 logs.push('[EDIT DEBUG] Could not find observation to delete at index ' + originalIndex);
                 console.warn(...logs);
@@ -2715,6 +2742,13 @@ async function showObservationFormForEdit(obs, currentNum, totalNum, onModified,
             });
             
             logs.push('[EDIT DEBUG] POST response status: ' + resp.status + ', ok: ' + resp.ok);
+            
+            if (resp.status === 409) {
+                // Duplicate - this shouldn't happen in edit mode, but handle it
+                logs.push('[EDIT DEBUG] ERROR: Duplicate observation detected');
+                throw new Error(i18nStrings.observers.error_observation_exists);
+            }
+            
             if (!resp.ok) throw new Error('Failed to save modified observation');
             
             const addedObs = await resp.json();
@@ -2725,13 +2759,13 @@ async function showObservationFormForEdit(obs, currentNum, totalNum, onModified,
             const obsResponse = await fetch('/api/observations?limit=200000');
             if (obsResponse.ok) {
                 const data = await obsResponse.json();
-                logs.push('[EDIT DEBUG] Reloaded from server: ' + data.observations?.length + ' observations');
+                logs.push('[EDIT DEBUG] Reloaded from server: ' + data.observations.length + ' observations');
                 window.haloData.observations = data.observations;
             }
             
             // Save logs to sessionStorage for later viewing
             sessionStorage.setItem('lastEditLogs', logs.join('\n'));
-            console.log('Debug logs saved to sessionStorage:', logs.join('\n'));
+
             
             // Set dirty flag
             window.haloData.isDirty = true;
@@ -2751,7 +2785,7 @@ async function showObservationFormForEdit(obs, currentNum, totalNum, onModified,
             }, 1500);
         } catch (e) {
             console.error('Error modifying observation:', e);
-            showErrorDialog(i18nStrings.common?.error + ': ' + e.message);
+            showErrorDialog(i18nStrings.common.error + ': ' + e.message);
         }
     }, () => {
         if (onCancelled) onCancelled();
@@ -2764,7 +2798,7 @@ async function showObservationFormForDelete(obs, currentNum, totalNum, onYes, on
     await form.initialize();
     
     // Show the form in delete mode with custom title and buttons
-    const questionText = i18nStrings.menus?.observations?.delete_question;
+    const questionText = i18nStrings.menus.observations.delete_question;
     form.show('delete', obs, null, null, currentNum, totalNum, questionText, onYes, onNo, onCancel);
 }
 
@@ -2774,17 +2808,17 @@ async function showDisplayObservationsDialog() {
     try {
         const response = await fetch('/api/observations?limit=1');
         if (!response.ok) {
-            showWarningModal(i18nStrings.dialogs?.no_data?.message);
+            showWarningModal(i18nStrings.dialogs.no_data.message);
             return;
         }
         const data = await response.json();
         if (!data.total || data.total === 0) {
-            showWarningModal(i18nStrings.dialogs?.no_data?.messag);
+            showWarningModal(i18nStrings.dialogs.no_data.messag);
             return;
         }
     } catch (error) {
         console.error('Error checking observations:', error);
-        showWarningModal(i18nStrings.dialogs?.no_data?.message);
+        showWarningModal(i18nStrings.dialogs.no_data.message);
         return;
     }
     
@@ -2816,7 +2850,7 @@ async function showDisplayObservationsDialog() {
         },
         () => {
             // onCancel callback - user cancelled
-            console.log('Display dialog cancelled');
+
         }
     );
 }
@@ -2827,7 +2861,7 @@ async function showDisplayCompactList(filterState) {
     const filteredObs = await applyFilterToObservations(filterState);
     
     if (filteredObs.length === 0) {
-        showWarningModal(i18nStrings.ui?.messages?.no_observations);
+        showWarningModal(i18nStrings.ui.messages.no_observations);
         return;
     }
     
@@ -2841,7 +2875,7 @@ async function showDisplayCompactList(filterState) {
             <div class="modal-dialog modal-xl modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header py-2">
-                        <h6 class="modal-title mb-0">${i18nStrings.observations?.title}</h6>
+                        <h6 class="modal-title mb-0">${i18nStrings.observations.title}</h6>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body p-3">
@@ -2875,7 +2909,7 @@ async function showDisplayCompactList(filterState) {
                         </div>
                     </div>
                     <div class="modal-footer py-2">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${i18nStrings.common?.close}</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${i18nStrings.common.close}</button>
                     </div>
                 </div>
             </div>
@@ -3110,7 +3144,7 @@ async function showDisplaySingleObservations(filterState) {
     const filteredObs = await applyFilterToObservations(filterState);
     
     if (filteredObs.length === 0) {
-        showWarningModal(i18nStrings.ui?.messages?.no_observations);
+        showWarningModal(i18nStrings.ui.messages.no_observations);
         return;
     }
     
@@ -3159,8 +3193,8 @@ async function showActiveObserversDialog() {
         const enabled = !!config.enabled;
 
         const title = i18nStrings.menus.settings.active_observers_question;
-        const yesText = i18nStrings.observers?.yes;
-        const noText = i18nStrings.observers?.no;
+        const yesText = i18nStrings.observers.yes;
+        const noText = i18nStrings.observers.no;
 
         const modalHtml = `
             <div class="modal fade" id="active-observers-modal" tabindex="-1">
@@ -3225,8 +3259,8 @@ async function showStartupFileDialog() {
 
         const title = i18nStrings.menus.settings.startup_file_title;
         const question = i18nStrings.menus.settings.startup_file_question;
-        const yesText = i18nStrings.observers?.yes;
-        const noText = i18nStrings.observers?.no;
+        const yesText = i18nStrings.observers.yes;
+        const noText = i18nStrings.observers.no;
 
         const modalHtml = `
             <div class="modal fade" id="startup-file-modal" tabindex="-1">
@@ -3327,6 +3361,989 @@ async function showStartupFileDialog() {
     } catch (error) {
         console.error('Startup file dialog error:', error);
     }
+}
+
+// Select observations (Selektieren)
+async function showSelectDialog() {
+    // Check if a file is loaded
+    if (!window.haloData.fileName) {
+        showWarningModal(i18nStrings.menus.observations.no_file_loaded || i18nStrings.observations.no_file_loaded);
+        return;
+    }
+    
+    // Get current observations count
+    const obsResp = await fetch('/api/observations?limit=1');
+    const obsData = await obsResp.json();
+    
+    if (!obsData.observations || obsData.observations.length === 0) {
+        showWarningModal(i18nStrings.dialogs.no_data.message);
+        return;
+    }
+
+    // Load i18n data for filter options
+    const i18nResp = await fetch(`/api/i18n/${currentLanguage}`);
+    const i18n = await i18nResp.json();
+
+    // Build filter options (same as in Auswertung)
+    const filterOptions = [
+        { value: '', text: currentLanguage === 'de' ? '-- Bitte wählen --' : '-- Please select --' },
+        { value: 'JJ', text: currentLanguage === 'de' ? 'Jahr' : 'Year' },
+        { value: 'MM', text: currentLanguage === 'de' ? 'Monat' : 'Month' },
+        { value: 'TT', text: currentLanguage === 'de' ? 'Tag' : 'Day' },
+        { value: 'ZZ', text: currentLanguage === 'de' ? 'Uhrzeit' : 'Time' },
+        { value: 'SH', text: currentLanguage === 'de' ? 'Sonnenhöhe' : 'Solar altitude' },
+        { value: 'KK', text: currentLanguage === 'de' ? 'Beobachter' : 'Observer' },
+        { value: 'GG', text: currentLanguage === 'de' ? 'Region' : 'Region' },
+        { value: 'O', text: currentLanguage === 'de' ? 'Objekt' : 'Object' },
+        { value: 'EE', text: currentLanguage === 'de' ? 'Haloart' : 'Halo type' },
+        { value: 'DD', text: currentLanguage === 'de' ? 'Cirrusdichte' : 'Cirrus density' },
+        { value: 'C', text: currentLanguage === 'de' ? 'Cirrusart' : 'Cirrus type' },
+        { value: 'H', text: currentLanguage === 'de' ? 'Helligkeit' : 'Brightness' },
+        { value: 'F', text: currentLanguage === 'de' ? 'Farbe' : 'Color' },
+        { value: 'V', text: currentLanguage === 'de' ? 'Vollständigkeit' : 'Completeness' }
+    ];
+
+    const filterOptionsHtml = filterOptions.map(opt => 
+        `<option value="${opt.value}">${opt.text}</option>`
+    ).join('');
+
+    const modalHtml = `
+        <div class="modal fade" id="select-modal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">${i18nStrings.observers.select_observations }</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Filter criterion -->
+                        <div class="mb-3">
+                            <label for="select-filter" class="form-label">${i18nStrings.observers.select_criterion}</label>
+                            <select class="form-select" id="select-filter" required autofocus>
+                                ${filterOptionsHtml}
+                            </select>
+                        </div>
+                        
+                        <!-- Filter value (shown after selection) -->
+                        <div id="select-value-div" style="display: none;">
+                            <div class="mb-3">
+                                <label for="select-value" class="form-label">${currentLanguage === 'de' ? 'Filterwert:' : 'Filter value:'}</label>
+                                <select class="form-select" id="select-value">
+                                    <!-- Will be populated by JavaScript -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Special fields for Month (MM) - month and year -->
+                        <div id="select-month-fields" style="display: none;">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="select-month" class="form-label">${currentLanguage === 'de' ? 'Monat:' : 'Month:'}</label>
+                                    <select class="form-select" id="select-month">
+                                        <!-- Will be populated by JavaScript -->
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="select-year" class="form-label">${currentLanguage === 'de' ? 'Jahr:' : 'Year:'}</label>
+                                    <select class="form-select" id="select-year">
+                                        <!-- Will be populated by JavaScript -->
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Special fields for Day (TT) - day, month and year -->
+                        <div id="select-day-fields" style="display: none;">
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label for="select-day" class="form-label">${currentLanguage === 'de' ? 'Tag:' : 'Day:'}</label>
+                                    <select class="form-select" id="select-day">
+                                        <!-- Will be populated by JavaScript -->
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="select-day-month" class="form-label">${currentLanguage === 'de' ? 'Monat:' : 'Month:'}</label>
+                                    <select class="form-select" id="select-day-month">
+                                        <!-- Will be populated by JavaScript -->
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="select-day-year" class="form-label">${currentLanguage === 'de' ? 'Jahr:' : 'Year:'}</label>
+                                    <select class="form-select" id="select-day-year">
+                                        <!-- Will be populated by JavaScript -->
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Special fields for Time (ZZ) - start and end hour:minute -->
+                        <div id="select-time-fields" style="display: none;">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">${currentLanguage === 'de' ? 'Von:' : 'From:'}</label>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <select class="form-select" id="select-time-from-hour">
+                                                <!-- Will be populated by JavaScript -->
+                                            </select>
+                                        </div>
+                                        <div class="col-6">
+                                            <select class="form-select" id="select-time-from-minute">
+                                                <!-- Will be populated by JavaScript -->
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">${currentLanguage === 'de' ? 'Bis:' : 'To:'}</label>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <select class="form-select" id="select-time-to-hour">
+                                                <!-- Will be populated by JavaScript -->
+                                            </select>
+                                        </div>
+                                        <div class="col-6">
+                                            <select class="form-select" id="select-time-to-minute">
+                                                <!-- Will be populated by JavaScript -->
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Special fields for Solar Altitude (SH) - from/to and min/mean/max -->
+                        <div id="select-sh-fields" style="display: none;">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="select-sh-from" class="form-label">${currentLanguage === 'de' ? 'Von:' : 'From:'}</label>
+                                    <select class="form-select" id="select-sh-from">
+                                        <!-- Will be populated by JavaScript -->
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="select-sh-to" class="form-label">${currentLanguage === 'de' ? 'Bis:' : 'To:'}</label>
+                                    <select class="form-select" id="select-sh-to">
+                                        <!-- Will be populated by JavaScript -->
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">${currentLanguage === 'de' ? 'Sonnenhöhe:' : 'Solar altitude:'}</label><br>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="select-sh-time" id="select-sh-min" value="min">
+                                    <label class="form-check-label" for="select-sh-min">
+                                        ${currentLanguage === 'de' ? 'minimale' : 'minimum'}
+                                    </label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="select-sh-time" id="select-sh-mean" value="mean" checked>
+                                    <label class="form-check-label" for="select-sh-mean">
+                                        ${currentLanguage === 'de' ? 'mittlere' : 'mean'}
+                                    </label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="select-sh-time" id="select-sh-max" value="max">
+                                    <label class="form-check-label" for="select-sh-max">
+                                        ${currentLanguage === 'de' ? 'maximale' : 'maximum'}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Keep or Delete radio buttons -->
+                        <div class="mb-3">
+                            <label class="form-label">${i18nStrings.observers.select_action}</label><br>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="select-action" id="select-keep" value="keep" checked>
+                                <label class="form-check-label" for="select-keep">
+                                    ${i18nStrings.observers.select_keep}
+                                </label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="select-action" id="select-delete" value="delete">
+                                <label class="form-check-label" for="select-delete">
+                                    ${i18nStrings.observers.select_delete}
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- New filename input -->
+                        <div class="mb-3">
+                            <label for="select-filename" class="form-label">${i18nStrings.observers.new_filename}:</label>
+                            <input type="text" id="select-filename" class="form-control" placeholder="${currentLanguage === 'de' ? 'Dateiname eingeben' : 'Enter filename'}">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-select-ok">${i18nStrings.common.ok}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modalEl = document.getElementById('select-modal');
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+
+    const selectFilter = document.getElementById('select-filter');
+    const selectValueDiv = document.getElementById('select-value-div');
+    const selectValue = document.getElementById('select-value');
+    const btnOk = document.getElementById('btn-select-ok');
+
+    // Reuse getParameterRange function from analysis.js
+    function getParameterRange(paramCode) {
+        function getMonthName(monthNum) {
+            if (i18n.months && typeof i18n.months === 'object') {
+                return i18n.months[String(monthNum)];
+            }
+            const monthArray = i18n.months;
+            return monthArray[monthNum - 1];
+        }
+        
+        switch (paramCode) {
+            case 'JJ':
+                const years = [];
+                for (let i = 1950; i <= 2049; i++) {
+                    years.push({ value: i, display: String(i) });
+                }
+                return years;
+            
+            case 'MM':
+                const months = [];
+                for (let i = 1; i <= 12; i++) {
+                    const monthName = getMonthName(i);
+                    months.push({ value: i, display: `${String(i).padStart(2, '0')} - ${monthName}` });
+                }
+                return months;
+            
+            case 'TT':
+                const days = [];
+                for (let i = 1; i <= 31; i++) {
+                    days.push({ value: i, display: String(i).padStart(2, '0') });
+                }
+                return days;
+            
+            case 'ZZ':
+                const hours = [];
+                for (let i = 0; i <= 23; i++) {
+                    hours.push({ value: i, display: `${i} Uhr` });
+                }
+                return hours;
+            
+            case 'SH':
+                const altitudes = [];
+                for (let i = -10; i <= 90; i++) {
+                    altitudes.push({ value: i, display: String(i) + '°' });
+                }
+                return altitudes;
+            
+            case 'KK':
+                // Load observers from API
+                const observers = [];
+                // Will be populated from server data
+                return observers;
+            
+            case 'GG':
+                const regionNumbers = [1,2,3,4,5,6,7,8,9,10,11,16,17,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39];
+                return regionNumbers.map(gg => {
+                    const regionName = i18n.geographic_regions[String(gg)];
+                    return { value: gg, display: `${String(gg).padStart(2, '0')} - ${regionName}` };
+                });
+            
+            case 'O':
+                const objects = [];
+                for (let i = 1; i <= 5; i++) {
+                    const objName = i18n.object_types[String(i)];
+                    objects.push({ value: i, display: `${i} - ${objName}` });
+                }
+                return objects;
+            
+            case 'EE':
+                const haloTypes = [];
+                for (let i = 1; i <= 77; i++) {
+                    const haloName = i18n.halo_types[String(i)];
+                    haloTypes.push({ value: i, display: `${String(i).padStart(2, '0')} - ${haloName}` });
+                }
+                haloTypes.push({ value: 99, display: `99 - ${i18n.halo_types['99']}` });
+                return haloTypes;
+            
+            case 'DD':
+                const densities = [];
+                densities.push({ value: 0, display: `0 - ${i18n.cirrus_density['0']}` });
+                densities.push({ value: 1, display: `1 - ${i18n.cirrus_density['1']}` });
+                densities.push({ value: 2, display: `2 - ${i18n.cirrus_density['2']}` });
+                densities.push({ value: 4, display: `4 - ${i18n.cirrus_density['4']}` });
+                densities.push({ value: 5, display: `5 - ${i18n.cirrus_density['5']}` });
+                densities.push({ value: 6, display: `6 - ${i18n.cirrus_density['6']}` });
+                densities.push({ value: 7, display: `7 - ${i18n.cirrus_density['7']}` });
+                return densities;
+            
+            case 'N':
+                const coverages = [];
+                for (let i = 0; i <= 9; i++) {
+                    const coverageName = i18n.cirrus_coverage[String(i)];
+                    coverages.push({ value: i, display: `${i} - ${coverageName}` });
+                }
+                return coverages;
+            
+            case 'C':
+                const cirrus = [];
+                for (let i = 0; i <= 7; i++) {
+                    const cirrusName = i18n.cirrus_types[String(i)];
+                    cirrus.push({ value: i, display: `${i} - ${cirrusName}` });
+                }
+                return cirrus;
+            
+            case 'H':
+                const brightness = [];
+                for (let i = 0; i <= 3; i++) {
+                    const brightName = i18n.brightness[String(i)];
+                    brightness.push({ value: i, display: `${i} - ${brightName}` });
+                }
+                return brightness;
+            
+            case 'F':
+                const colors = [];
+                for (let i = 0; i <= 5; i++) {
+                    const colorName = i18n.color[String(i)];
+                    colors.push({ value: i, display: `${i} - ${colorName}` });
+                }
+                return colors;
+            
+            case 'V':
+                const completeness = [];
+                for (let i = 1; i <= 2; i++) {
+                    const complName = i18n.completeness[String(i)];
+                    completeness.push({ value: i, display: `${i} - ${complName}` });
+                }
+                return completeness;
+            
+            default:
+                return [];
+        }
+    }
+
+    // Handle filter selection change - populate value dropdown or show special fields
+    selectFilter.addEventListener('change', async () => {
+        const filterType = selectFilter.value;
+        
+        const selectMonthFields = document.getElementById('select-month-fields');
+        const selectDayFields = document.getElementById('select-day-fields');
+        const selectTimeFields = document.getElementById('select-time-fields');
+        const selectShFields = document.getElementById('select-sh-fields');
+        
+        if (!filterType) {
+            selectValueDiv.style.display = 'none';
+            selectMonthFields.style.display = 'none';
+            selectDayFields.style.display = 'none';
+            selectTimeFields.style.display = 'none';
+            selectShFields.style.display = 'none';
+            return;
+        }
+
+        // Hide all special fields first
+        selectValueDiv.style.display = 'none';
+        selectMonthFields.style.display = 'none';
+        selectDayFields.style.display = 'none';
+        selectTimeFields.style.display = 'none';
+        selectShFields.style.display = 'none';
+
+        // Show appropriate fields based on filter type
+        if (filterType === 'MM') {
+            // Month selection - show month and year dropdowns
+            selectMonthFields.style.display = 'block';
+            const months = getParameterRange('MM');
+            const years = getParameterRange('JJ');
+            
+            const selectMonth = document.getElementById('select-month');
+            const selectYear = document.getElementById('select-year');
+            
+            selectMonth.innerHTML = '';
+            months.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.value;
+                option.textContent = item.display;
+                selectMonth.appendChild(option);
+            });
+            
+            selectYear.innerHTML = '';
+            years.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.value;
+                option.textContent = item.display;
+                selectYear.appendChild(option);
+            });
+            
+        } else if (filterType === 'TT') {
+            // Day selection - show day, month and year dropdowns
+            selectDayFields.style.display = 'block';
+            const days = getParameterRange('TT');
+            const months = getParameterRange('MM');
+            const years = getParameterRange('JJ');
+            
+            const selectDay = document.getElementById('select-day');
+            const selectDayMonth = document.getElementById('select-day-month');
+            const selectDayYear = document.getElementById('select-day-year');
+            
+            // Function to update day dropdown based on selected month and year
+            const updateDayDropdown = () => {
+                const month = parseInt(selectDayMonth.value);
+                const year = parseInt(selectDayYear.value);
+                const currentDay = parseInt(selectDay.value) || 1;
+                
+                // Get days in month
+                const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+                let maxDay = daysInMonth[month - 1];
+                
+                // Check for leap year in February
+                if (month === 2) {
+                    const fullYear = year < 50 ? 2000 + year : 1900 + year;
+                    if (fullYear % 4 === 0) {
+                        maxDay = 29;
+                    }
+                }
+                
+                // Rebuild day dropdown with valid days only
+                selectDay.innerHTML = '';
+                for (let i = 1; i <= maxDay; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = String(i).padStart(2, '0');
+                    selectDay.appendChild(option);
+                }
+                
+                // Restore previous selection if valid, otherwise select last day
+                if (currentDay <= maxDay) {
+                    selectDay.value = currentDay;
+                } else {
+                    selectDay.value = maxDay;
+                }
+            };
+            
+            selectDay.innerHTML = '';
+            days.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.value;
+                option.textContent = item.display;
+                selectDay.appendChild(option);
+            });
+            
+            selectDayMonth.innerHTML = '';
+            months.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.value;
+                option.textContent = item.display;
+                selectDayMonth.appendChild(option);
+            });
+            
+            selectDayYear.innerHTML = '';
+            years.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.value;
+                option.textContent = item.display;
+                selectDayYear.appendChild(option);
+            });
+            
+            // Add change listeners to update day dropdown when month or year changes
+            selectDayMonth.addEventListener('change', updateDayDropdown);
+            selectDayYear.addEventListener('change', updateDayDropdown);
+            
+        } else if (filterType === 'ZZ') {
+            // Time selection - show start and end hour:minute
+            selectTimeFields.style.display = 'block';
+            const selectTimeFromHour = document.getElementById('select-time-from-hour');
+            const selectTimeToHour = document.getElementById('select-time-to-hour');
+            const selectTimeFromMinute = document.getElementById('select-time-from-minute');
+            const selectTimeToMinute = document.getElementById('select-time-to-minute');
+            
+            selectTimeFromHour.innerHTML = '';
+            selectTimeToHour.innerHTML = '';
+            for (let i = 0; i <= 23; i++) {
+                const optFrom = document.createElement('option');
+                optFrom.value = i;
+                optFrom.textContent = String(i).padStart(2, '0');
+                selectTimeFromHour.appendChild(optFrom);
+                
+                const optTo = document.createElement('option');
+                optTo.value = i;
+                optTo.textContent = String(i).padStart(2, '0');
+                selectTimeToHour.appendChild(optTo);
+            }
+            
+            selectTimeFromMinute.innerHTML = '';
+            selectTimeToMinute.innerHTML = '';
+            for (let i = 0; i <= 59; i++) {
+                const optFrom = document.createElement('option');
+                optFrom.value = i;
+                optFrom.textContent = String(i).padStart(2, '0');
+                selectTimeFromMinute.appendChild(optFrom);
+                
+                const optTo = document.createElement('option');
+                optTo.value = i;
+                optTo.textContent = String(i).padStart(2, '0');
+                selectTimeToMinute.appendChild(optTo);
+            }
+            
+        } else if (filterType === 'SH') {
+            // Solar altitude - show from/to and min/mean/max radio buttons
+            selectShFields.style.display = 'block';
+            const altitudes = getParameterRange('SH');
+            const selectShFrom = document.getElementById('select-sh-from');
+            const selectShTo = document.getElementById('select-sh-to');
+            
+            selectShFrom.innerHTML = '';
+            selectShTo.innerHTML = '';
+            altitudes.forEach(item => {
+                const optFrom = document.createElement('option');
+                optFrom.value = item.value;
+                optFrom.textContent = item.display;
+                selectShFrom.appendChild(optFrom);
+                
+                const optTo = document.createElement('option');
+                optTo.value = item.value;
+                optTo.textContent = item.display;
+                selectShTo.appendChild(optTo);
+            });
+            
+            // Set "to" to last value
+            if (altitudes.length > 0) {
+                selectShTo.selectedIndex = altitudes.length - 1;
+            }
+            
+        } else if (filterType === 'KK') {
+            // Observer selection - fetch from API and populate dropdown
+            selectValueDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/observers');
+                const data = await response.json();
+                const observers = data.observers || [];
+                
+                selectValue.innerHTML = '';
+                observers.forEach(observer => {
+                    const option = document.createElement('option');
+                    option.value = observer.KK;
+                    // Format: KK - VName NName
+                    option.textContent = `${String(observer.KK).padStart(2, '0')} - ${observer.VName} ${observer.NName}`;
+                    selectValue.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Failed to load observers:', error);
+                selectValue.innerHTML = '<option value="">Error loading observers</option>';
+            }
+            
+        } else {
+            // All other parameters - show simple value dropdown
+            selectValueDiv.style.display = 'block';
+            const range = getParameterRange(filterType);
+            
+            selectValue.innerHTML = '';
+            range.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.value;
+                option.textContent = item.display;
+                selectValue.appendChild(option);
+            });
+        }
+    });
+
+    // Handle OK button
+    btnOk.addEventListener('click', () => {
+        const filterType = selectFilter.value;
+        const action = document.querySelector('input[name="select-action"]:checked').value;
+        let filename = document.getElementById('select-filename').value.trim();
+
+        if (!filterType) {
+            showWarningModal(i18nStrings.observers.select_no_filter);
+            return;
+        }
+
+        if (!filename) {
+            showWarningModal(i18nStrings.observers.select_no_filename);
+            return;
+        }
+        
+        // Ensure filename has .csv extension
+        if (!filename.toLowerCase().endsWith('.csv')) {
+            filename = filename + '.csv';
+        }
+
+        // Debug output - show all selected parameters
+
+
+
+
+
+        
+        // Capture values based on filter type
+        if (filterType === 'MM') {
+            const month = document.getElementById('select-month').value;
+            const year = document.getElementById('select-year').value;
+
+
+            console.log('Display:', document.getElementById('select-month').options[document.getElementById('select-month').selectedIndex].text, 
+                        document.getElementById('select-year').options[document.getElementById('select-year').selectedIndex].text);
+        } else if (filterType === 'TT') {
+            const day = document.getElementById('select-day').value;
+            const month = document.getElementById('select-day-month').value;
+            const year = document.getElementById('select-day-year').value;
+
+
+
+            console.log('Display:', document.getElementById('select-day').options[document.getElementById('select-day').selectedIndex].text,
+                        document.getElementById('select-day-month').options[document.getElementById('select-day-month').selectedIndex].text,
+                        document.getElementById('select-day-year').options[document.getElementById('select-day-year').selectedIndex].text);
+        } else if (filterType === 'ZZ') {
+            const fromHour = document.getElementById('select-time-from-hour').value;
+            const fromMinute = document.getElementById('select-time-from-minute').value;
+            const toHour = document.getElementById('select-time-to-hour').value;
+            const toMinute = document.getElementById('select-time-to-minute').value;
+
+
+        } else if (filterType === 'SH') {
+            const shFrom = document.getElementById('select-sh-from').value;
+            const shTo = document.getElementById('select-sh-to').value;
+            const shTime = document.querySelector('input[name="select-sh-time"]:checked').value;
+
+
+
+        } else {
+            const filterValue = selectValue.value;
+
+
+        }
+        
+
+        
+        // Check if current file has unsaved changes
+        checkDirtyAndProceed(() => performSelection(filterType, action, filename, modal));
+    });
+    
+    async function checkDirtyAndProceed(callback) {
+        try {
+            const response = await fetch('/api/file/status');
+            if (response.ok) {
+                const status = await response.json();
+                if (status.dirty) {
+                    // File has unsaved changes - ask to save first
+                    showConfirmDialog(
+                        i18nStrings.dialogs.unsaved_changes.title,
+                        i18nStrings.dialogs.unsaved_changes.message,
+                        async () => {
+                            // Save the file first
+                            const saveResp = await fetch('/api/file/save', { method: 'POST' });
+                            if (saveResp.ok) {
+                                callback();
+                            } else {
+                                showWarningModal(i18nStrings.dialogs.save_failed);
+                            }
+                        },
+                        () => {
+                            // User chose not to save - still proceed
+                            callback();
+                        }
+                    );
+                    return;
+                }
+            }
+            // No unsaved changes or status check failed - proceed
+            callback();
+        } catch (error) {
+            console.error('Error checking dirty status:', error);
+            // On error, proceed anyway
+            callback();
+        }
+    }
+    
+    async function performSelection(filterType, action, filename, modal) {
+        // Create loading modal
+        const loadingModal = document.createElement('div');
+        loadingModal.className = 'modal fade';
+        loadingModal.innerHTML = `
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-body text-center py-4">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">${i18nStrings.dialogs.loading.loading}</span>
+                        </div>
+                        <p class="mb-0">${i18nStrings.observers.select_processing}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(loadingModal);
+        const bsLoadingModal = new bootstrap.Modal(loadingModal, { backdrop: 'static', keyboard: false });
+        
+        try {
+            // Show progress spinner
+            bsLoadingModal.show();
+            
+            // Build filter parameters based on filter type
+            let filterParams = {
+                filter_type: filterType,
+                action: action
+            };
+            
+            if (filterType === 'MM') {
+                filterParams.month = parseInt(document.getElementById('select-month').value);
+                filterParams.year = parseInt(document.getElementById('select-year').value);
+            } else if (filterType === 'TT') {
+                filterParams.day = parseInt(document.getElementById('select-day').value);
+                filterParams.month = parseInt(document.getElementById('select-day-month').value);
+                filterParams.year = parseInt(document.getElementById('select-day-year').value);
+            } else if (filterType === 'ZZ') {
+                filterParams.from_hour = parseInt(document.getElementById('select-time-from-hour').value);
+                filterParams.from_minute = parseInt(document.getElementById('select-time-from-minute').value);
+                filterParams.to_hour = parseInt(document.getElementById('select-time-to-hour').value);
+                filterParams.to_minute = parseInt(document.getElementById('select-time-to-minute').value);
+            } else if (filterType === 'SH') {
+                filterParams.from = parseInt(document.getElementById('select-sh-from').value);
+                filterParams.to = parseInt(document.getElementById('select-sh-to').value);
+                filterParams.sh_time = document.querySelector('input[name="select-sh-time"]:checked').value;
+            } else {
+                // Simple value filters (KK, GG, O, EE, DD, N, C, H, F, V)
+                filterParams.value = parseInt(selectValue.value);
+            }
+            
+            // Send to server for filtering
+            const filterResponse = await fetch('/api/observations/filter', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(filterParams)
+            });
+            
+            if (!filterResponse.ok) {
+                const error = await filterResponse.json();
+                showWarningModal(error.error || 'Failed to filter observations');
+                bsLoadingModal.hide();
+                loadingModal.remove();
+                return;
+            }
+            
+            const filterResult = await filterResponse.json();
+            const filteredObs = filterResult.filtered_observations || [];
+            const keptCount = filterResult.kept_count || 0;
+            const deletedCount = filterResult.deleted_count || 0;
+            
+
+
+
+
+            
+            // Check if result is empty
+            if (keptCount === 0) {
+                const emptyMessage = currentLanguage === 'de'
+                    ? 'Keine Beobachtungen entsprechen den Filterkriterien. Es würde eine leere Datei erstellt.'
+                    : 'No observations match the filter criteria. This would create an empty file.';
+                showWarningModal(emptyMessage);
+                bsLoadingModal.hide();
+                loadingModal.remove();
+                modal.hide();
+                window.location.href = '/';
+                return;
+            }
+            
+            // Function to show selection results
+            function showSelectionResults(filename, keptCount, deletedCount) {
+                const message = currentLanguage === 'de' 
+                    ? `${keptCount} Beobachtungen behalten, ${deletedCount} gelöscht. Gespeichert als ${filename}`
+                    : `${keptCount} observations kept, ${deletedCount} deleted. Saved as ${filename}`;
+                
+                // Show success alert at top of window
+                const successMsg = document.createElement('div');
+                successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+                successMsg.style.cssText = 'z-index:9999;min-width:300px;';
+                successMsg.innerHTML = `
+                    <strong>✓</strong> ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.body.appendChild(successMsg);
+                
+                // Auto-remove after 3 seconds and return to main
+                setTimeout(() => {
+                    successMsg.remove();
+                    window.location.href = '/';
+                }, 3000);
+            }
+            
+            // Save filtered observations to new file
+            const saveResponse = await fetch('/api/observations/save', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    filename: filename,
+                    observations: filteredObs
+                })
+            });
+            
+            bsLoadingModal.hide();
+            loadingModal.remove();
+            
+            if (!saveResponse.ok) {
+                const error = await saveResponse.json();
+                showWarningModal(error.error || 'Failed to save file');
+                modal.hide();
+                window.location.href = '/';
+                return;
+            }
+            
+            const saveResult = await saveResponse.json();
+            
+            if (saveResult.exists) {
+                // File exists - ask for overwrite confirmation
+                showConfirmDialog(
+                    i18nStrings.dialogs.file_exists.title,
+                    i18nStrings.dialogs.file_exists.message,
+                    async () => {
+                        // User confirmed overwrite
+                        // Recreate loading modal
+                        const newLoadingModal = document.createElement('div');
+                        newLoadingModal.className = 'modal fade';
+                        const savingText = currentLanguage === 'de' ? 'Speichern...' : 'Saving...';
+                        newLoadingModal.innerHTML = `
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-body text-center py-4">
+                                        <div class="spinner-border text-primary mb-3" role="status">
+                                            <span class="visually-hidden">${i18nStrings.dialogs.loading.loading}</span>
+                                        </div>
+                                        <p class="mb-0">${savingText}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(newLoadingModal);
+                        const newBsLoadingModal = new bootstrap.Modal(newLoadingModal, {backdrop: 'static', keyboard: false});
+                        newBsLoadingModal.show();
+                        const overwriteResponse = await fetch('/api/observations/save', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                filename: filename,
+                                observations: filteredObs,
+                                overwrite: true
+                            })
+                        });
+                        newBsLoadingModal.hide();
+                        newLoadingModal.remove();
+                        
+                        if (!overwriteResponse.ok) {
+                            const error = await overwriteResponse.json();
+                            showWarningModal(error.error || 'Failed to save file');
+                            modal.hide();
+                            window.location.href = '/';
+                            return;
+                        }
+                        
+                        const result = await overwriteResponse.json();
+                        
+                        // Load the filtered file into memory so we can continue working with it
+                        try {
+                            const loadResponse = await fetch(`/api/file/load/${encodeURIComponent(filename)}`, {
+                                method: 'POST'
+                            });
+                            
+                            if (loadResponse.ok) {
+                                const loadResult = await loadResponse.json();
+                                // Update file info display
+                                if (window.updateFileInfoDisplay) {
+                                    window.updateFileInfoDisplay(filename, loadResult.count || keptCount);
+                                }
+                                // Update haloData
+                                window.haloData = {
+                                    fileName: filename,
+                                    isLoaded: true,
+                                    isDirty: false,
+                                    observations: filteredObs
+                                };
+                            }
+                        } catch (loadError) {
+                            console.error('Failed to load filtered file:', loadError);
+                        }
+                        
+                        showSelectionResults(filename, keptCount, deletedCount);
+                    },
+                    () => {
+                        // User cancelled - hide modal and return to main
+                        modal.hide();
+                        window.location.href = '/';
+                    },
+                    {
+                        cancel: i18nStrings.observers.no,
+                        confirm: i18nStrings.observers.yes
+                    }
+                );
+                return;
+            }
+            
+            // Check if save was successful
+            if (!saveResult.success) {
+                showWarningModal(saveResult.error || 'Failed to save file');
+                modal.hide();
+                window.location.href = '/';
+                return;
+            }
+            
+            const result = saveResult;
+            
+            // Load the filtered file into memory so we can continue working with it
+            try {
+                const loadResponse = await fetch(`/api/file/load/${encodeURIComponent(filename)}`, {
+                    method: 'POST'
+                });
+                
+                if (loadResponse.ok) {
+                    const loadResult = await loadResponse.json();
+                    // Update file info display
+                    if (window.updateFileInfoDisplay) {
+                        window.updateFileInfoDisplay(filename, loadResult.count || keptCount);
+                    }
+                    // Update haloData
+                    window.haloData = {
+                        fileName: filename,
+                        isLoaded: true,
+                        isDirty: false,
+                        observations: filteredObs
+                    };
+                }
+            } catch (loadError) {
+                console.error('Failed to load filtered file:', loadError);
+            }
+            
+            // Show selection results
+            showSelectionResults(filename, keptCount, deletedCount);
+            
+        } catch (error) {
+            bsLoadingModal.hide();
+            loadingModal.remove();
+            modal.hide();
+            console.error('Selection error:', error);
+            showWarningModal(error.message || 'Error during selection');
+            window.location.href = '/';
+        }
+    }
+
+    // Handle Enter key on filename input
+    document.getElementById('select-filename').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            btnOk.click();
+        }
+    });
+
+    // Handle ESC key
+    modalEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            modal.hide();
+        }
+    });
+
+    modalEl.addEventListener('hidden.bs.modal', () => {
+        clearMenuHighlights();
+        modalEl.remove();
+    });
 }
 
 // Create new file
@@ -3465,16 +4482,16 @@ async function showSaveAsDialog() {
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">${i18nStrings.menus?.file?.save_as}</h5>
+                        <h5 class="modal-title">${i18nStrings.menus.file.save_as}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <label class="form-label">${i18nStrings.common?.save_as_prompt}</label>
+                        <label class="form-label">${i18nStrings.common.save_as_prompt}</label>
                         <input type="text" class="form-control" id="saveas-filename" placeholder="${(window.haloData.fileName || 'alle.csv').replace(/\.[^.]+$/, '')}" value="${(window.haloData.fileName || '').replace(/\.[^.]+$/, '')}">
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18nStrings.common?.cancel}</button>
-                        <button type="button" class="btn btn-primary" id="saveas-ok">${i18nStrings.common?.ok}</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-primary" id="saveas-ok">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -3532,9 +4549,9 @@ async function processSaveAs(filename) {
         let result = await response.json();
         
         if (result.exists) {
-            const overwriteMsg = result.message + ' ' + (i18nStrings.common?.overwrite_confirm);
+            const overwriteMsg = result.message + ' ' + (i18nStrings.common.overwrite_confirm);
             showConfirmDialog(
-                i18nStrings.common?.confirm,
+                i18nStrings.common.confirm,
                 overwriteMsg,
                 async () => {
                     // User confirmed - proceed with overwrite
@@ -3607,7 +4624,7 @@ async function triggerAutosave() {
         });
         
         if (response.ok) {
-            console.log('[AUTOSAVE] Saved successfully');
+
         } else {
             console.warn('[AUTOSAVE] Failed:', await response.text());
         }
@@ -3621,7 +4638,7 @@ async function checkAutosaveRecovery() {
     try {
         // Skip autosave recovery if we already have observations loaded in memory
         if (window.haloData.isLoaded && window.haloData.observations.length > 0) {
-            console.log('[AUTOSAVE RECOVERY] Skipping - observations already in memory');
+
             return;
         }
         
@@ -3717,14 +4734,14 @@ function showErrorDialog(message, onClose = null) {
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">${i18nStrings.dialogs?.error?.title}</h5>
+                        <h5 class="modal-title">${i18nStrings.dialogs.error.title}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <p>${message}</p>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">${i18nStrings.common?.ok}</button>
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -3744,16 +4761,16 @@ function showErrorDialog(message, onClose = null) {
 
 // Load file dialog
 async function showLoadFileDialog() {
-    const isDirty = window.haloData?.isDirty;
+    const isDirty = window.haloData.isDirty;
     const exists = !!window.haloData;
     let warningShown = false;
     
     // Check if current file has unsaved changes
     if (window.haloData && window.haloData.isDirty) {
         warningShown = true;
-        const message = i18nStrings.dialogs?.unsaved_changes?.message;
+        const message = i18nStrings.dialogs.unsaved_changes.message;
         showConfirmDialog(
-            i18nStrings.dialogs?.unsaved_changes?.title,
+            i18nStrings.dialogs.unsaved_changes.title,
             message,
             () => continueLoadFile()
         );
@@ -3764,7 +4781,7 @@ async function showLoadFileDialog() {
 }
 
 async function continueLoadFile() {
-    console.log('continueLoadFile called');
+
     
     // Use native file picker with webkitdirectory attribute workaround
     const fileInput = document.createElement('input');
@@ -3776,7 +4793,7 @@ async function continueLoadFile() {
     let pickerOpened = false;
     window.addEventListener('focus', () => {
         if (pickerOpened) {
-            console.log('File picker closed');
+
             // Clear menu highlights when picker closes (whether file was selected or not)
             // If a file was selected, this will be overridden by the file load success message
             setTimeout(() => {
@@ -3789,7 +4806,7 @@ async function continueLoadFile() {
     }, { once: true });
     
     fileInput.addEventListener('change', async (e) => {
-        console.log('File selected:', e.target.files.length, 'files');
+
         const file = e.target.files[0];
         if (!file) return;
         
@@ -3823,13 +4840,13 @@ async function continueLoadFile() {
             const formData = new FormData();
             formData.append('file', file);
             
-            console.log('Uploading file:', file.name, 'size:', file.size);
+
             const uploadResponse = await fetch('/api/file/upload', {
                 method: 'POST',
                 body: formData
             });
             
-            console.log('Upload response status:', uploadResponse.status);
+
             
             if (!uploadResponse.ok) throw new Error('Failed to upload file');
             
@@ -3851,7 +4868,7 @@ async function continueLoadFile() {
             setTimeout(() => loadingModal.remove(), 300);
             
             // Show success message
-            const obsText = i18nStrings.ui?.messages?.observations;
+            const obsText = i18nStrings.ui.messages.observations;
             const successMsg = document.createElement('div');
             successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
             successMsg.style.cssText = 'z-index:9999;min-width:300px;';
@@ -3879,10 +4896,142 @@ async function continueLoadFile() {
     });
     
     // Trigger native file picker
-    console.log('Triggering file picker');
+
     pickerOpened = true;
     fileInput.click();
-    console.log('File picker triggered');
+
+}
+
+// Merge files - Datei -> Verbinden
+async function showMergeFileDialog() {
+    // Check if a file is loaded
+    if (!window.haloData.fileName) {
+        showWarningModal(i18nStrings.menus.observations.no_file_loaded || i18nStrings.observations.no_file_loaded);
+        return;
+    }
+    
+    // Check if current file has unsaved changes
+    if (window.haloData && window.haloData.isDirty) {
+        const message = i18nStrings.dialogs.unsaved_changes.message;
+        showConfirmDialog(
+            i18nStrings.dialogs.unsaved_changes.title,
+            message,
+            () => continueMergeFile()
+        );
+        return;
+    }
+    
+    continueMergeFile();
+}
+
+async function continueMergeFile() {
+    // Use native file picker
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.csv,.CSV';
+    
+    // Detect when file picker is closed
+    let pickerOpened = false;
+    window.addEventListener('focus', () => {
+        if (pickerOpened) {
+            setTimeout(() => {
+                clearMenuHighlights();
+            }, 100);
+        }
+    }, { once: true });
+    
+    fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        // Create loading modal
+        const loadingModal = document.createElement('div');
+        loadingModal.className = 'modal fade';
+        loadingModal.innerHTML = `
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-body text-center py-4">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">${i18nStrings.dialogs.loading.loading}</span>
+                        </div>
+                        <p class="mb-0">${i18nStrings.dialogs.loading.merging_file || 'Merging file'} "${file.name}" ...</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(loadingModal);
+        const bsModal = new bootstrap.Modal(loadingModal, { backdrop: 'static', keyboard: false });
+        bsModal.show();
+        
+        try {
+            // Upload file to merge endpoint
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const mergeResponse = await fetch('/api/file/merge', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!mergeResponse.ok) {
+                const errorData = await mergeResponse.json();
+                throw new Error(errorData.error || 'Failed to merge file');
+            }
+            
+            const result = await mergeResponse.json();
+            
+            // Reload observations into global store
+            const obsResponse = await fetch('/api/observations?limit=200000');
+            if (!obsResponse.ok) throw new Error('Failed to load observations');
+            
+            const data = await obsResponse.json();
+            window.haloData.observations = data.observations;
+            // Mark as dirty only if at least one observation was added
+            const addedCount = result.added_count || 0;
+            if (addedCount > 0) {
+                window.haloData.isDirty = true;
+            }
+            saveHaloDataToSession();
+            
+            // Update file info in header
+            updateFileInfoDisplay(window.haloData.fileName, window.haloData.observations.length);
+            
+            // Hide loading modal
+            bsModal.hide();
+            setTimeout(() => loadingModal.remove(), 300);
+            
+            // Show success message with count of added observations
+            // (addedCount already computed above)
+            const successMsg = document.createElement('div');
+            successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+            successMsg.style.cssText = 'z-index:9999;min-width:300px;';
+            const obsText = i18nStrings.ui.messages.observations;
+            successMsg.innerHTML = `
+                <strong>✓</strong> ${addedCount} ${obsText} ${i18nStrings.dialogs.success.hinzugefuegt} "${file.name}"
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(successMsg);
+            setTimeout(() => successMsg.remove(), 3000);
+        } catch (error) {
+            bsModal.hide();
+            setTimeout(() => loadingModal.remove(), 300);
+            console.error('Error merging file:', error);
+            
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'alert alert-danger alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+            errorMsg.style.cssText = 'z-index:9999;min-width:300px;';
+            errorMsg.innerHTML = `
+                <strong>✗</strong> ${i18nStrings.dialogs.file_error.error_loading_file}: ${error.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(errorMsg);
+            setTimeout(() => errorMsg.remove(), 5000);
+        }
+    });
+    
+    // Trigger the file picker
+    pickerOpened = true;
+    fileInput.click();
 }
 
 // Update file info display
@@ -3974,14 +5123,14 @@ function showWarningModal(message) {
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">${i18nStrings.common?.warning}</h5>
+                        <h5 class="modal-title">${i18nStrings.common.warning}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <p>${message}</p>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">${i18nStrings.common?.ok}</button>
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -4011,7 +5160,7 @@ async function showFixedObserverDialog() {
         const observers = obsData.observers || [];
         
         // Build dropdown options
-        const noObserverText = i18nStrings.menus?.settings?.no_fixed_observer;
+        const noObserverText = i18nStrings.menus.settings.no_fixed_observer;
         let options = `<option value="">${noObserverText}</option>`;
         observers.forEach(obs => {
             const selected = String(obs.KK) === String(currentObserver) ? 'selected' : '';
@@ -4024,11 +5173,11 @@ async function showFixedObserverDialog() {
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">${i18nStrings.menus?.settings?.fixed_observer_title}</h5>
+                            <h5 class="modal-title">${i18nStrings.menus.settings.fixed_observer_title}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
-                            <p class="mb-3">${i18nStrings.menus?.settings?.fixed_observer_question}</p>
+                            <p class="mb-3">${i18nStrings.menus.settings.fixed_observer_question}</p>
                             <select class="form-select" id="fixed-observer-select">
                                 ${options}
                             </select>
@@ -4083,18 +5232,18 @@ async function showEingabeartDialog() {
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">${i18nStrings.menus?.settings?.input_mode_title}</h5>
+                            <h5 class="modal-title">${i18nStrings.menus.settings.input_mode_title}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
-                            <p class="mb-3">${i18nStrings.menus?.settings?.input_mode_question}</p>
+                            <p class="mb-3">${i18nStrings.menus.settings.input_mode_question}</p>
                             <div class="form-check form-check-inline mb-0">
                                 <input class="form-check-input" type="radio" name="eingabeart" id="mode-m" value="M" ${currentMode === 'M' ? 'checked' : ''}>
-                                <label class="form-check-label" for="mode-m">${i18nStrings.menus?.settings?.input_mode_menu}</label>
+                                <label class="form-check-label" for="mode-m">${i18nStrings.menus.settings.input_mode_menu}</label>
                             </div>
                             <div class="form-check form-check-inline mb-0">
                                 <input class="form-check-input" type="radio" name="eingabeart" id="mode-n" value="N" ${currentMode === 'N' ? 'checked' : ''}>
-                                <label class="form-check-label" for="mode-n">${i18nStrings.menus?.settings?.input_mode_number}</label>
+                                <label class="form-check-label" for="mode-n">${i18nStrings.menus.settings.input_mode_number}</label>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -4136,9 +5285,76 @@ async function showEingabeartDialog() {
         console.error('Eingabeart dialog error:', error);
     }
 }
+// Show Ausgabeart (output format) dialog - NEW FEATURE
+async function showAusgabeartDialog() {
+    try {
+        const response = await fetch('/api/config/outputmode');
+        const config = await response.json();
+        const currentMode = config.mode;
+        
+        // Create Bootstrap modal
+        const modalHtml = `
+            <div class="modal fade" id="ausgabeart-modal" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">${i18nStrings.menus.settings.output_type_title}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="mb-3">${i18nStrings.menus.settings.output_type_question}</p>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="radio" name="ausgabeart" id="mode-h" value="H" ${currentMode === 'H' ? 'checked' : ''}>
+                                <label class="form-check-label" for="mode-h">${i18nStrings.menus.settings.output_type_html}</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="radio" name="ausgabeart" id="mode-p" value="P" ${currentMode === 'P' ? 'checked' : ''}>
+                                <label class="form-check-label" for="mode-p">${i18nStrings.menus.settings.output_type_pseudo}</label>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                            <button type="button" class="btn btn-primary" id="btn-ausgabeart-ok">${i18nStrings.common.ok}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        const modalEl = document.getElementById('ausgabeart-modal');
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+        
+        document.getElementById('btn-ausgabeart-ok').addEventListener('click', async () => {
+            const selected = document.querySelector('input[name="ausgabeart"]:checked');
+            const newMode = selected ? selected.value : 'P';
+            
+            modal.hide();
+            
+            if (newMode !== currentMode) {
+                await fetch('/api/config/outputmode', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({mode: newMode})
+                });
+                // Silent success: no confirmation dialogs
+            }
+        });
+        
+        modalEl.addEventListener('hidden.bs.modal', () => {
+            clearMenuHighlights();
+            modalEl.remove();
+        });
+        
+    } catch (error) {
+        console.error('Ausgabeart dialog error:', error);
+    }
+}
+
 // Show version information dialog
 function showVersionDialog() {
-    const v = i18nStrings.menus?.help?.version_dialog || {};
+    const v = i18nStrings.menus.help.version_dialog || {};
     const versionText = `<h4 class="text-center mb-4">${v.title}</h4>
            <p class="mb-2"><strong>${v.date_label}:</strong> ${v.date}</p>
            <p class="mb-3"><strong>${v.author_label}:</strong> ${v.author}</p>
@@ -4158,7 +5374,7 @@ function showVersionDialog() {
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">${i18nStrings.help?.version}</h5>
+                        <h5 class="modal-title">${i18nStrings.help.version}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
@@ -4217,7 +5433,7 @@ async function showWhatsNewDialog() {
                 <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">${i18nStrings.help?.whats_new}</h5>
+                            <h5 class="modal-title">${i18nStrings.help.whats_new}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body" style="font-size: 14px; line-height: 1.6;">
@@ -4281,7 +5497,7 @@ async function showHelpDialog() {
                 <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">${i18nStrings.menu_titles?.help}</h5>
+                            <h5 class="modal-title">${i18nStrings.menu_titles.help}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body" style="font-size: 14px; line-height: 1.6;">
