@@ -284,7 +284,7 @@ class FilterDialog {
         observers.forEach(obs => {
             const option = document.createElement('option');
             option.value = obs.kk;
-            option.textContent = `${String(obs.kk).padStart(2, '0')} ${obs.name}`;
+            option.textContent = `${String(obs.kk).padStart(2, '0')} - ${obs.name}`;
             filter1SelectElem.appendChild(option);
         });
     }

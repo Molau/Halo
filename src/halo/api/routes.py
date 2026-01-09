@@ -2970,6 +2970,17 @@ def _get_timezone_offset(region_code):
         return 0
 
 
+def _extract_sector_letters(sector_str: str) -> list[str]:
+    """Return unique sector octant letters (a-h) found in the sector string."""
+    if not sector_str:
+        return []
+    cleaned = []
+    for ch in sector_str.lower():
+        if 'a' <= ch <= 'h':
+            cleaned.append(ch)
+    return sorted(set(cleaned))
+
+
 def _calculate_observation_solar_altitude(obs, observers_list, sh_type='mean'):
     """Calculate solar altitude for an observation.
     
@@ -3337,6 +3348,11 @@ def _matches_parameter(obs, param_name, param_value, all_params, prefix):
             observers = current_app.config.get('OBSERVERS', [])
             sh_type = all_params.get('sh_type', 'mean')
             obs_value = _calculate_observation_solar_altitude(obs, observers, sh_type)
+    elif param_name == 'SE':
+        # Sectors: check if the filter octant letter is present in the sectors string
+        sector_letters = _extract_sector_letters(getattr(obs, 'sectors', ''))
+        # param_value should be a single letter a-h
+        return param_value.lower() in sector_letters
     else:
         obs_value = getattr(obs, param_name, None)
     
@@ -3481,6 +3497,13 @@ def _group_by_parameter(observations, param_name, all_params, prefix):
                     groups[str(left)] += 1
                     groups[str(right)] += 1
                     value = None  # Don't count again below
+        elif param_name == 'SE':
+            # Sectors: count each octant letter (a-h) present in the sectors string
+            sector_letters = _extract_sector_letters(getattr(obs, 'sectors', ''))
+            # Only count observations that have sectors (skip those without)
+            for letter in sector_letters:
+                groups[letter] += 1
+            value = None  # Already counted
         else:
             value = getattr(obs, param_name, None)
         
@@ -3509,101 +3532,102 @@ def _group_by_parameter(observations, param_name, all_params, prefix):
     # Generate all values in the range if range is specified
     result = dict(groups)
     
-    # Get range from parameters
-    from_key = f'{prefix}_from'
-    to_key = f'{prefix}_to'
-    
-    if from_key in all_params and to_key in all_params:
-        from_val = all_params[from_key]
-        to_val = all_params[to_key]
+    # Skip range expansion for non-numeric sectors parameter
+    if param_name != 'SE':
+        # Get range from parameters
+        from_key = f'{prefix}_from'
+        to_key = f'{prefix}_to'
         
-        if from_val is not None and to_val is not None:
-            try:
-                from_val = int(from_val) if from_val else None
-                to_val = int(to_val) if to_val else None
-                
-                if from_val is not None and to_val is not None:
-                    # Generate all values in range (handling century boundary for JJ)
-                    range_values = []
+        if from_key in all_params and to_key in all_params:
+            from_val = all_params[from_key]
+            to_val = all_params[to_key]
+            
+            if from_val is not None and to_val is not None:
+                try:
+                    from_val = int(from_val) if from_val else None
+                    to_val = int(to_val) if to_val else None
                     
-                    if param_name == 'TT':
-                        # Day parameter - generate ALL days in the month (1 to max_day)
-                        # Get the number of days in the specified month
-                        month_key = f'{prefix}_month'
-                        year_key = f'{prefix}_year'
-                        month = all_params.get(month_key)
-                        year = all_params.get(year_key)
+                    if from_val is not None and to_val is not None:
+                        # Generate all values in range (handling century boundary for JJ)
+                        range_values = []
                         
-                        if month is not None and year is not None:
-                            try:
-                                import calendar
-                                month = int(month)
-                                year = int(year)
-                                # Convert 2-digit year to 4-digit for calendar
-                                if year < 50:
-                                    year = 2000 + year
-                                elif year < 100:
-                                    year = 1900 + year
-                                
-                                # Get max days in this month
-                                max_day = calendar.monthrange(year, month)[1]
-                                
-                                # Generate all days in month (1 to max_day)
-                                range_values = list(range(1, max_day + 1))
-                            except (ValueError, TypeError):
-                                # Fallback to 1-31
-                                range_values = list(range(1, 32))
-                        else:
-                            # No month/year context, generate 1-31
-                            range_values = list(range(1, 32))
-                    elif param_name == 'JJ':
-                        # Year - convert 2-digit to 4-digit, then handle range
-                        # Year < 50 = 20xx, Year >= 50 = 19xx
-                        from_year = from_val
-                        to_year = to_val
-                        
-                        if from_year < 50:
-                            from_year = 2000 + from_year
-                        elif from_year < 100:
-                            from_year = 1900 + from_year
+                        if param_name == 'TT':
+                            # Day parameter - generate ALL days in the month (1 to max_day)
+                            # Get the number of days in the specified month
+                            month_key = f'{prefix}_month'
+                            year_key = f'{prefix}_year'
+                            month = all_params.get(month_key)
+                            year = all_params.get(year_key)
                             
-                        if to_year < 50:
-                            to_year = 2000 + to_year
-                        elif to_year < 100:
-                            to_year = 1900 + to_year
-                        
-                        # Now generate range with 4-digit years
-                        if from_year > to_year:
-                            # Century boundary case: 1990-2010 for example
-                            range_values = list(range(from_year, 2050)) + list(range(1950, to_year + 1))
+                            if month is not None and year is not None:
+                                try:
+                                    import calendar
+                                    month = int(month)
+                                    year = int(year)
+                                    # Convert 2-digit year to 4-digit for calendar
+                                    if year < 50:
+                                        year = 2000 + year
+                                    elif year < 100:
+                                        year = 1900 + year
+                                    
+                                    # Get max days in this month
+                                    max_day = calendar.monthrange(year, month)[1]
+                                    
+                                    # Generate all days in month (1 to max_day)
+                                    range_values = list(range(1, max_day + 1))
+                                except (ValueError, TypeError):
+                                    # Fallback to 1-31
+                                    range_values = list(range(1, 32))
+                            else:
+                                # No month/year context, generate 1-31
+                                range_values = list(range(1, 32))
+                        elif param_name == 'JJ':
+                            # Year - convert 2-digit to 4-digit, then handle range
+                            # Year < 50 = 20xx, Year >= 50 = 19xx
+                            from_year = from_val
+                            to_year = to_val
+                            
+                            if from_year < 50:
+                                from_year = 2000 + from_year
+                            elif from_year < 100:
+                                from_year = 1900 + from_year
+                                
+                            if to_year < 50:
+                                to_year = 2000 + to_year
+                            elif to_year < 100:
+                                to_year = 1900 + to_year
+                            
+                            # Now generate range with 4-digit years
+                            if from_year > to_year:
+                                # Century boundary case: 1990-2010 for example
+                                range_values = list(range(from_year, 2050)) + list(range(1950, to_year + 1))
+                            else:
+                                # Normal case
+                                range_values = list(range(from_year, to_year + 1))
                         else:
-                            # Normal case
-                            range_values = list(range(from_year, to_year + 1))
-                    else:
-                        # Regular numeric range
-                        range_values = list(range(from_val, to_val + 1))
-                    
-                    # Add missing values with count 0
-                    for val in range_values:
-                        str_val = str(val)
-                        if str_val not in result:
-                            result[str_val] = 0
-            except (ValueError, TypeError):
-                pass
+                            # Regular numeric range
+                            range_values = list(range(from_val, to_val + 1))
+                        
+                        # Add missing values with count 0
+                        for val in range_values:
+                            str_val = str(val)
+                            if str_val not in result:
+                                result[str_val] = 0
+                except (ValueError, TypeError):
+                    pass
     
     # Sort keys intelligently (before formatting)
-    if param_name in ['MM', 'JJ', 'TT', 'ZZ', 'SH']:
-        # Numeric sort for dates/times and solar altitude
-        def numeric_sort_key(item):
-            key = item[0]
-            if key == 'keine Angabe':
-                return (0, float('-inf'))  # Sort to beginning
-            try:
-                return (1, float(key))  # Sort numerically
-            except (ValueError, TypeError):
-                return (2, key)  # Non-numeric at end
-        
-        result = dict(sorted(result.items(), key=numeric_sort_key))
+    def numeric_sort_key(item):
+        key = item[0]
+        if key == 'keine Angabe':
+            return (0, float('-inf'))  # Sort to beginning
+        try:
+            return (1, float(key))  # Sort numerically
+        except (ValueError, TypeError):
+            return (2, key)  # Non-numeric at end
+    
+    # Apply numeric sorting for all parameters (numeric parameters sort numerically, others alphabetically)
+    result = dict(sorted(result.items(), key=numeric_sort_key))
     
     # Remove combined types when split is enabled (they will have 0 counts)
     if param_name == 'C' and all_params.get(f'{prefix}_c_split'):
@@ -3684,7 +3708,10 @@ def _group_by_two_parameters(observations, param1_name, param2_name, all_params)
                 val2 = (val2 + offset) % 24
         
         # Handle C (cirrus) splitting for param1
-        if param1_name == 'C' and val1 is not None and all_params.get('param1_c_split'):
+        if param1_name == 'SE':
+            sector_letters = _extract_sector_letters(getattr(obs, 'sectors', ''))
+            val1_list = sector_letters if sector_letters else []
+        elif param1_name == 'C' and val1 is not None and all_params.get('param1_c_split'):
             c_value = int(val1) if isinstance(val1, (int, str)) else val1
             if c_value == 4:  # C4 (Ci + Cc) → count as both C1 and C2
                 val1_list = ['1', '2']
@@ -3709,7 +3736,10 @@ def _group_by_two_parameters(observations, param1_name, param2_name, all_params)
             val1_list = [str(val1) if val1 is not None else 'keine Angabe']
         
         # Handle C (cirrus) splitting for param2
-        if param2_name == 'C' and val2 is not None and all_params.get('param2_c_split'):
+        if param2_name == 'SE':
+            sector_letters = _extract_sector_letters(getattr(obs, 'sectors', ''))
+            val2_list = sector_letters if sector_letters else []
+        elif param2_name == 'C' and val2 is not None and all_params.get('param2_c_split'):
             c_value = int(val2) if isinstance(val2, (int, str)) else val2
             if c_value == 4:  # C4 (Ci + Cc) → count as both C1 and C2
                 val2_list = ['1', '2']

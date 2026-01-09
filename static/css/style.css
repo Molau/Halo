@@ -129,6 +129,12 @@ footer {
     background-color: #5555ff !important;
     color: white !important;
     border-color: #3333dd !important;
+    text-align: center !important;
+}
+
+/* Monthly report header should be left-aligned to match monospace content */
+.analysis-table thead th.monthly-report-header {
+    text-align: left !important;
 }
 
 .analysis-table tbody tr {
@@ -148,6 +154,27 @@ footer {
     margin-bottom: 1rem;
     font-style: italic;
     color: #666;
+}
+
+/* Print styles */
+@media print {
+    @page {
+        margin: 0.3cm;
+    }
+    
+    body {
+        margin: 0;
+        padding: 0.2cm;
+    }
+    
+    .analysis-table {
+        font-size: 8pt;
+    }
+    
+    .analysis-table th,
+    .analysis-table td {
+        padding: 2px 4px;
+    }
 }
 
 /* Responsive */

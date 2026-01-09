@@ -154,12 +154,20 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    // Load observers
+    // Load observers - get all observers and sort by KK numerically
     async function loadObservers() {
         try {
             const response = await fetch('/api/observers/list');
             const data = await response.json();
-            observers = data.observers;
+            
+            // Sort observers numerically by KK
+            observers = data.observers.sort((a, b) => {
+                const kkA = parseInt(a.KK);
+                const kkB = parseInt(b.KK);
+                return kkA - kkB;
+            });
+            
+            console.log('Loaded observers:', observers.length);
 
         } catch (error) {
             console.error('Error loading observers:', error);
@@ -396,8 +404,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             case 'DD':
                 // Duration: display key values 0, 10, 20, 30, etc.
                 const durations = [];
+                const minuteText = i18n.observations.detail_labels.minutes.trim();
                 for (let i = 0; i <= 99; i += 10) {
-                    const minuteText = i18n.fields.minutes;
                     durations.push({ value: i, display: `${i} ${minuteText}` });
                 }
                 return durations;
@@ -430,8 +438,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             case 'zz':
                 // Zeit bis Niederschlag (hours): 0 hours, 1 hours, etc.
                 const zzTimes = [];
+                const hourText = i18n.observations.detail_labels.hours.trim();
                 for (let i = 0; i <= 99; i++) {
-                    const hourText = i18n.fields.hours;
                     zzTimes.push({ value: i, display: `${i} ${hourText}` });
                 }
                 return zzTimes;
@@ -445,7 +453,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 return heights;
             
             case 'SE':
-                return [{ value: 0, display: i18n.fields.not_applicable }];
+                // Sectors (octants a-h)
+                return ['a','b','c','d','e','f','g','h'].map(letter => ({ value: letter, display: letter }));
             
             default:
                 return [];
@@ -457,9 +466,62 @@ document.addEventListener('DOMContentLoaded', async function() {
     function formatParamValue(paramCode, rawValue) {
         // Special handling for KK (observer) - search observers array directly
         if (paramCode === 'KK') {
-            const kk = String(parseInt(rawValue));
-            const observer = observers.find(obs => String(obs.KK) === kk);
-            return `${kk.padStart(2, '0')} - ${observer.VName} ${observer.NName}`;
+            const kkNum = parseInt(rawValue);
+            const observer = observers.find(obs => parseInt(obs.KK) === kkNum);
+            if (!observer) {
+                return null; // Return null if observer not found (will be filtered out)
+            }
+            return `${String(kkNum).padStart(2, '0')} - ${observer.VName} ${observer.NName}`;
+        }
+        
+        // Special handling for GG (geographic region) - filter out non-existent regions
+        if (paramCode === 'GG') {
+            const validRegions = [1,2,3,4,5,6,7,8,9,10,11,16,17,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39];
+            const ggNum = parseInt(rawValue);
+            if (!validRegions.includes(ggNum)) {
+                return null; // Return null if region doesn't exist (will be filtered out)
+            }
+            const regionName = i18n.geographic_regions[String(ggNum)];
+            return `${String(ggNum).padStart(2, '0')} - ${regionName}`;
+        }
+
+        // Special handling for SE (sectors) - count by octant letter
+        if (paramCode === 'SE') {
+            if (rawValue === 'keine Angabe') {
+                return i18n.fields.not_applicable || rawValue;
+            }
+            return String(rawValue).toLowerCase();
+        }
+
+        // Special handling for DD (duration) - display as minutes in steps of 10
+        if (paramCode === 'DD') {
+            const ddVal = parseInt(rawValue);
+            if (isNaN(ddVal)) {
+                return null;
+            }
+            const minutes = ddVal * 10;
+            return `${minutes} min`;
+        }
+
+        // Special handling for zz (time till precipitation) - display as hours
+        if (paramCode === 'zz') {
+            const hoursVal = parseInt(rawValue);
+            if (isNaN(hoursVal)) {
+                return null;
+            }
+            const hourText = i18n.observations.detail_labels.hours.trim();
+            return `${hoursVal} ${hourText}`;
+        }
+        
+        // Special handling for EE (halo type) - filter out non-existent types (78-98)
+        if (paramCode === 'EE') {
+            const eeNum = parseInt(rawValue);
+            // Valid halo types: 1-77 and 99
+            if (eeNum < 1 || (eeNum > 77 && eeNum !== 99)) {
+                return null; // Return null if halo type doesn't exist (will be filtered out)
+            }
+            const haloName = i18n.halo_types[String(eeNum)];
+            return `${String(eeNum).padStart(2, '0')} - ${haloName}`;
         }
         
         if (!valueLabelCache[paramCode]) {
@@ -726,19 +788,24 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Populate range dropdowns for special parameters (SH, C, EE, DD)
     function populateSpecialRangeSelects(paramCode, fromSelect, toSelect) {
         const range = getParameterRange(paramCode);
+        // Use abbreviated minutes label for duration (DD)
+        const minuteSuffix = ' min';
         
         fromSelect.innerHTML = '';
         toSelect.innerHTML = '';
         
         range.forEach(item => {
+            const displayText = paramCode === 'DD'
+                ? `${item.value}${minuteSuffix}`
+                : item.display;
             const fromOption = document.createElement('option');
             fromOption.value = item.value;
-            fromOption.textContent = item.display;
+            fromOption.textContent = displayText;
             fromSelect.appendChild(fromOption);
             
             const toOption = document.createElement('option');
             toOption.value = item.value;
-            toOption.textContent = item.display;
+            toOption.textContent = displayText;
             toSelect.appendChild(toOption);
         });
 
@@ -1499,10 +1566,20 @@ document.addEventListener('DOMContentLoaded', async function() {
     let lastAnalysisParams = null;
 
     // Display analysis result as table
-    function displayAnalysisResult(result, params) {
+    async function displayAnalysisResult(result, params) {
         if (!result.success) {
             showWarningModal(result.error);
             return;
+        }
+        
+        // Check output mode setting
+        let outputMode = 'H'; // Default: HTML-Tabellen (current for analysis)
+        try {
+            const modeResponse = await fetch('/api/config/outputmode');
+            const modeData = await modeResponse.json();
+            outputMode = modeData.mode || 'H';
+        } catch (error) {
+            console.error('Error fetching output mode:', error);
         }
         
         // Store result for later use (print/save)
@@ -1516,8 +1593,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             ? `${i18n.analysis_results.title_two_params}: ${param1Name} ${i18n.analysis_results.and} ${param2Name}`
             : `${i18n.analysis_results.title_one_param}: ${param1Name}`;
         
-        // Build restrictions text
-        let restrictionsHtml = '';
+        // Build restrictions array
         const restrictions = [];
         if (params.filter1) {
             const filterName = i18n.analysis_dialog.param_names[params.filter1];
@@ -1530,25 +1606,34 @@ document.addEventListener('DOMContentLoaded', async function() {
             restrictions.push(`${filterName} = ${displayValue}`);
         }
         
-        if (restrictions.length > 0) {
+        // Build restrictions HTML (for HTML mode only)
+        let restrictionsHtml = '';
+        if (restrictions.length > 0 && outputMode === 'H') {
             restrictionsHtml = `<div class="restrictions"><strong>${i18n.analysis_results.restrictions}:</strong> ${restrictions.join(', ')}</div>`;
         }
         
-        // Build result HTML based on number of parameters
+        // Build result HTML based on output mode and number of parameters
         let resultHtml = '';
-        if (!params.param2) {
-            // Single parameter - show simple table
-            resultHtml = buildSingleParameterTable(result.data, param1Name, result.total, params.param1);
+        
+        if (outputMode === 'H') {
+            // HTML-Tabellen format (current implementation)
+            if (!params.param2) {
+                // Single parameter - show simple table
+                resultHtml = buildSingleParameterTable(result.data, param1Name, result.total, params.param1);
+            } else {
+                // Two parameters - show cross-tabulation
+                const percentageMode = params.percentage_mode;
+                resultHtml = buildTwoParameterTable(result.data, param1Name, param2Name, result.total, percentageMode, params.param1, params.param2);
+            }
         } else {
-            // Two parameters - show cross-tabulation
-            const percentageMode = params.percentage_mode;
-            resultHtml = buildTwoParameterTable(result.data, param1Name, param2Name, result.total, percentageMode, params.param1, params.param2);
+            // Pseudografik format (title and restrictions are included in the table itself)
+            resultHtml = buildPseudografikAnalysisTable(result, params, param1Name, param2Name, restrictions, i18n);
         }
         
         // Combine all parts
         const html = `
             <div class="analysis-results">
-                <h4>${titleText}</h4>
+                ${outputMode === 'H' ? `<h4>${titleText}</h4>` : ''}
                 ${restrictionsHtml}
                 ${resultHtml}
             </div>
@@ -1567,13 +1652,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             modal.id = 'resultModal';
             modal.className = 'modal fade';
             modal.innerHTML = `
-                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                <div class="modal-dialog modal-dialog-scrollable" style="max-width: 800px;">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title">${i18n.dialogs.analysis_title}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
-                        <div class="modal-body" id="resultModalBody" style="overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 200px);">
+                        <div class="modal-body" id="resultModalBody" style="overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 250px);">
                         </div>
                         <div class="modal-footer d-flex justify-content-end gap-2">
                             <button type="button" id="btn-result-bar-chart" class="btn btn-secondary btn-sm px-4">${i18n.button.bar_chart}</button>
@@ -2206,20 +2291,44 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     
     
-    // Save analysis result to CSV file
-    function saveAnalysisResult() {
+    // Save analysis result to file (CSV or TXT depending on output mode)
+    async function saveAnalysisResult() {
         if (!lastAnalysisResult || !lastAnalysisParams) return;
+
+        // Check output mode
+        const modeResponse = await fetch('/api/config/outputmode');
+        const modeData = await modeResponse.json();
+        const outputMode = modeData.mode || 'P';
 
         // Generate filename based on parameters
         const param1 = lastAnalysisParams.param1;
         const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-        const filename = `analysis_${param1}_${timestamp}.csv`;
-
-        // Generate CSV content
-        const csv = generateAnalysisCsv();
+        
+        let content, mimeType, filename;
+        
+        if (outputMode === 'H') {
+            // HTML-Tabellen mode: save as CSV
+            filename = `analysis_${param1}_${timestamp}.csv`;
+            content = generateAnalysisCsv();
+            mimeType = 'text/csv;charset=utf-8';
+        } else {
+            // Pseudografik mode: save as TXT with content from modal
+            filename = `analysis_${param1}_${timestamp}.txt`;
+            const modalBody = document.getElementById('resultModalBody');
+            if (modalBody) {
+                // Find the monospace div containing the pseudografik output
+                const preDiv = modalBody.querySelector('div[style*="monospace"]');
+                content = preDiv ? preDiv.textContent : modalBody.textContent;
+                // Remove leading/trailing whitespace but preserve internal formatting
+                content = content.trim();
+            } else {
+                content = '';
+            }
+            mimeType = 'text/plain;charset=utf-8';
+        }
 
         // Create blob and download
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+        const blob = new Blob([content], { type: mimeType });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -2501,6 +2610,312 @@ document.addEventListener('DOMContentLoaded', async function() {
         `;
         
         return html;
+    }
+
+    // Build Pseudografik format analysis table (full implementation)
+    function buildPseudografikAnalysisTable(result, params, param1Name, param2Name, restrictions, i18n) {
+        let html = '<div style="font-family: monospace; white-space: pre; font-size: 11px; line-height: 1.0;">';
+        
+        // Build table first to get its width, then add centered title
+        let tableHtml = '';
+        let tableWidth = 0;
+        
+        if (!params.param2) {
+            // Single parameter - simple two-column table
+            const tableResult = buildSingleParameterPseudografikWithWidth(result.data, param1Name, result.total, params.param1, i18n);
+            tableHtml = tableResult.html;
+            tableWidth = tableResult.width;
+        } else {
+            // Two parameters - cross-tabulation
+            const tableResult = buildTwoParameterPseudografikWithWidth(result.data, param1Name, param2Name, result.total, params.percentage_mode, params.param1, params.param2, i18n);
+            tableHtml = tableResult.html;
+            tableWidth = tableResult.width;
+        }
+        
+        // Build centered title with double underline based on actual table width
+        const titleText = param2Name 
+            ? `${i18n.analysis_results.title_two_params}: ${param1Name} ${i18n.analysis_results.and} ${param2Name}`
+            : `${i18n.analysis_results.title_one_param}: ${param1Name}`;
+        const titlePadLeft = Math.max(0, Math.floor((tableWidth - titleText.length) / 2));
+        html += ' '.repeat(titlePadLeft) + titleText + '\n';
+        html += ' '.repeat(titlePadLeft) + '═'.repeat(titleText.length) + '\n';
+        
+        // Add centered restrictions with double underline if any
+        if (restrictions.length > 0) {
+            const restrictionText = `${i18n.analysis_results.restrictions}: ${restrictions.join(', ')}`;
+            const restrictionPadLeft = Math.max(0, Math.floor((tableWidth - restrictionText.length) / 2));
+            html += '\n' + ' '.repeat(restrictionPadLeft) + restrictionText + '\n';
+            html += ' '.repeat(restrictionPadLeft) + '═'.repeat(restrictionText.length) + '\n';
+        }
+        
+        html += '\n' + tableHtml;
+        html += '</div>';
+        return html;
+    }
+
+    // Build single parameter pseudo-graphics table
+    function buildSingleParameterPseudografikWithWidth(data, paramName, total, paramCode, i18n) {
+        let html = '';
+        // Keep local alias for clarity and to avoid undefined references
+        const param1Code = paramCode;
+        
+        // Data is already sorted by backend
+        
+        // First pass: calculate actual column widths needed
+        let maxValueWidth = paramName.length;
+        let maxCountWidth = 0;
+        let maxPercentWidth = 0;
+        
+        const formattedData = [];
+        const isNumericAlignedParam = param1Code === 'DD' || param1Code === 'zz';
+        const obsAbbr = i18n.analysis_results.observation_abbr || 'Beob.';
+        
+        for (const item of data) {
+            const key = item.key;
+            const count = item.count;
+            const displayKey = formatParamValue(paramCode, key);
+            
+            // Skip if observer doesn't exist (formatParamValue returns null)
+            if (displayKey === null) {
+                continue;
+            }
+            
+            const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
+            const obsLabel = obsAbbr; // use full abbreviation (e.g., "Beob.")
+            
+            maxValueWidth = Math.max(maxValueWidth, displayKey.length);
+            maxCountWidth = Math.max(maxCountWidth, (count + ' ' + obsLabel).length);
+            maxPercentWidth = Math.max(maxPercentWidth, (percentage + '%').length);
+            
+            formattedData.push({
+                displayKey: displayKey,
+                count: count,
+                obsLabel: obsLabel,
+                percentage: percentage
+            });
+        }
+        
+        // Combined single column header
+        const colWidth = Math.max(maxValueWidth + 3 + maxCountWidth + 3 + maxPercentWidth, paramName.length + 10);
+        const tableWidth = colWidth + 4; // +4 for borders and spaces
+        
+        // Table header
+        html += '╔' + '═'.repeat(colWidth + 2) + '╗\n';
+        
+        // Combined header: "paramName / Beob."
+        const headerText = paramName + ' / ' + obsAbbr;
+        const header = ' ' + headerText.padEnd(colWidth) + ' ';
+        html += '║' + header + '║\n';
+        html += '╠' + '═'.repeat(colWidth + 2) + '╣\n';
+        
+        // Data rows
+        for (const item of formattedData) {
+            const alignedValue = isNumericAlignedParam
+                ? item.displayKey.padStart(maxValueWidth)
+                : item.displayKey.padEnd(maxValueWidth);
+            
+            // Right-align count and percentage
+            const countText = (item.count + ' ' + item.obsLabel).padStart(maxCountWidth);
+            const percentText = (item.percentage + '%').padStart(maxPercentWidth);
+            const cellContent = alignedValue + ' ' + countText + ' - ' + percentText;
+            const row = ' ' + cellContent.padEnd(colWidth) + ' ';
+            
+            html += '║' + row + '║\n';
+        }
+        
+        // Table footer
+        html += '╚' + '═'.repeat(colWidth + 2) + '╝\n';
+        
+        return { html: html, width: tableWidth };
+    }
+
+    // Build two parameter cross-tabulation pseudo-graphics table
+    function buildTwoParameterPseudografikWithWidth(data, param1Name, param2Name, total, percentageMode, param1Code, param2Code, i18n) {
+        let html = '';
+        
+        // Extract all unique param2 values (columns) and sort them
+        const param2Values = new Set();
+        Object.values(data).forEach(row => {
+            Object.keys(row).forEach(col => param2Values.add(col));
+        });
+        const columns = Array.from(param2Values).sort((a, b) => {
+            const numA = parseFloat(a);
+            const numB = parseFloat(b);
+            if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+            return a.localeCompare(b);
+        });
+        
+        // Calculate column totals
+        const columnTotals = {};
+        columns.forEach(col => {
+            columnTotals[col] = 0;
+            Object.values(data).forEach(row => {
+                const val = row[col] !== undefined ? row[col] : 0;
+                columnTotals[col] += val;
+            });
+        });
+        
+        // First pass: calculate actual column widths
+        let maxCol1Width = param1Name.length;
+        let maxCol2Width = param2Name.length;
+        
+        // Check row labels width
+        const param1Values = Object.keys(data).sort((a, b) => {
+            const numA = parseFloat(a);
+            const numB = parseFloat(b);
+            if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+            return a.localeCompare(b);
+        });
+        
+        param1Values.forEach(param1Val => {
+            const rowLabel = formatParamValue(param1Code, param1Val);
+            maxCol1Width = Math.max(maxCol1Width, rowLabel.length);
+            
+            // Calculate row total width
+            const rowData = data[param1Val];
+            let rowTotal = 0;
+            columns.forEach(col => {
+                rowTotal += rowData[col] !== undefined ? rowData[col] : 0;
+            });
+            const rowPercentage = total > 0 ? ((rowTotal / total) * 100).toFixed(1) : '0.0';
+            const totalText = 'Σ=' + rowTotal + ' ' + rowPercentage + '%';
+            maxCol2Width = Math.max(maxCol2Width, totalText.length);
+        });
+        
+        // Calculate data cell widths (one width per column)
+        const cellWidths = [];
+        const obsAbbr = i18n.analysis_results.observation_abbr || 'B';
+        const alignNumericParam1 = param1Code === 'DD' || param1Code === 'zz';
+        
+        columns.forEach(col => {
+            const colLabel = formatParamValue(param2Code, col);
+            const colTotal = columnTotals[col];
+            const colPercentage = total > 0 ? ((colTotal / total) * 100).toFixed(1) : '0.0';
+            const headerText = colLabel + ' Σ=' + colTotal;
+            const percentText = '(' + colPercentage + '%)';
+            
+            let maxCellWidth = Math.max(headerText.length, percentText.length);
+            
+            // Check all data cells in this column
+            param1Values.forEach(param1Val => {
+                const rowData = data[param1Val];
+                const count = rowData[col] !== undefined ? rowData[col] : 0;
+                const rowTotal = Object.values(rowData).reduce((sum, val) => sum + val, 0);
+                
+                let percentage;
+                if (percentageMode === 'param1') {
+                    percentage = rowTotal > 0 ? ((count / rowTotal) * 100).toFixed(1) : '0.0';
+                } else if (percentageMode === 'param2') {
+                    const colTotal = columnTotals[col];
+                    percentage = colTotal > 0 ? ((count / colTotal) * 100).toFixed(1) : '0.0';
+                } else {
+                    percentage = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
+                }
+                
+                const cellText = count + ' ' + obsAbbr + ' - ' + percentage + '%';
+                maxCellWidth = Math.max(maxCellWidth, cellText.length);
+            });
+            
+            cellWidths.push(maxCellWidth);
+        });
+        
+        const col1Width = maxCol1Width;
+        const col2Width = maxCol2Width;
+        const totalCellWidth = cellWidths.reduce((sum, w) => sum + w + 3, 0); // +3 per cell for borders and spaces
+        const tableWidth = col1Width + col2Width + totalCellWidth + 6; // +6 for first two columns borders and spaces
+        
+        // Table header
+        html += '╔' + '═'.repeat(col1Width + 2) + '╦' + '═'.repeat(col2Width + 2);
+        cellWidths.forEach(w => {
+            html += '╦' + '═'.repeat(w + 2);
+        });
+        html += '╗\n';
+        
+        // First header row with param names
+        const header1 = ' ' + param1Name.padEnd(col1Width) + ' ';
+        html += '║' + header1 + '║';
+        
+        // Parameter 2 name with columns
+        columns.forEach((col, idx) => {
+            const colLabel = formatParamValue(param2Code, col);
+            const cellText = ' ' + colLabel.padEnd(cellWidths[idx]) + ' ';
+            html += '║' + cellText;
+        });
+        html += '║\n';
+        
+        // Second header row with param2Name and column totals
+        const header2 = ' ' + param2Name.padEnd(col2Width) + ' ';
+        html += '║' + ' '.repeat(col1Width + 2) + '║' + header2;
+        
+        // Column headers with totals and percentages
+        columns.forEach((col, idx) => {
+            const colTotal = columnTotals[col];
+            const colPercentage = total > 0 ? ((colTotal / total) * 100).toFixed(1) : '0.0';
+            const headerText = 'Σ=' + colTotal + ' (' + colPercentage + '%)';
+            const cellText = ' ' + headerText.padEnd(cellWidths[idx]) + ' ';
+            html += '║' + cellText;
+        });
+        html += '║\n';
+        html += '╠' + '═'.repeat(col1Width + 2) + '╬' + '═'.repeat(col2Width + 2);
+        cellWidths.forEach(w => {
+            html += '╬' + '═'.repeat(w + 2);
+        });
+        html += '╣\n';
+        
+        // Data rows
+        param1Values.forEach((param1Val, rowIndex) => {
+            const rowData = data[param1Val];
+            
+            // Calculate row total
+            let rowTotal = 0;
+            columns.forEach(col => {
+                rowTotal += rowData[col] !== undefined ? rowData[col] : 0;
+            });
+            
+            const rowPercentage = total > 0 ? ((rowTotal / total) * 100).toFixed(1) : '0.0';
+            const rowLabel = formatParamValue(param1Code, param1Val);
+            
+            // Row label (right-align durations)
+            const alignedRowLabel = alignNumericParam1
+                ? rowLabel.padStart(col1Width)
+                : rowLabel.padEnd(col1Width);
+            const col1 = ' ' + alignedRowLabel + ' ';
+            const totalText = 'Σ=' + rowTotal + ' ' + rowPercentage + '%';
+            const col2 = ' ' + totalText.padEnd(col2Width) + ' ';
+            
+            html += '║' + col1 + '║' + col2;
+            
+            // Data cells
+            columns.forEach((col, idx) => {
+                const count = rowData[col] !== undefined ? rowData[col] : 0;
+                let percentage;
+                
+                // Calculate percentage based on mode
+                if (percentageMode === 'param1') {
+                    percentage = rowTotal > 0 ? ((count / rowTotal) * 100).toFixed(1) : '0.0';
+                } else if (percentageMode === 'param2') {
+                    const colTotal = columnTotals[col];
+                    percentage = colTotal > 0 ? ((count / colTotal) * 100).toFixed(1) : '0.0';
+                } else {
+                    percentage = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
+                }
+                
+                const cellText = count + ' ' + obsAbbr + ' - ' + percentage + '%';
+                const cell = ' ' + cellText.padStart(cellWidths[idx]) + ' ';
+                html += '║' + cell;
+            });
+            
+            html += '║\n';
+        });
+        
+        // Table footer
+        html += '╚' + '═'.repeat(col1Width + 2) + '╩' + '═'.repeat(col2Width + 2);
+        cellWidths.forEach(w => {
+            html += '╩' + '═'.repeat(w + 2);
+        });
+        html += '╝\n';
+        
+        return { html: html, width: tableWidth };
     }
 
     // ESC key support - close current dialog and return to main

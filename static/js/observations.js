@@ -431,7 +431,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const option = document.createElement('option');
             option.value = obs.KK;
             const name = `${obs.VName} ${obs.NName}`.trim();
-            option.textContent = `${String(obs.KK).padStart(2, '0')} ${name}`;
+            option.textContent = `${String(obs.KK).padStart(2, '0')} - ${name}`;
             filter1SelectElem.appendChild(option);
         });
     }

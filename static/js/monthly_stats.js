@@ -196,9 +196,19 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     // Show statistics in results modal
-    function showStatistics(data) {
+    async function showStatistics(data) {
         const statsContent = document.getElementById('stats-content');
         if (!statsContent) return;
+        
+        // Check output mode setting
+        let outputMode = 'P'; // Default: Pseudografik
+        try {
+            const modeResponse = await fetch('/api/config/outputmode');
+            const modeData = await modeResponse.json();
+            outputMode = modeData.mode || 'P';
+        } catch (error) {
+            console.error('Error fetching output mode:', error);
+        }
         
         // Get month name (months array is 1-indexed in i18n)
         const months = i18n.months || {};
@@ -214,36 +224,16 @@ document.addEventListener('DOMContentLoaded', async function() {
             resultsTitle.textContent = i18n.monthly_stats?.title;
         }
         
-        // Build statistics HTML
-        let html = '<div class="statistics-report" style="font-family: monospace; white-space: pre; font-size: 11px; color: #000000; line-height: 1;">';
+        // Build statistics HTML based on output mode
+        let html = '';
         
-        // Title (centered)
-        const titleLine = `${i18n.monthly_stats?.title} ${monthName} ${year}`;
-        const titlePadding = Math.max(0, Math.floor((86 - titleLine.length) / 2));
-        html += ' '.repeat(titlePadding) + titleLine + '\n';
-        html += ' '.repeat(titlePadding) + '═'.repeat(titleLine.length) + '\n\n';
-        
-        // Table 1: Observer Overview (Beobachterübersicht)
-        if (data.observer_overview && data.observer_overview.length > 0) {
-            html += renderObserverOverview(data.observer_overview, monthName, year);
+        if (outputMode === 'P') {
+            // Pseudografik format (current implementation)
+            html = buildPseudografikMonthlyStats(data, monthName, year, i18n);
+        } else {
+            // HTML-Tabellen format (stub)
+            html = buildHTMLTableMonthlyStats(data, monthName, year, i18n);
         }
-        
-        // Table 2: EE Overview (Ergebnisübersicht Sonnenhalos)
-        if (data.ee_overview && data.ee_overview.length > 0) {
-            html += renderEEOverview(data.ee_overview, data.daily_totals || {}, data.grand_total || 0, monthName, year);
-        }
-        
-        // Table 3: Rare Halos (Erscheinungen über EE 12)
-        if (data.rare_halos && data.rare_halos.length > 0) {
-            html += renderRareHalos(data.rare_halos, monthName, year);
-        }
-        
-        // Table 4: Activity (Haloaktivität)
-        if (data.activity_real && data.activity_relative && data.activity_totals) {
-            html += renderActivityTable(data.activity_real, data.activity_relative, data.activity_totals, monthName, year);
-        }
-        
-        html += '</div>';
         
         statsContent.innerHTML = html;
         
@@ -636,16 +626,33 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Save button
         if (btnStatsSave) {
-            btnStatsSave.onclick = () => {
+            btnStatsSave.onclick = async () => {
                 if (!currentStatsData) return;
                 
                 const data = currentStatsData;
                 const monthShort = i18n.months_short?.[data.mm] || String(data.mm).padStart(2, '0');
                 const jjPadded = String(data.jj).padStart(2, '0');
-                const filename = `${monthShort.toLowerCase()}19${jjPadded}.txt`;
                 
-                const text = generateStatsText();
-                const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+                // Check output mode
+                const modeResponse = await fetch('/api/config/outputmode');
+                const modeData = await modeResponse.json();
+                const outputMode = modeData.mode || 'P';
+                
+                let content, mimeType, filename;
+                
+                if (outputMode === 'H') {
+                    // HTML-Tabellen mode: save as CSV with table data
+                    filename = `${monthShort.toLowerCase()}19${jjPadded}.csv`;
+                    content = generateStatsCSV(data);
+                    mimeType = 'text/csv;charset=utf-8';
+                } else {
+                    // Pseudografik mode: save as TXT with formatted statistics
+                    filename = `${monthShort.toLowerCase()}19${jjPadded}.txt`;
+                    content = generateStatsText();
+                    mimeType = 'text/plain;charset=utf-8';
+                }
+                
+                const blob = new Blob([content], { type: mimeType });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -770,7 +777,21 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
         
         // Show chart modal
-        const chartModal = new bootstrap.Modal(document.getElementById('chart-modal'));
+        const chartModalElement = document.getElementById('chart-modal');
+        const chartModal = new bootstrap.Modal(chartModalElement);
+        
+        // Prevent ESC key from propagating to parent modal
+        chartModalElement.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                e.stopPropagation();
+            }
+        });
+        
+        // Set focus to chart modal after it's shown to capture ESC key
+        chartModalElement.addEventListener('shown.bs.modal', () => {
+            chartModalElement.focus();
+        }, { once: true });
+        
         chartModal.show();
         
         // Wire up chart print button
@@ -901,6 +922,119 @@ document.addEventListener('DOMContentLoaded', async function() {
         }, 'image/png');
     }
 
+    // Generate CSV from statistics data
+    function generateStatsCSV(data) {
+        let csv = '';
+        const months = i18n.months || {};
+        const monthName = months[data.mm] || months[data.mm.toString()];
+        const year = data.jj >= 50 ? `19${data.jj.toString().padStart(2, '0')}` : 
+                     `20${data.jj.toString().padStart(2, '0')}`;
+        
+        // Table 1: Observer Overview
+        if (data.observer_overview && data.observer_overview.length > 0) {
+            csv += `"${i18n.monthly_stats?.observer_overview} ${monthName} ${year}"\n`;
+            csv += 'KKGG';
+            for (let d = 1; d <= 31; d++) {
+                csv += ',' + d;
+            }
+            csv += ',EE(Sonne),Tage(Sonne),Tage(Mond),Tage(gesamt)\n';
+            
+            for (const obs of data.observer_overview) {
+                const kk = obs.kk.toString().padStart(2, '0');
+                const gg = obs.region === 39 ? '//' : obs.region.toString().padStart(2, '0');
+                csv += kk + gg;
+                
+                for (let day = 1; day <= 31; day++) {
+                    const dayData = obs.days[day];
+                    let cellValue = '';
+                    if (dayData) {
+                        const solar = dayData.solar || 0;
+                        const lunar = dayData.lunar || false;
+                        if (solar > 0 && lunar) cellValue = '_' + solar;
+                        else if (solar > 0) cellValue = solar;
+                        else if (lunar) cellValue = 'X';
+                    }
+                    csv += ',' + cellValue;
+                }
+                
+                csv += ',' + obs.total_solar + ',' + obs.days_solar + ',' + obs.days_lunar + ',' + obs.total_days + '\n';
+            }
+            csv += '\n';
+        }
+        
+        // Table 2: EE Overview
+        if (data.ee_overview && data.ee_overview.length > 0) {
+            csv += `"${i18n.monthly_stats?.ee_overview} ${monthName} ${year}"\n`;
+            csv += 'EE';
+            for (let d = 1; d <= 31; d++) {
+                csv += ',' + d;
+            }
+            csv += ',gesamt\n';
+            
+            for (const eeRow of data.ee_overview) {
+                csv += eeRow.ee.toString().padStart(2, '0');
+                
+                for (let day = 1; day <= 31; day++) {
+                    const count = eeRow.days[day] || 0;
+                    csv += ',' + (count > 0 ? count : '');
+                }
+                
+                csv += ',' + eeRow.total + '\n';
+            }
+            
+            // Daily totals
+            csv += 'Summe';
+            for (let day = 1; day <= 31; day++) {
+                const count = (data.daily_totals && data.daily_totals[day]) || 0;
+                csv += ',' + (count > 0 ? count : '');
+            }
+            csv += ',' + (data.grand_total || 0) + '\n';
+            csv += '\n';
+        }
+        
+        // Table 3: Rare Halos
+        if (data.rare_halos && data.rare_halos.length > 0) {
+            csv += `"${i18n.monthly_stats?.rare_halos}"\n`;
+            csv += 'TT,EE,KK,GG\n';
+            for (const halo of data.rare_halos) {
+                const tt = halo.tt;
+                const ee = halo.ee.toString().padStart(2, '0');
+                const kk = halo.kk.toString().padStart(2, '0');
+                const gg = halo.gg === 39 ? '//' : halo.gg.toString().padStart(2, '0');
+                csv += tt + ',' + ee + ',' + kk + ',' + gg + '\n';
+            }
+            csv += '\n';
+        }
+        
+        // Table 4: Activity
+        if (data.activity_real && data.activity_relative && data.activity_totals) {
+            csv += `"${i18n.monthly_stats?.activity_title} ${monthName} ${year}"\n`;
+            csv += 'Tag';
+            for (let d = 1; d <= 31; d++) {
+                csv += ',' + d;
+            }
+            csv += ',gesamt\n';
+            
+            // Real activity
+            csv += 'real';
+            for (let d = 1; d <= 31; d++) {
+                const val = data.activity_real[d] || 0;
+                csv += ',' + val.toFixed(1);
+            }
+            csv += ',' + (data.activity_totals.real || 0).toFixed(1) + '\n';
+            
+            // Relative activity
+            csv += 'rel.';
+            for (let d = 1; d <= 31; d++) {
+                const val = data.activity_relative[d] || 0;
+                csv += ',' + val.toFixed(1);
+            }
+            csv += ',' + (data.activity_totals.relative || 0).toFixed(1) + '\n';
+        }
+        
+        return csv;
+    }
+
     // Initialize
     async function initialize() {
         await loadI18n();
@@ -923,6 +1057,246 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
             });
         }
+    }
+
+    // Build Pseudografik format statistics (original implementation)
+    function buildPseudografikMonthlyStats(data, monthName, year, i18n) {
+        let html = '<div class="statistics-report" style="font-family: monospace; white-space: pre; font-size: 11px; color: #000000; line-height: 1.3;">';
+        
+        // Title (centered)
+        const titleLine = `${i18n.monthly_stats?.title} ${monthName} ${year}`;
+        const titlePadding = Math.max(0, Math.floor((86 - titleLine.length) / 2));
+        html += ' '.repeat(titlePadding) + titleLine + '\n';
+        html += ' '.repeat(titlePadding) + '═'.repeat(titleLine.length) + '\n\n';
+        
+        // Table 1: Observer Overview (Beobachterübersicht)
+        if (data.observer_overview && data.observer_overview.length > 0) {
+            html += renderObserverOverview(data.observer_overview, monthName, year);
+        }
+        
+        // Table 2: EE Overview (Ergebnisübersicht Sonnenhalos)
+        if (data.ee_overview && data.ee_overview.length > 0) {
+            html += renderEEOverview(data.ee_overview, data.daily_totals || {}, data.grand_total || 0, monthName, year);
+        }
+        
+        // Table 3: Rare Halos (Erscheinungen über EE 12)
+        if (data.rare_halos && data.rare_halos.length > 0) {
+            html += renderRareHalos(data.rare_halos, monthName, year);
+        }
+        
+        // Table 4: Activity (Haloaktivität)
+        if (data.activity_real && data.activity_relative && data.activity_totals) {
+            html += renderActivityTable(data.activity_real, data.activity_relative, data.activity_totals, monthName, year);
+        }
+        
+        html += '</div>';
+        return html;
+    }
+
+    // Build HTML-Tabellen format statistics
+    function buildHTMLTableMonthlyStats(data, monthName, year, i18n) {
+        let html = '<div style="padding: 20px;">';
+        
+        // Title
+        const titleLine = `${i18n.monthly_stats?.title} ${monthName} ${year}`;
+        html += `<h3 style="text-align: center; font-family: Arial, sans-serif; margin-bottom: 30px;">${titleLine}</h3>`;
+        
+        // Table 1: Observer Overview (Beobachterübersicht)
+        if (data.observer_overview && data.observer_overview.length > 0) {
+            html += '<table class="table table-bordered analysis-table" style="margin-bottom: 30px;">';
+            html += '<thead>';
+            html += '<tr>';
+            html += '<th colspan="36" style="text-align: center;">' + 
+                    i18n.monthly_stats?.observer_overview + ' ' + monthName + ' ' + year + '</th>';
+            html += '</tr>';
+            html += '<tr>';
+            html += '<th>KKGG</th>';
+            for (let d = 1; d <= 31; d++) {
+                html += '<th>' + d + '</th>';
+            }
+            html += '<th>1)</th><th>2)</th><th>3)</th><th>4)</th>';
+            html += '</tr>';
+            html += '</thead>';
+            html += '<tbody>';
+            
+            for (const obs of data.observer_overview) {
+                const kk = obs.kk.toString().padStart(2, '0');
+                const gg = obs.region === 39 ? '//' : obs.region.toString().padStart(2, '0');
+                
+                html += '<tr>';
+                html += '<td style="font-weight: bold;">' + kk + gg + '</td>';
+                
+                for (let day = 1; day <= 31; day++) {
+                    const dayData = obs.days[day];
+                    let cellValue = '';
+                    if (dayData) {
+                        const solar = dayData.solar || 0;
+                        const lunar = dayData.lunar || false;
+                        if (solar > 0 && lunar) cellValue = '<u>' + solar + '</u>';
+                        else if (solar > 0) cellValue = solar;
+                        else if (lunar) cellValue = '<u>X</u>';
+                    }
+                    html += '<td style="text-align: center;">' + cellValue + '</td>';
+                }
+                
+                html += '<td style="text-align: right;">' + obs.total_solar + '</td>';
+                html += '<td style="text-align: right;">' + obs.days_solar + '</td>';
+                html += '<td style="text-align: right;">' + obs.days_lunar + '</td>';
+                html += '<td style="text-align: right;">' + obs.total_days + '</td>';
+                html += '</tr>';
+            }
+            
+            html += '</tbody>';
+            html += '<tfoot>';
+            html += '<tr><td colspan="36" style="text-align: left; font-size: 90%;">';
+            html += '1) = EE (Sonne) &nbsp; 2) = Tage (Sonne) &nbsp; 3) = Tage (Mond) &nbsp; 4) = Tage (gesamt)';
+            html += '</td></tr>';
+            html += '</tfoot>';
+            html += '</table>';
+        }
+        
+        // Table 2: EE Overview (Ergebnisübersicht Sonnenhalos)
+        if (data.ee_overview && data.ee_overview.length > 0) {
+            html += '<table class="table table-bordered analysis-table" style="margin-bottom: 30px;">';
+            html += '<thead>';
+            html += '<tr>';
+            html += '<th colspan="33" style="text-align: center;">' + 
+                    i18n.monthly_stats?.ee_overview + ' ' + monthName + ' ' + year + '</th>';
+            html += '</tr>';
+            html += '<tr>';
+            html += '<th>EE</th>';
+            for (let d = 1; d <= 31; d++) {
+                html += '<th>' + d + '</th>';
+            }
+            html += '<th>ges</th>';
+            html += '</tr>';
+            html += '</thead>';
+            html += '<tbody>';
+            
+            for (const eeRow of data.ee_overview) {
+                html += '<tr>';
+                html += '<td style="font-weight: bold;">' + eeRow.ee.toString().padStart(2, '0') + '</td>';
+                
+                for (let day = 1; day <= 31; day++) {
+                    const count = eeRow.days[day] || 0;
+                    html += '<td style="text-align: center;">' + (count > 0 ? count : '') + '</td>';
+                }
+                
+                html += '<td style="text-align: right; font-weight: bold;">' + eeRow.total + '</td>';
+                html += '</tr>';
+            }
+            
+            // Daily totals row
+            html += '<tr style="font-weight: bold; border-top: 2px solid #000;">';
+            html += '<td>Σ</td>';
+            for (let day = 1; day <= 31; day++) {
+                const count = (data.daily_totals && data.daily_totals[day]) || 0;
+                html += '<td style="text-align: center;">' + (count > 0 ? count : '') + '</td>';
+            }
+            html += '<td style="text-align: right;">' + (data.grand_total || 0) + '</td>';
+            html += '</tr>';
+            
+            html += '</tbody>';
+            html += '</table>';
+        }
+        
+        // Table 3: Rare Halos (Erscheinungen über EE 12)
+        if (data.rare_halos && data.rare_halos.length > 0) {
+            html += '<table class="table table-bordered analysis-table" style="margin-bottom: 30px;">';
+            html += '<thead>';
+            html += '<tr>';
+            html += '<th colspan="6" style="text-align: center;">' + 
+                    i18n.monthly_stats?.rare_halos + '</th>';
+            html += '</tr>';
+            html += '<tr>';
+            html += '<th style="text-align: center;">TT EE KKGG</th>';
+            html += '<th style="text-align: center;">TT EE KKGG</th>';
+            html += '<th style="text-align: center;">TT EE KKGG</th>';
+            html += '<th style="text-align: center;">TT EE KKGG</th>';
+            html += '<th style="text-align: center;">TT EE KKGG</th>';
+            html += '<th style="text-align: center;">TT EE KKGG</th>';
+            html += '</tr>';
+            html += '</thead>';
+            html += '<tbody>';
+            
+            // Distribute halos across 6 columns
+            const itemsPerColumn = Math.ceil(data.rare_halos.length / 6);
+            
+            for (let row = 0; row < itemsPerColumn; row++) {
+                html += '<tr>';
+                for (let col = 0; col < 6; col++) {
+                    const idx = col * itemsPerColumn + row;
+                    if (idx < data.rare_halos.length) {
+                        const h = data.rare_halos[idx];
+                        const ttStr = String(h.tt).padStart(2, ' ');
+                        const eeStr = String(h.ee).padStart(2, '0');
+                        const kkStr = String(h.kk).padStart(2, '0');
+                        const ggStr = h.gg === 39 ? '//' : String(h.gg).padStart(2, '0');
+                        html += '<td style="text-align: center; font-family: monospace;">' + 
+                                ttStr + ' ' + eeStr + ' ' + kkStr + ggStr + '</td>';
+                    } else {
+                        html += '<td></td>';
+                    }
+                }
+                html += '</tr>';
+            }
+            
+            html += '</tbody>';
+            html += '</table>';
+        } else {
+            // No rare halos message
+            html += '<div style="padding: 20px; text-align: center; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; margin-bottom: 30px;">';
+            const noneText = (i18n.monthly_stats?.rare_halos_none || '').replace('{month}', monthName);
+            html += '<p style="margin: 0;">' + noneText + '</p>';
+            html += '</div>';
+        }
+        
+        // Table 4: Activity (Haloaktivität) - all 31 days in one table
+        if (data.activity_real && data.activity_relative && data.activity_totals) {
+            html += '<table class="table table-bordered analysis-table" style="margin-bottom: 30px;">';
+            html += '<thead>';
+            html += '<tr>';
+            html += '<th colspan="33" style="text-align: center;">' + 
+                    i18n.monthly_stats?.activity_title + ' ' + monthName + ' ' + year + '</th>';
+            html += '</tr>';
+            html += '<tr>';
+            html += '<th>Tag</th>';
+            for (let d = 1; d <= 31; d++) {
+                html += '<th>' + d + '</th>';
+            }
+            html += '<th>ges</th>';
+            html += '</tr>';
+            html += '</thead>';
+            html += '<tbody>';
+            
+            // Real activity row
+            html += '<tr>';
+            html += '<td style="font-weight: bold;">real</td>';
+            for (let d = 1; d <= 31; d++) {
+                const val = data.activity_real[d] || 0;
+                html += '<td style="text-align: center;">' + val.toFixed(1) + '</td>';
+            }
+            html += '<td style="text-align: right; font-weight: bold;">' + 
+                    (data.activity_totals.real || 0).toFixed(1) + '</td>';
+            html += '</tr>';
+            
+            // Relative activity row
+            html += '<tr>';
+            html += '<td style="font-weight: bold;">rel.</td>';
+            for (let d = 1; d <= 31; d++) {
+                const val = data.activity_relative[d] || 0;
+                html += '<td style="text-align: center;">' + val.toFixed(1) + '</td>';
+            }
+            html += '<td style="text-align: right; font-weight: bold;">' + 
+                    (data.activity_totals.relative || 0).toFixed(1) + '</td>';
+            html += '</tr>';
+            
+            html += '</tbody>';
+            html += '</table>';
+        }
+        
+        html += '</div>';
+        return html;
     }
 
     initialize();

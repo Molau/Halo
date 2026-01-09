@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         for (const obs of observers) {
             const option = document.createElement('option');
             option.value = obs.kk;
-            option.textContent = `${String(obs.kk).padStart(2, '0')} ${obs.vname} ${obs.nname}`;
+            option.textContent = `${String(obs.kk).padStart(2, '0')} - ${obs.vname} ${obs.nname}`;
             observerSelect.appendChild(option);
         }
 
@@ -390,13 +390,23 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     // Display monthly report
-    function displayMonthlyReport(data) {
+    async function displayMonthlyReport(data) {
         const resultsModal = document.getElementById('results-modal');
         const reportContent = document.getElementById('report-content');
         const reportTitle = document.getElementById('results-modal-title');
         
         // Store current report data for save/print operations
         currentReportData = data;
+        
+        // Check output mode setting
+        let outputMode = 'P'; // Default: Pseudografik
+        try {
+            const modeResponse = await fetch('/api/config/outputmode');
+            const modeData = await modeResponse.json();
+            outputMode = modeData.mode || 'P';
+        } catch (error) {
+            console.error('Error fetching output mode:', error);
+        }
         
         // Use i18n month names
         const monthName = i18n.months?.[data.mm] || data.mm;
@@ -411,7 +421,42 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Modal title shows i18n title
         reportTitle.textContent = i18n.output?.monthly_report;
         
-        // Build report content
+        // Build report content based on output mode
+        let html = '';
+        
+        if (outputMode === 'P') {
+            // Pseudografik format (current implementation)
+            html = buildPseudografikReport(data, i18n);
+        } else {
+            // HTML-Tabellen format (stub)
+            html = buildHTMLTableReport(data, i18n);
+        }
+        
+        reportContent.innerHTML = html;
+        
+        // Show modal
+        const modal = new bootstrap.Modal(resultsModal, {
+            backdrop: true,
+            keyboard: false
+        });
+        modal.show();
+        
+        // Wire up action buttons
+        setupActionButtons();
+    }
+    
+    // Build Pseudografik format report (original implementation)
+    function buildPseudografikReport(data, i18n) {
+        // Use i18n month names
+        const monthName = i18n.months?.[data.mm] || data.mm;
+        
+        // Format title
+        const year = data.jj < 50 ? 2000 + data.jj : 1900 + data.jj;
+        const title = i18n.monthly_report.report_title_template
+            .replace('{observer}', data.observer_name)
+            .replace('{month}', monthName)
+            .replace('{year}', year);
+        
         let html = '<pre style="font-family: monospace; font-size: 14px; line-height: 1.4;">';
         
         // Header box
@@ -465,17 +510,62 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         html += '</pre>';
         
-        reportContent.innerHTML = html;
+        return html;
+    }
+    
+    // Build HTML-Tabellen format report (implementation)
+    function buildHTMLTableReport(data, i18n) {
+        // Use i18n month names
+        const monthName = i18n.months?.[data.mm] || data.mm;
         
-        // Show modal
-        const modal = new bootstrap.Modal(resultsModal, {
-            backdrop: true,
-            keyboard: false
-        });
-        modal.show();
+        // Format title
+        const year = data.jj < 50 ? 2000 + data.jj : 1900 + data.jj;
+        const title = i18n.monthly_report.report_title_template
+            .replace('{observer}', data.observer_name)
+            .replace('{month}', monthName)
+            .replace('{year}', year);
         
-        // Wire up action buttons
-        setupActionButtons();
+        let html = '<div class="analysis-results">';
+        
+        // Title
+        html += `<h4 style="text-align: center; margin-bottom: 20px;">${title}</h4>`;
+        
+        // Table with single column for HALO key
+        html += '<table class="table table-bordered analysis-table">';
+        html += '<thead>';
+        html += '<tr>';
+        html += '<th class="monthly-report-header">KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18n.monthly_report.sectors + ' ' + i18n.monthly_report.remarks + '</th>';
+        html += '</tr>';
+        html += '</thead>';
+        html += '<tbody>';
+        
+        // Observations using kurzausgabe format
+        if (data.observations.length === 0) {
+            const noObsMsg = i18n.ui?.messages?.no_observations;
+            html += `<tr><td style="text-align: center; padding: 20px;">${noObsMsg}</td></tr>`;
+        } else {
+            for (const obs of data.observations) {
+                const line = kurzausgabe(obs);
+                html += `<tr><td style="font-family: monospace; white-space: pre;">${line}</td></tr>`;
+            }
+        }
+        
+        html += '</tbody>';
+        
+        // Footer with observer locations
+        html += '<tfoot>';
+        html += '<tr>';
+        html += `<td style="text-align: center; padding: 10px;">`;
+        html += `<strong>${i18n.monthly_report.main_location}:</strong> ${data.observer_hbort}<br>`;
+        html += `<strong>${i18n.monthly_report.secondary_location}:</strong> ${data.observer_nbort}`;
+        html += `</td>`;
+        html += '</tr>';
+        html += '</tfoot>';
+        
+        html += '</table>';
+        html += '</div>';
+        
+        return html;
     }
     
     // Generate plain text report content for save/print (reuses modal display layout)
@@ -579,9 +669,15 @@ document.addEventListener('DOMContentLoaded', async function() {
                     const printTitle = i18n.menus?.output?.monthly_report;
                     const printWindow = window.open('', '_blank');
                     printWindow.document.write(`<html><head><title>${printTitle}</title>`);
-                    printWindow.document.write('<style>body { font-family: monospace; white-space: pre; }</style>');
+                    printWindow.document.write('<style>');
+                    printWindow.document.write('body { font-family: monospace; font-size: 9pt; white-space: pre; margin: 0.5cm; }');
+                    printWindow.document.write('.analysis-table { width: 100%; border-collapse: collapse; font-size: 9pt; }');
+                    printWindow.document.write('.analysis-table th, .analysis-table td { border: 1px solid #dee2e6; padding: 4px; }');
+                    printWindow.document.write('.analysis-table thead th { background-color: #f8f9fa; font-weight: bold; }');
+                    printWindow.document.write('.analysis-table tfoot td { background-color: #f8f9fa; }');
+                    printWindow.document.write('</style>');
                     printWindow.document.write('</head><body>');
-                    printWindow.document.write(reportContent.textContent || '');
+                    printWindow.document.write(reportContent.innerHTML);
                     printWindow.document.write('</body></html>');
                     printWindow.document.close();
                     printWindow.focus();
@@ -592,7 +688,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             };
         }
         
-        // Save button - format: KK-MONTHJJ.TXT (e.g., 44-MAR88.TXT)
+        // Save button - format: KK-MONTHJJ.CSV (e.g., 44-MAR88.CSV)
         if (btnSave) {
             btnSave.onclick = () => {
                 if (!currentReportData) return;
@@ -601,10 +697,56 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const monthShort = i18n.months_short?.[data.mm] || String(data.mm).padStart(2, '0');
                 const kkPadded = String(data.kk).padStart(2, '0');
                 const jjPadded = String(data.jj).padStart(2, '0');
-                const filename = `${kkPadded}-${monthShort.toUpperCase()}${jjPadded}.TXT`;
+                const filename = `${kkPadded}-${monthShort.toUpperCase()}${jjPadded}.CSV`;
                 
-                const text = generateReportText();
-                const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+                // Generate CSV with comma-separated fields
+                let csv = 'KK,O,JJ,MM,TT,g,ZZZZ,d,DD,N,C,c,EE,H,F,V,f,zz,GG,8HHHH,Sektoren,Bemerkungen\n';
+                for (const obs of data.observations) {
+                    try {
+                        // Extract and format each field - use nullish coalescing for proper zero handling
+                        const kk = String(obs.KK ?? '').padStart(2, '0');
+                        const o = (obs.O ?? '') === '' ? '' : String(obs.O);
+                        const jj = String(obs.JJ ?? '').padStart(2, '0');
+                        const mm = String(obs.MM ?? '').padStart(2, '0');
+                        const tt = String(obs.TT ?? '').padStart(2, '0');
+                        const g = (obs.g ?? '') === '' ? '' : String(obs.g);
+                        const zzzz = String(obs.ZS ?? '').padStart(2, '0') + String(obs.ZM ?? '').padStart(2, '0');
+                        const d = (obs.d ?? '') === '' ? '' : String(obs.d);
+                        const dd = String(obs.DD ?? '').padStart(2, '0');
+                        const n = (obs.N ?? '') === '' ? '' : String(obs.N);
+                        const c_upper = (obs.C ?? '') === '' ? '' : String(obs.C);
+                        const c_lower = (obs.c ?? '') === '' ? '' : String(obs.c);
+                        const ee = String(obs.EE ?? '').padStart(2, '0');
+                        const h = (obs.H ?? '') === '' ? '' : String(obs.H);
+                        const f_upper = (obs.F ?? '') === '' ? '' : String(obs.F);
+                        const v = (obs.V ?? '') === '' ? '' : String(obs.V);
+                        const f_lower = (obs.f ?? '') === '' ? '' : String(obs.f);
+                        const zz = String(obs.zz ?? '').padStart(2, '0');
+                        const gg = String(obs.GG ?? 0).padStart(2, '0');
+                        
+                        // Height fields - 8HHHH
+                        let hhhh = '';
+                        if (obs.EE === 8 && obs.HO != null) {
+                            hhhh = '8' + String(obs.HO).padStart(2, '0') + '//';
+                        } else if (obs.EE === 9 && obs.HU != null) {
+                            hhhh = '8//' + String(obs.HU).padStart(2, '0');
+                        } else if (obs.EE === 10 && obs.HO != null && obs.HU != null) {
+                            hhhh = '8' + String(obs.HO).padStart(2, '0') + String(obs.HU).padStart(2, '0');
+                        } else if ([8, 9, 10].includes(obs.EE)) {
+                            hhhh = '8////';
+                        }
+                        
+                        // Sectors and remarks - check both property names
+                        const sektoren = (obs.sectors ?? obs.SE ?? '').trim();
+                        const bemerkungen = (obs.remarks ?? obs.BEM ?? '').replace(/,/g, ';').trim(); // Escape commas in remarks
+                        
+                        csv += `${kk},${o},${jj},${mm},${tt},${g},${zzzz},${d},${dd},${n},${c_upper},${c_lower},${ee},${h},${f_upper},${v},${f_lower},${zz},${gg},${hhhh},${sektoren},${bemerkungen}\n`;
+                    } catch (err) {
+                        console.error('Error formatting observation:', obs, err);
+                    }
+                }
+                
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;

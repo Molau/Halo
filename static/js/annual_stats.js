@@ -190,9 +190,19 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     // Show statistics in results modal
-    function showStatistics(data) {
+    async function showStatistics(data) {
         const statsContent = document.getElementById('stats-content');
         if (!statsContent) return;
+        
+        // Check output mode setting
+        let outputMode = 'P'; // Default: Pseudografik
+        try {
+            const modeResponse = await fetch('/api/config/outputmode');
+            const modeData = await modeResponse.json();
+            outputMode = modeData.mode || 'P';
+        } catch (error) {
+            console.error('Error fetching output mode:', error);
+        }
         
         // Format year
         const year = data.jj >= 50 ? `19${data.jj.toString().padStart(2, '0')}` : 
@@ -204,36 +214,16 @@ document.addEventListener('DOMContentLoaded', async function() {
             resultsTitle.textContent = i18n.annual_stats.title;
         }
         
-        // Build statistics HTML
-        let html = '<div class="statistics-report" style="font-family: monospace; white-space: pre; font-size: 11px; color: #000000; line-height: 1;">';
+        // Build statistics HTML based on output mode
+        let html = '';
         
-        // Title (centered)
-        const titleLine = i18n.annual_stats.title_with_year.replace('{year}', year);
-        const titlePadding = Math.max(0, Math.floor((73 - titleLine.length) / 2));
-        html += ' '.repeat(titlePadding) + titleLine + '\n';
-        html += ' '.repeat(titlePadding) + '═'.repeat(titleLine.length) + '\n\n';
-        
-        // Monthly activity table
-        if (data.monthly_stats && data.totals) {
-            html += renderMonthlyActivity(data.monthly_stats, data.totals, year);
+        if (outputMode === 'P') {
+            // Pseudografik format (current implementation)
+            html = buildPseudografikAnnualStats(data, year, i18n);
+        } else {
+            // HTML-Tabellen format (stub)
+            html = buildHTMLTableAnnualStats(data, year, i18n);
         }
-        
-        // EE observation tables
-        if (data.sun_ee_counts || data.moon_ee_counts) {
-            html += renderEEObservations(data.sun_ee_counts, data.moon_ee_counts);
-        }
-        
-        // Observer distribution table
-        if (data.observer_distribution) {
-            html += renderObserverDistribution(data.observer_distribution);
-        }
-        
-        // Phenomena table
-        if (data.phenomena) {
-            html += renderPhenomena(data.phenomena);
-        }
-        
-        html += '</div>';
         
         statsContent.innerHTML = html;
         
@@ -658,7 +648,21 @@ document.addEventListener('DOMContentLoaded', async function() {
         resultsModal?.hide();
         
         // Show chart modal
-        const chartModal = new bootstrap.Modal(document.getElementById('chart-modal'));
+        const chartModalElement = document.getElementById('chart-modal');
+        const chartModal = new bootstrap.Modal(chartModalElement);
+        
+        // Prevent ESC key from propagating to parent modal
+        chartModalElement.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                e.stopPropagation();
+            }
+        });
+        
+        // Set focus to chart modal after it's shown to capture ESC key
+        chartModalElement.addEventListener('shown.bs.modal', () => {
+            chartModalElement.focus();
+        }, { once: true });
+        
         chartModal.show();
         
         // Wire up chart buttons
@@ -789,25 +793,162 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     
     // Save statistics
-    function saveStatistics() {
+    async function saveStatistics() {
         if (!currentStatsData) return;
         
         const year = currentStatsData.jj >= 50 ? `19${currentStatsData.jj.toString().padStart(2, '0')}` : 
                      `20${currentStatsData.jj.toString().padStart(2, '0')}`;
         
-        const statsContent = document.getElementById('stats-content');
-        if (!statsContent) return;
+        // Check output mode
+        const modeResponse = await fetch('/api/config/outputmode');
+        const modeData = await modeResponse.json();
+        const outputMode = modeData.mode || 'P';
         
-        const text = statsContent.textContent;
-        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        let content, mimeType, filename;
+        
+        if (outputMode === 'H') {
+            // HTML-Tabellen mode: save as CSV
+            filename = `${year}.csv`;
+            content = generateStatsCSV(currentStatsData, year);
+            mimeType = 'text/csv;charset=utf-8';
+        } else {
+            // Pseudografik mode: save as TXT
+            filename = `${year}.txt`;
+            const statsContent = document.getElementById('stats-content');
+            content = statsContent ? statsContent.textContent : '';
+            mimeType = 'text/plain;charset=utf-8';
+        }
+        
+        const blob = new Blob([content], { type: mimeType });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${year}.txt`;
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    }
+
+    // Generate CSV from annual statistics data
+    function generateStatsCSV(data, year) {
+        let csv = '';
+        
+        // Table 1: Monthly Activity
+        if (data.monthly_stats && data.totals) {
+            csv += `"${i18n.annual_stats.title_with_year.replace('{year}', year)}"\n`;
+            csv += i18n.annual_stats.table_month;
+            csv += ',,' + i18n.annual_stats.table_sun;
+            csv += ',,' + i18n.annual_stats.table_moon;
+            csv += ',,' + i18n.annual_stats.table_total;
+            csv += ',,' + i18n.annual_stats.table_activity + '\n';
+            csv += ',';
+            csv += i18n.annual_stats.table_ee + ',' + i18n.annual_stats.table_days;
+            csv += ',' + i18n.annual_stats.table_ee + ',' + i18n.annual_stats.table_days;
+            csv += ',' + i18n.annual_stats.table_ee + ',' + i18n.annual_stats.table_days;
+            csv += ',' + i18n.annual_stats.table_real + ',' + i18n.annual_stats.table_relative + '\n';
+            
+            for (let mm = 1; mm <= 12; mm++) {
+                const mmStr = mm.toString();
+                const monthData = data.monthly_stats[mmStr] || {};
+                csv += i18n.months[mmStr] + ',';
+                csv += (monthData.sun_ee || 0) + ',' + (monthData.sun_days || 0) + ',';
+                csv += (monthData.moon_ee || 0) + ',' + (monthData.moon_days || 0) + ',';
+                csv += (monthData.total_ee || 0) + ',' + (monthData.total_days || 0) + ',';
+                csv += (monthData.real || 0).toFixed(1) + ',' + (monthData.relative || 0).toFixed(1) + '\n';
+            }
+            
+            // Totals
+            csv += i18n.annual_stats.table_total + ',';
+            csv += (data.totals.sun_ee || 0) + ',' + (data.totals.sun_days || 0) + ',';
+            csv += (data.totals.moon_ee || 0) + ',' + (data.totals.moon_days || 0) + ',';
+            csv += (data.totals.total_ee || 0) + ',' + (data.totals.total_days || 0) + ',';
+            csv += (data.totals.real || 0).toFixed(1) + ',' + (data.totals.relative || 0).toFixed(1) + '\n\n';
+        }
+        
+        // Table 2: EE Observations - Sun
+        if (data.sun_ee_counts && Object.keys(data.sun_ee_counts).length > 0) {
+            csv += `"${i18n.annual_stats.ee_observed_title}"\n`;
+            csv += `"${i18n.annual_stats.ee_sun_label}"\n`;
+            csv += 'EE';
+            const sunEEs = Object.keys(data.sun_ee_counts).map(Number).sort((a, b) => a - b);
+            for (const ee of sunEEs) {
+                csv += ',' + ee.toString().padStart(2, '0');
+            }
+            csv += '\n' + i18n.annual_stats.ee_count_label;
+            for (const ee of sunEEs) {
+                csv += ',' + (data.sun_ee_counts[ee] || 0);
+            }
+            csv += '\n\n';
+        }
+        
+        // Table 2: EE Observations - Moon
+        if (data.moon_ee_counts && Object.keys(data.moon_ee_counts).length > 0) {
+            csv += `"${i18n.annual_stats.ee_moon_label}"\n`;
+            csv += 'EE';
+            const moonEEs = Object.keys(data.moon_ee_counts).map(Number).sort((a, b) => a - b);
+            for (const ee of moonEEs) {
+                csv += ',' + ee.toString().padStart(2, '0');
+            }
+            csv += '\n' + i18n.annual_stats.ee_count_label;
+            for (const ee of moonEEs) {
+                csv += ',' + (data.moon_ee_counts[ee] || 0);
+            }
+            csv += '\n\n';
+        }
+        
+        // Table 3: Observer Distribution
+        if (data.observer_distribution && data.observer_distribution.length > 0) {
+            csv += `"${i18n.annual_stats.observer_dist_title}"\n`;
+            csv += i18n.annual_stats.observer_dist_kk + ',';
+            csv += i18n.annual_stats.observer_dist_ee01 + ',' + i18n.annual_stats.observer_dist_percent + ',';
+            csv += i18n.annual_stats.observer_dist_ee02 + ',' + i18n.annual_stats.observer_dist_percent + ',';
+            csv += i18n.annual_stats.observer_dist_ee03 + ',' + i18n.annual_stats.observer_dist_percent + ',';
+            csv += i18n.annual_stats.observer_dist_ee567 + ',' + i18n.annual_stats.observer_dist_percent + ',';
+            csv += i18n.annual_stats.observer_dist_ee17 + ',';
+            csv += i18n.annual_stats.observer_dist_ee_so + ',';
+            csv += i18n.annual_stats.observer_dist_ht_ges + '\n';
+            
+            for (const obs of data.observer_distribution) {
+                csv += obs.kk.toString().padStart(2, '0') + ',';
+                csv += obs.ee01 + ',' + obs.pct01.toFixed(1) + ',';
+                csv += obs.ee02 + ',' + obs.pct02.toFixed(1) + ',';
+                csv += obs.ee03 + ',' + obs.pct03.toFixed(1) + ',';
+                csv += obs.ee567 + ',' + obs.pct567.toFixed(1) + ',';
+                csv += obs.ee17 + ',' + obs.total_sun_ee + ',' + obs.total_days + '\n';
+            }
+            csv += '\n';
+        }
+        
+        // Table 4: Phenomena
+        if (data.phenomena && data.phenomena.length > 0) {
+            csv += `"${i18n.annual_stats.phenomena_title}"\n`;
+            csv += i18n.annual_stats.phenomena_date + ',KK,GG,' + i18n.annual_stats.phenomena_time + ',O,';
+            const eeColumns = [1, 2, 3, 5, 6, 7, 8, 9, 11, 12];
+            for (const ee of eeColumns) {
+                csv += ee.toString().padStart(2, '0') + ',';
+            }
+            csv += i18n.annual_stats.phenomena_other_ee + '\n';
+            
+            for (const phenom of data.phenomena) {
+                csv += phenom.tt.toString().padStart(2, '0') + '.' + phenom.mm.toString().padStart(2, '0') + ',';
+                csv += phenom.kk.toString().padStart(2, '0') + ',';
+                csv += phenom.gg.toString().padStart(2, '0') + ',';
+                csv += phenom.zs.toString().padStart(2, ' ') + 'h ' + phenom.zm.toString().padStart(2, '0') + 'm,';
+                csv += phenom.o + ',';
+                
+                // EE types 01-12
+                for (const ee of eeColumns) {
+                    csv += (phenom.ee_types.includes(ee) ? 'X' : '') + ',';
+                }
+                
+                // Further EE
+                const furtherEE = phenom.ee_types.filter(ee => ee > 12).map(ee => ee.toString().padStart(2, '0'));
+                csv += furtherEE.join(' ') + '\n';
+            }
+        }
+        
+        return csv;
     }
     
     // Save chart as PNG
@@ -897,4 +1038,267 @@ document.addEventListener('DOMContentLoaded', async function() {
             yearInput.focus();
         }
     });
+
+    // Build Pseudografik format annual statistics (original implementation)
+    function buildPseudografikAnnualStats(data, year, i18n) {
+        let html = '<div class="statistics-report" style="font-family: monospace; white-space: pre; font-size: 11px; color: #000000; line-height: 1.3;">';
+        
+        // Title (centered)
+        const titleLine = i18n.annual_stats.title_with_year.replace('{year}', year);
+        const titlePadding = Math.max(0, Math.floor((73 - titleLine.length) / 2));
+        html += ' '.repeat(titlePadding) + titleLine + '\n';
+        html += ' '.repeat(titlePadding) + '═'.repeat(titleLine.length) + '\n\n';
+        
+        // Monthly activity table
+        if (data.monthly_stats && data.totals) {
+            html += renderMonthlyActivity(data.monthly_stats, data.totals, year);
+        }
+        
+        // EE observation tables
+        if (data.sun_ee_counts || data.moon_ee_counts) {
+            html += renderEEObservations(data.sun_ee_counts, data.moon_ee_counts);
+        }
+        
+        // Observer distribution table
+        if (data.observer_distribution) {
+            html += renderObserverDistribution(data.observer_distribution);
+        }
+        
+        // Phenomena table
+        if (data.phenomena) {
+            html += renderPhenomena(data.phenomena);
+        }
+        
+        html += '</div>';
+        return html;
+    }
+
+    // Build HTML-Tabellen format annual statistics
+    function buildHTMLTableAnnualStats(data, year, i18n) {
+        let html = '<div style="padding: 20px;">';
+        
+        // Title
+        const titleLine = i18n.annual_stats.title_with_year.replace('{year}', year);
+        html += `<h3 style="text-align: center; font-family: Arial, sans-serif; margin-bottom: 30px;">${titleLine}</h3>`;
+        
+        // Table 1: Monthly Activity - split columns
+        if (data.monthly_stats && data.totals) {
+            html += '<table class="table table-bordered analysis-table" style="margin-bottom: 30px;">';
+            html += '<thead>';
+            html += '<tr>';
+            html += '<th rowspan="2">' + i18n.annual_stats.table_month + '</th>';
+            html += '<th colspan="2">' + i18n.annual_stats.table_sun + '</th>';
+            html += '<th colspan="2">' + i18n.annual_stats.table_moon + '</th>';
+            html += '<th colspan="2">' + i18n.annual_stats.table_total + '</th>';
+            html += '<th colspan="2">' + i18n.annual_stats.table_activity + '</th>';
+            html += '</tr>';
+            html += '<tr>';
+            html += '<th>' + i18n.annual_stats.table_ee + '</th>';
+            html += '<th>' + i18n.annual_stats.table_days + '</th>';
+            html += '<th>' + i18n.annual_stats.table_ee + '</th>';
+            html += '<th>' + i18n.annual_stats.table_days + '</th>';
+            html += '<th>' + i18n.annual_stats.table_ee + '</th>';
+            html += '<th>' + i18n.annual_stats.table_days + '</th>';
+            html += '<th>' + i18n.annual_stats.table_real + '</th>';
+            html += '<th>' + i18n.annual_stats.table_relative + '</th>';
+            html += '</tr>';
+            html += '</thead>';
+            html += '<tbody>';
+            
+            for (let mm = 1; mm <= 12; mm++) {
+                const mmStr = mm.toString();
+                const monthData = data.monthly_stats[mmStr] || {};
+                
+                html += '<tr>';
+                html += '<td>' + i18n.months[mmStr] + '</td>';
+                html += '<td style="text-align: right;">' + (monthData.sun_ee || 0) + '</td>';
+                html += '<td style="text-align: right;">' + (monthData.sun_days || 0) + '</td>';
+                html += '<td style="text-align: right;">' + (monthData.moon_ee || 0) + '</td>';
+                html += '<td style="text-align: right;">' + (monthData.moon_days || 0) + '</td>';
+                html += '<td style="text-align: right;">' + (monthData.total_ee || 0) + '</td>';
+                html += '<td style="text-align: right;">' + (monthData.total_days || 0) + '</td>';
+                html += '<td style="text-align: right;">' + (monthData.real || 0).toFixed(1) + '</td>';
+                html += '<td style="text-align: right;">' + (monthData.relative || 0).toFixed(1) + '</td>';
+                html += '</tr>';
+            }
+            
+            // Totals row
+            html += '<tr style="font-weight: bold; border-top: 2px solid #000;">';
+            html += '<td>' + i18n.annual_stats.table_total + '</td>';
+            html += '<td style="text-align: right;">' + (data.totals.sun_ee || 0) + '</td>';
+            html += '<td style="text-align: right;">' + (data.totals.sun_days || 0) + '</td>';
+            html += '<td style="text-align: right;">' + (data.totals.moon_ee || 0) + '</td>';
+            html += '<td style="text-align: right;">' + (data.totals.moon_days || 0) + '</td>';
+            html += '<td style="text-align: right;">' + (data.totals.total_ee || 0) + '</td>';
+            html += '<td style="text-align: right;">' + (data.totals.total_days || 0) + '</td>';
+            html += '<td style="text-align: right;">' + (data.totals.real || 0).toFixed(1) + '</td>';
+            html += '<td style="text-align: right;">' + (data.totals.relative || 0).toFixed(1) + '</td>';
+            html += '</tr>';
+            
+            html += '</tbody>';
+            html += '</table>';
+        }
+        
+        // Table 2: EE Observations - one table for sun, one for moon
+        const titleLine2 = i18n.annual_stats.ee_observed_title;
+        html += `<h4 style="text-align: center; font-family: Arial, sans-serif; margin-top: 30px; margin-bottom: 20px;">${titleLine2}</h4>`;
+        
+        // Sun halos table
+        if (data.sun_ee_counts && Object.keys(data.sun_ee_counts).length > 0) {
+            html += '<table class="table table-bordered analysis-table" style="margin-bottom: 30px;">';
+            html += '<thead>';
+            html += '<tr>';
+            html += '<th colspan="100" style="text-align: center;">' + i18n.annual_stats.ee_sun_label + '</th>';
+            html += '</tr>';
+            html += '<tr>';
+            html += '<th>EE</th>';
+            const sunEEs = Object.keys(data.sun_ee_counts).map(Number).sort((a, b) => a - b);
+            for (const ee of sunEEs) {
+                html += '<th style="text-align: center;">' + ee.toString().padStart(2, '0') + '</th>';
+            }
+            html += '</tr>';
+            html += '</thead>';
+            html += '<tbody>';
+            html += '<tr>';
+            html += '<td style="font-weight: bold;">' + i18n.annual_stats.ee_count_label + '</td>';
+            for (const ee of sunEEs) {
+                html += '<td style="text-align: right;">' + (data.sun_ee_counts[ee] || 0) + '</td>';
+            }
+            html += '</tr>';
+            html += '</tbody>';
+            html += '</table>';
+        }
+        
+        // Moon halos table
+        if (data.moon_ee_counts && Object.keys(data.moon_ee_counts).length > 0) {
+            html += '<table class="table table-bordered analysis-table" style="margin-bottom: 30px;">';
+            html += '<thead>';
+            html += '<tr>';
+            html += '<th colspan="100" style="text-align: center;">' + i18n.annual_stats.ee_moon_label + '</th>';
+            html += '</tr>';
+            html += '<tr>';
+            html += '<th>EE</th>';
+            const moonEEs = Object.keys(data.moon_ee_counts).map(Number).sort((a, b) => a - b);
+            for (const ee of moonEEs) {
+                html += '<th style="text-align: center;">' + ee.toString().padStart(2, '0') + '</th>';
+            }
+            html += '</tr>';
+            html += '</thead>';
+            html += '<tbody>';
+            html += '<tr>';
+            html += '<td style="font-weight: bold;">' + i18n.annual_stats.ee_count_label + '</td>';
+            for (const ee of moonEEs) {
+                html += '<td style="text-align: right;">' + (data.moon_ee_counts[ee] || 0) + '</td>';
+            }
+            html += '</tr>';
+            html += '</tbody>';
+            html += '</table>';
+        }
+        
+        // Table 3: Observer Distribution - no separators every 5 rows
+        if (data.observer_distribution && data.observer_distribution.length > 0) {
+            const titleLine3 = i18n.annual_stats.observer_dist_title;
+            html += `<h4 style="text-align: center; font-family: Arial, sans-serif; margin-top: 30px; margin-bottom: 20px;">${titleLine3}</h4>`;
+            
+            html += '<table class="table table-bordered analysis-table" style="margin-bottom: 30px;">';
+            html += '<thead>';
+            html += '<tr>';
+            html += '<th>' + i18n.annual_stats.observer_dist_kk + '</th>';
+            html += '<th>' + i18n.annual_stats.observer_dist_ee01 + '</th>';
+            html += '<th>' + i18n.annual_stats.observer_dist_percent + '</th>';
+            html += '<th>' + i18n.annual_stats.observer_dist_ee02 + '</th>';
+            html += '<th>' + i18n.annual_stats.observer_dist_percent + '</th>';
+            html += '<th>' + i18n.annual_stats.observer_dist_ee03 + '</th>';
+            html += '<th>' + i18n.annual_stats.observer_dist_percent + '</th>';
+            html += '<th>' + i18n.annual_stats.observer_dist_ee567 + '</th>';
+            html += '<th>' + i18n.annual_stats.observer_dist_percent + '</th>';
+            html += '<th>' + i18n.annual_stats.observer_dist_ee17 + '</th>';
+            html += '<th>' + i18n.annual_stats.observer_dist_ee_so + '</th>';
+            html += '<th>' + i18n.annual_stats.observer_dist_ht_ges + '</th>';
+            html += '</tr>';
+            html += '</thead>';
+            html += '<tbody>';
+            
+            for (const obs of data.observer_distribution) {
+                html += '<tr>';
+                html += '<td style="text-align: center;">' + obs.kk.toString().padStart(2, '0') + '</td>';
+                html += '<td style="text-align: right;">' + obs.ee01 + '</td>';
+                html += '<td style="text-align: right;">' + obs.pct01.toFixed(1) + '</td>';
+                html += '<td style="text-align: right;">' + obs.ee02 + '</td>';
+                html += '<td style="text-align: right;">' + obs.pct02.toFixed(1) + '</td>';
+                html += '<td style="text-align: right;">' + obs.ee03 + '</td>';
+                html += '<td style="text-align: right;">' + obs.pct03.toFixed(1) + '</td>';
+                html += '<td style="text-align: right;">' + obs.ee567 + '</td>';
+                html += '<td style="text-align: right;">' + obs.pct567.toFixed(1) + '</td>';
+                html += '<td style="text-align: right;">' + obs.ee17 + '</td>';
+                html += '<td style="text-align: right;">' + obs.total_sun_ee + '</td>';
+                html += '<td style="text-align: right;">' + obs.total_days + '</td>';
+                html += '</tr>';
+            }
+            
+            html += '</tbody>';
+            html += '</table>';
+        }
+        
+        // Table 4: Phenomena - halo types in separate columns
+        if (data.phenomena && data.phenomena.length > 0) {
+            const titleLine4 = i18n.annual_stats.phenomena_title;
+            html += `<h4 style="text-align: center; font-family: Arial, sans-serif; margin-top: 30px; margin-bottom: 20px;">${titleLine4}</h4>`;
+            
+            html += '<table class="table table-bordered analysis-table" style="margin-bottom: 30px;">';
+            html += '<thead>';
+            html += '<tr>';
+            html += '<th>' + i18n.annual_stats.phenomena_date + '</th>';
+            html += '<th>KK</th>';
+            html += '<th>GG</th>';
+            html += '<th>' + i18n.annual_stats.phenomena_time + '</th>';
+            html += '<th>O</th>';
+            // EE columns 01-12
+            const eeColumns = [1, 2, 3, 5, 6, 7, 8, 9, 11, 12];
+            for (const ee of eeColumns) {
+                html += '<th style="text-align: center;">' + ee.toString().padStart(2, '0') + '</th>';
+            }
+            html += '<th>' + i18n.annual_stats.phenomena_other_ee + '</th>';
+            html += '</tr>';
+            html += '</thead>';
+            html += '<tbody>';
+            
+            for (const phenom of data.phenomena) {
+                html += '<tr>';
+                html += '<td>' + phenom.tt.toString().padStart(2, '0') + '.' + phenom.mm.toString().padStart(2, '0') + '</td>';
+                html += '<td style="text-align: center;">' + phenom.kk.toString().padStart(2, '0') + '</td>';
+                html += '<td style="text-align: center;">' + phenom.gg.toString().padStart(2, '0') + '</td>';
+                html += '<td>' + phenom.zs.toString().padStart(2, ' ') + 'h ' + phenom.zm.toString().padStart(2, '0') + 'm</td>';
+                html += '<td style="text-align: center;">' + phenom.o + '</td>';
+                
+                // EE types 01-12 (show X where present)
+                for (const ee of eeColumns) {
+                    if (phenom.ee_types.includes(ee)) {
+                        html += '<td style="text-align: center;">X</td>';
+                    } else {
+                        html += '<td></td>';
+                    }
+                }
+                
+                // Further EE (beyond 12) - all in one column
+                const furtherEE = phenom.ee_types.filter(ee => ee > 12).map(ee => ee.toString().padStart(2, '0'));
+                html += '<td>' + furtherEE.join(' ') + '</td>';
+                
+                html += '</tr>';
+            }
+            
+            html += '</tbody>';
+            html += '</table>';
+        } else {
+            // No phenomena
+            const titleLine4 = i18n.annual_stats.phenomena_title;
+            html += `<h4 style="text-align: center; font-family: Arial, sans-serif; margin-top: 30px; margin-bottom: 20px;">${titleLine4}</h4>`;
+            html += '<div style="padding: 20px; text-align: center; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; margin-bottom: 30px;">';
+            html += '<p style="margin: 0;">' + i18n.annual_stats.phenomena_none + '</p>';
+            html += '</div>';
+        }
+        
+        html += '</div>';
+        return html;
+    }
 });
