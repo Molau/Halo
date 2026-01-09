@@ -1,4 +1,6 @@
-/data/# Python
+/data/
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class

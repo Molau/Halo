@@ -10,7 +10,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Elements
     const filterDialog = document.getElementById('filter-dialog');
     const observerSelect = document.getElementById('observer-select');
-    const monthYearInput = document.getElementById('month-year-input');
+    const monthSelect = document.getElementById('month-select');
+    const yearSelect = document.getElementById('year-select');
     const monthYearError = document.getElementById('month-year-error');
     const btnCancel = document.getElementById('btn-cancel-filter');
     const btnApply = document.getElementById('btn-apply-filter');
@@ -69,28 +70,19 @@ document.addEventListener('DOMContentLoaded', async function() {
     function updateUIText() {
         // Filter dialog title already set by template
         
-        // Observer label
-        const observerLabel = document.getElementById('observer-label');
-        if (observerLabel) {
-            observerLabel.textContent = i18n.observers?.select_observer;
-        }
-        
         // Observer select placeholder
         const observerPlaceholder = document.getElementById('observer-select-placeholder');
         if (observerPlaceholder) {
             observerPlaceholder.textContent = '-- ' + i18n.observers?.select_prompt + ' --';
         }
         
-        // Month/year label
-        const monthYearLabel = document.getElementById('month-year-label');
-        if (monthYearLabel) {
-            monthYearLabel.textContent = i18n.monthly_report?.month_year_label;
-        }
-        
-        // Month/year placeholder
-        const monthYearInput = document.getElementById('month-year-input');
-        if (monthYearInput) {
-            monthYearInput.placeholder = i18n.monthly_report?.month_year_placeholder;
+        // Populate year dropdown
+        if (yearSelect) {
+            yearSelect.innerHTML = '<option value="">-- ' + i18n.fields?.select + ' --</option>';
+            for (let year = 1950; year <= 2049; year++) {
+                const yy = String(year % 100).padStart(2, '0');
+                yearSelect.innerHTML += `<option value="${yy}">${year}</option>`;
+            }
         }
     }
 
@@ -120,6 +112,25 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         } catch (error) {
             console.error('Error loading fixed observer:', error);
+        }
+    }
+
+    // Load date default and pre-fill month/year dropdowns
+    async function loadDateDefault() {
+        try {
+            // Use the helper function from main.js
+            const dateDefault = await getDateDefault();
+            if (dateDefault) {
+                // Pre-fill month and year dropdowns
+                if (monthSelect) {
+                    monthSelect.value = dateDefault.month;
+                }
+                if (yearSelect) {
+                    yearSelect.value = dateDefault.jj;
+                }
+            }
+        } catch (error) {
+            console.error('Error loading date default:', error);
         }
     }
 
@@ -167,52 +178,29 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    // Validate month/year input
-    function validateMonthYear(input) {
+    // Validate month/year selection from dropdowns
+    function validateMonthYear() {
         monthYearError.style.display = 'none';
         
-        if (!input || input.trim() === '') {
+        const mm = monthSelect.value;
+        const jj = yearSelect.value;
+        
+        if (!mm || !jj) {
             const msg = i18n.monthly_report?.error_month_year_required;
             monthYearError.textContent = msg;
             monthYearError.style.display = 'block';
             return null;
         }
 
-        // Parse input: "MM JJ" format
-        const parts = input.trim().split(/\s+/);
-        if (parts.length !== 2) {
-            const msg = i18n.monthly_report?.error_invalid_format;
-            monthYearError.textContent = msg;
-            monthYearError.style.display = 'block';
-            return null;
-        }
-
-        const mm = parseInt(parts[0]);
-        const jj = parseInt(parts[1]);
-
-        // Validate month (1-12)
-        if (isNaN(mm) || mm < 1 || mm > 12) {
-            const msg = i18n.monthly_report?.error_invalid_month;
-            monthYearError.textContent = msg;
-            monthYearError.style.display = 'block';
-            return null;
-        }
-
-        // Validate year (0-99, representing 1900-1999 or 2000-2099)
-        if (isNaN(jj) || jj < 0 || jj > 99) {
-            const msg = i18n.monthly_report?.error_invalid_year;
-            monthYearError.textContent = msg;
-            monthYearError.style.display = 'block';
-            return null;
-        }
-
-        return { mm, jj };
+        return { 
+            mm: String(parseInt(mm)).padStart(2, '0'), 
+            jj: String(parseInt(jj)).padStart(2, '0')
+        };
     }
 
     // Apply filter
     async function applyFilter() {
         const selectedKK = observerSelect.value;
-        const monthYearValue = monthYearInput.value;
 
         // Validate observer selection
         if (!selectedKK) {
@@ -222,9 +210,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         // Validate month/year
-        const dateInfo = validateMonthYear(monthYearValue);
+        const dateInfo = validateMonthYear();
         if (!dateInfo) {
-            monthYearInput.focus();
+            monthSelect.focus();
             return;
         }
 
@@ -269,15 +257,22 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     btnApply.addEventListener('click', applyFilter);
 
-    // Enter key support for both inputs
-    monthYearInput.addEventListener('keypress', (e) => {
+    // Enter key support
+    observerSelect.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             applyFilter();
         }
     });
-    
-    observerSelect.addEventListener('keypress', (e) => {
+
+    monthSelect.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            applyFilter();
+        }
+    });
+
+    yearSelect.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             applyFilter();
@@ -293,21 +288,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     };
     
     document.addEventListener('keydown', escKeyHandler);
-
-    // Auto-format month/year input
-    monthYearInput.addEventListener('input', (e) => {
-        let value = e.target.value;
-        // Remove non-digits and non-spaces
-        value = value.replace(/[^\d\s]/g, '');
-        // Ensure single space between parts
-        value = value.replace(/\s+/g, ' ');
-        e.target.value = value;
-        
-        // Clear error on input
-        if (monthYearError.style.display !== 'none') {
-            monthYearError.style.display = 'none';
-        }
-    });
 
     // Kurzausgabe formatter (from observations.js)
     function kurzausgabe(obs) {
@@ -457,7 +437,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             .replace('{month}', monthName)
             .replace('{year}', year);
         
-        let html = '<pre style="font-family: monospace; font-size: 14px; line-height: 1.4;">';
+        let html = '<pre style="font-family: monospace; font-size: 14px; line-height: 1;">';
         
         // Header box
         const titlePadLeft = Math.floor((122 - title.length) / 2);
@@ -773,6 +753,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     
                     // Load observers and show filter dialog
                     await loadFixedObserver();
+                    await loadDateDefault();
                     await loadObservers();
 
                     // Show filter dialog with explicit backdrop configuration

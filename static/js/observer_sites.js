@@ -42,7 +42,7 @@ async function showAddSiteDialog(observer) {
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header py-2">
-                        <h5 class="modal-title">${i18n.modify_add_site || 'Add Observation Site'}: ${observer.KK} ${observer.VName} ${observer.NName}</h5>
+                        <h5 class="modal-title">${i18n.modify_add_site}: ${observer.KK} ${observer.VName} ${observer.NName}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
@@ -50,37 +50,37 @@ async function showAddSiteDialog(observer) {
                             <div class="row g-2">
                                 <!-- Since (Month/Year) and Active -->
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.since_month_label || 'Since (Month)'} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18n.since_month_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="site-seit-month" required>
                                         <option value="">--</option>
                                         ${monthOptions}
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.since_year_label || 'Since (Year)'} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18n.since_year_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="site-seit-year" required>
                                         <option value="">--</option>
                                         ${yearOptions}
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.active_label || 'Active'} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18n.active_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="site-active" required>
-                                        <option value="1">${i18n.yes || 'Yes'}</option>
-                                        <option value="0">${i18n.no || 'No'}</option>
+                                        <option value="1">${i18n.yes}</option>
+                                        <option value="0">${i18n.no}</option>
                                     </select>
                                 </div>
                                 
                                 <!-- Main Observation Site -->
                                 <div class="col-12 mt-2">
-                                    <h6 class="mb-1">${i18n.main_site_label || 'Main Observation Site'}</h6>
+                                    <h6 class="mb-1">${i18n.main_site_label}</h6>
                                 </div>
                                 <div class="col-md-8">
-                                    <label class="form-label small mb-0">${i18n.main_site_label || 'Main Site'} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18n.main_site_label} <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control form-control-sm" id="site-hb-ort" maxlength="20" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.region_label || 'Region'} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18n.region_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="site-gh" required>
                                         <option value="">--</option>
                                         ${regionOptions}
@@ -89,7 +89,7 @@ async function showAddSiteDialog(observer) {
                                 
                                 <!-- Main Site Coordinates -->
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.longitude_label || 'Longitude'} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18n.longitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="site-hlg" required>
                                             ${lonDegOptions}
@@ -106,7 +106,7 @@ async function showAddSiteDialog(observer) {
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.latitude_label || 'Latitude'} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18n.latitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="site-hbg" required>
                                             ${latDegOptions}
@@ -125,14 +125,14 @@ async function showAddSiteDialog(observer) {
                                 
                                 <!-- Secondary Observation Site -->
                                 <div class="col-12 mt-2">
-                                    <h6 class="mb-1">${i18n.secondary_site_label || 'Secondary Observation Site'}</h6>
+                                    <h6 class="mb-1">${i18n.secondary_site_label}</h6>
                                 </div>
                                 <div class="col-md-8">
-                                    <label class="form-label small mb-0">${i18n.secondary_site_label || 'Secondary Site'} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18n.secondary_site_label} <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control form-control-sm" id="site-nb-ort" maxlength="20" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.region_label || 'Region'} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18n.region_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="site-gn" required>
                                         <option value="">--</option>
                                         ${regionOptions}
@@ -141,7 +141,7 @@ async function showAddSiteDialog(observer) {
                                 
                                 <!-- Secondary Site Coordinates -->
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.longitude_label || 'Longitude'} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18n.longitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="site-nlg" required>
                                             ${lonDegOptions}
@@ -158,7 +158,7 @@ async function showAddSiteDialog(observer) {
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.latitude_label || 'Latitude'} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18n.latitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="site-nbg" required>
                                             ${latDegOptions}
@@ -179,8 +179,8 @@ async function showAddSiteDialog(observer) {
                         </form>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${common.cancel || 'Cancel'}</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-add-site-ok">${common.ok || 'Save'}</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-add-site-ok">${common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -234,7 +234,7 @@ async function showAddSiteDialog(observer) {
             
             // Validate
             if (!siteData.seit_month || !siteData.seit_year || !siteData.HbOrt || !siteData.GH || !siteData.NbOrt || !siteData.GN) {
-                errEl.textContent = i18n.error_missing_required || 'Please fill in all required fields!';
+                errEl.textContent = i18n.error_missing_required;
                 errEl.style.display = 'block';
                 return;
             }
@@ -249,7 +249,7 @@ async function showAddSiteDialog(observer) {
             const result = await resp.json();
             
             if (!resp.ok) {
-                errEl.textContent = result.error || 'Error adding site';
+                errEl.textContent = result.error;
                 errEl.style.display = 'block';
                 return;
             }
@@ -263,7 +263,7 @@ async function showAddSiteDialog(observer) {
             successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
             successMsg.style.cssText = 'z-index:9999;min-width:300px;';
             successMsg.innerHTML = `
-                <strong>✓</strong> ${i18n.success_added || 'Site successfully added'}
+                <strong>✓</strong> ${i18n.success_added}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
             document.body.appendChild(successMsg);
@@ -294,7 +294,7 @@ async function showEditSiteDialog(observer) {
         const data = await resp.json();
         
         if (!data.sites || data.sites.length === 0) {
-            showErrorDialog(i18n.error_no_sites || 'No observation sites found');
+            showErrorDialog(i18n.error_no_sites);
             return;
         }
         
@@ -318,21 +318,21 @@ function showEditSiteConfirmDialog(observer, sites, currentIndex) {
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header py-2">
-                        <h5 class="modal-title">${i18n.modify_edit_site || 'Edit Observation Site'}</h5>
+                        <h5 class="modal-title">${i18n.modify_edit_site}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <p class="mb-2">${i18n.modify_edit_question || 'Edit this site entry?'}</p>
+                        <p class="mb-2">${i18n.modify_edit_question}</p>
                         <table class="table table-sm table-bordered">
-                            <tr><td><strong>${i18n.since_label || 'Since'}:</strong></td><td>${seitMonth} ${site.seit_year}</td></tr>
-                            <tr><td><strong>${i18n.active_label || 'Active'}:</strong></td><td>${site.active === 1 ? i18n.yes : i18n.no}</td></tr>
-                            <tr><td><strong>${i18n.main_site_label || 'Main Site'}:</strong></td><td>${site.HbOrt} (GG ${site.GH})</td></tr>
-                            <tr><td><strong>${i18n.secondary_site_label || 'Secondary Site'}:</strong></td><td>${site.NbOrt} (GG ${site.GN})</td></tr>
+                            <tr><td><strong>${i18n.since_label}:</strong></td><td>${seitMonth} ${site.seit_year}</td></tr>
+                            <tr><td><strong>${i18n.active_label}:</strong></td><td>${site.active === 1 ? i18n.yes : i18n.no}</td></tr>
+                            <tr><td><strong>${i18n.main_site_label}:</strong></td><td>${site.HbOrt} (GG ${site.GH})</td></tr>
+                            <tr><td><strong>${i18n.secondary_site_label}:</strong></td><td>${site.NbOrt} (GG ${site.GN})</td></tr>
                         </table>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${common.no || 'No'}</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-confirm-edit-site">${common.yes || 'Yes'}</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${common.no}</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-confirm-edit-site">${common.yes}</button>
                     </div>
                 </div>
             </div>
@@ -357,7 +357,7 @@ function showEditSiteConfirmDialog(observer, sites, currentIndex) {
 function showEditSiteFormDialog(observer, oldSite) {
     // This will be very similar to showAddSiteDialog but pre-filled with oldSite data
     // Implementation continues...
-    showErrorDialog(i18nStrings.common.not_implemented || 'Edit site form - to be implemented');
+    showErrorDialog(i18nStrings.common.not_implemented);
 }
 
 // Delete observation site
@@ -371,12 +371,12 @@ async function showDeleteSiteDialog(observer) {
         const data = await resp.json();
         
         if (!data.sites || data.sites.length === 0) {
-            showErrorDialog(i18n.error_no_sites || 'No observation sites found');
+            showErrorDialog(i18n.error_no_sites);
             return;
         }
         
         if (data.sites.length === 1) {
-            showErrorDialog(i18n.error_last_site || 'Cannot delete the last observation site');
+            showErrorDialog(i18n.error_last_sit);
             return;
         }
         
@@ -400,23 +400,23 @@ function showDeleteSiteConfirmDialog(observer, sites, currentIndex) {
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header py-2">
-                        <h5 class="modal-title">${i18n.modify_delete_site || 'Delete Observation Site'}</h5>
+                        <h5 class="modal-title">${i18n.modify_delete_site}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <p class="mb-2">${i18n.delete_site_question || 'Delete this site entry?'}</p>
+                        <p class="mb-2">${i18n.delete_site_question}</p>
                         <table class="table table-sm table-bordered">
-                            <tr><td><strong>${i18n.since_label || 'Since'}:</strong></td><td>${seitMonth} ${site.seit_year}</td></tr>
-                            <tr><td><strong>${i18n.active_label || 'Active'}:</strong></td><td>${site.active === 1 ? i18n.yes : i18n.no}</td></tr>
-                            <tr><td><strong>${i18n.main_site_label || 'Main Site'}:</strong></td><td>${site.HbOrt} (GG ${site.GH})</td></tr>
-                            <tr><td><strong>${i18n.secondary_site_label || 'Secondary Site'}:</strong></td><td>${site.NbOrt} (GG ${site.GN})</td></tr>
+                            <tr><td><strong>${i18n.since_label}:</strong></td><td>${seitMonth} ${site.seit_year}</td></tr>
+                            <tr><td><strong>${i18n.active_label}:</strong></td><td>${site.active === 1 ? i18n.yes : i18n.no}</td></tr>
+                            <tr><td><strong>${i18n.main_site_label}:</strong></td><td>${site.HbOrt} (GG ${site.GH})</td></tr>
+                            <tr><td><strong>${i18n.secondary_site_label}:</strong></td><td>${site.NbOrt} (GG ${site.GN})</td></tr>
                         </table>
-                        <p class="text-muted small">${i18n.delete_site_info || `Entry ${currentIndex + 1} of ${sites.length}`}</p>
+                        <p class="text-muted small">${i18n.delete_site_info}</p>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${common.no || 'No'}</button>
-                        <button type="button" class="btn btn-danger btn-sm" id="btn-delete-site">${common.yes || 'Yes'}</button>
-                        ${currentIndex < sites.length - 1 ? `<button type="button" class="btn btn-info btn-sm" id="btn-next-site">${common.next || 'Next'}</button>` : ''}
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${common.no}</button>
+                        <button type="button" class="btn btn-danger btn-sm" id="btn-delete-site">${common.yes}</button>
+                        ${currentIndex < sites.length - 1 ? `<button type="button" class="btn btn-info btn-sm" id="btn-next-site">${common.next}</button>` : ''}
                     </div>
                 </div>
             </div>
@@ -437,7 +437,7 @@ function showDeleteSiteConfirmDialog(observer, sites, currentIndex) {
             const result = await resp.json();
             
             if (!resp.ok) {
-                showErrorDialog(result.error || 'Error deleting site');
+                showErrorDialog(result.error);
                 return;
             }
             
@@ -449,7 +449,7 @@ function showDeleteSiteConfirmDialog(observer, sites, currentIndex) {
                 successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
                 successMsg.style.cssText = 'z-index:9999;min-width:300px;';
                 successMsg.innerHTML = `
-                    <strong>✓</strong> ${i18n.success_deleted || 'Site successfully deleted'}
+                    <strong>✓</strong> ${i18n.success_deleted}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 `;
                 document.body.appendChild(successMsg);

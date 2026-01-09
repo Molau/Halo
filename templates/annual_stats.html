@@ -124,17 +124,14 @@
                     </div>
                     <div class="modal-body">
                         <div class="filter-form">
-                            <!-- Year Input -->
+                            <!-- Year Selection -->
                             <div class="filter-group mb-3">
-                                <label class="form-label fw-bold" for="year-input" id="year-label">
+                                <label class="form-label fw-bold" for="year-select" id="year-label">
                                     {% if lang() == 'de' %}{{ g.i18n.get('annual_stats.year_prompt') }}{% else %}{{ g.i18n.get('annual_stats.year_prompt') }}{% endif %}
                                 </label>
-                                <input type="text" 
-                                       id="year-input" 
-                                       class="form-control"
-                                       maxlength="4"
-                                       placeholder="88 or 1988"
-                                       autofocus>
+                                <select id="year-select" class="form-select" autofocus>
+                                    <option value="">-- {{ g.i18n.get('fields.select') }} --</option>
+                                </select>
                                 <div id="year-error" class="text-danger mt-1" style="display:none;"></div>
                             </div>
                         </div>

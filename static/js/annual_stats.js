@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Elements
     const filterDialog = document.getElementById('filter-dialog');
-    const yearInput = document.getElementById('year-input');
+    const yearSelect = document.getElementById('year-select');
     const yearError = document.getElementById('year-error');
     const btnCancel = document.getElementById('btn-cancel-filter');
     const btnApply = document.getElementById('btn-apply-filter');
@@ -59,7 +59,32 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    // Placeholder and labels are already set in HTML template via Jinja2
+    // Populate year dropdown (1950-2049)
+    function populateYears() {
+        const startYear = 1950;
+        const endYear = 2049;
+        if (!yearSelect) return;
+        yearSelect.innerHTML = `<option value="">-- ${i18n.fields?.select || 'Select'} --</option>`;
+        for (let year = startYear; year <= endYear; year++) {
+            const yy = String(year % 100).padStart(2, '0');
+            const option = document.createElement('option');
+            option.value = yy;
+            option.textContent = year;
+            yearSelect.appendChild(option);
+        }
+    }
+
+    // Load date default and pre-fill year dropdown
+    async function loadDateDefault() {
+        try {
+            const dateDefault = await getDateDefault();
+            if (dateDefault && yearSelect) {
+                yearSelect.value = dateDefault.jj;
+            }
+        } catch (error) {
+            console.error('Error loading date default:', error);
+        }
+    }
 
     // Check if observations are loaded (same approach as monthly_report.js)
     async function checkDataLoaded() {
@@ -81,68 +106,29 @@ document.addEventListener('DOMContentLoaded', async function() {
         return false;
     }
 
-    // Validate year input
-    function validateYear(input) {
-        const trimmed = input.trim();
-        let jj = parseInt(trimmed);
-        
-        if (isNaN(jj)) {
-            return {
-                valid: false,
-                error: i18n.annual_stats.error_invalid_year
-            };
-        }
-        
-        // Accept 4-digit years (1950-2049) and convert to 2-digit
-        if (jj >= 1950 && jj <= 1999) {
-            jj = jj - 1900;
-        } else if (jj >= 2000 && jj <= 2049) {
-            jj = jj - 2000;
-        } else if (jj < 50 || jj > 99) {
-            // 2-digit year must be 50-99
-            return {
-                valid: false,
-                error: i18n.annual_stats.error_invalid_year_range
-            };
-        }
-        
-        return {
-            valid: true,
-            jj: jj
-        };
-    }
-
-    // Show year error
-    function showYearError(message) {
-        if (yearError) {
-            yearError.textContent = message;
-            yearError.style.display = 'block';
-            yearInput?.classList.add('is-invalid');
-        }
-    }
-
-    // Hide year error
-    function hideYearError() {
+    // Validate year selection
+    function validateYear() {
         if (yearError) {
             yearError.style.display = 'none';
-            yearInput?.classList.remove('is-invalid');
         }
+
+        const jj = yearSelect.value;
+        if (!jj) {
+            if (yearError) {
+                yearError.textContent = i18n.annual_stats.error_year_required;
+                yearError.style.display = 'block';
+            }
+            return null;
+        }
+
+        return { jj: String(parseInt(jj)).padStart(2, '0') };
     }
 
     // Apply filter and generate statistics
     async function applyFilter() {
-        hideYearError();
-        
-        // Validate year input
-        const yearValue = yearInput?.value || '';
-        if (!yearValue.trim()) {
-            showYearError(i18n.annual_stats.error_year_required);
-            return;
-        }
-        
-        const validation = validateYear(yearValue);
-        if (!validation.valid) {
-            showYearError(validation.error);
+        const validation = validateYear();
+        if (!validation) {
+            yearSelect.focus();
             return;
         }
         
@@ -157,12 +143,18 @@ document.addEventListener('DOMContentLoaded', async function() {
             const data = await response.json();
             
             if (!response.ok) {
-                showYearError(i18n.annual_stats.error_fetching);
+                if (yearError) {
+                    yearError.textContent = i18n.annual_stats.error_fetching;
+                    yearError.style.display = 'block';
+                }
                 return;
             }
             
             if (data.activity_count === 0) {
-                showYearError(i18n.annual_stats.error_no_data);
+                if (yearError) {
+                    yearError.textContent = i18n.annual_stats.error_no_data;
+                    yearError.style.display = 'block';
+                }
                 return;
             }
             
@@ -181,7 +173,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             
         } catch (error) {
             console.error('Error fetching statistics:', error);
-            showYearError(i18n.annual_stats.error_fetching);
+            if (yearError) {
+                yearError.textContent = i18n.annual_stats.error_fetching;
+                yearError.style.display = 'block';
+            }
         } finally {
             // Hide spinner
             if (applySpinner) applySpinner.style.display = 'none';
@@ -998,9 +993,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         btnApply.addEventListener('click', applyFilter);
     }
     
-    if (yearInput) {
-        yearInput.addEventListener('keypress', (e) => {
+    if (yearSelect) {
+        yearSelect.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
+                e.preventDefault();
                 applyFilter();
             }
         });
@@ -1018,6 +1014,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Initialize
     await loadI18n();
+    populateYears();
+
+    // Load date default and pre-fill year select
+    await loadDateDefault();
     
     // Check if data is loaded
     const dataLoaded = await checkDataLoaded();
@@ -1032,16 +1032,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
     modal.show();
     
-    // Focus year input when modal is shown
+    // Focus year select when modal is shown
     filterDialog.addEventListener('shown.bs.modal', () => {
-        if (yearInput) {
-            yearInput.focus();
+        if (yearSelect) {
+            yearSelect.focus();
         }
     });
 
     // Build Pseudografik format annual statistics (original implementation)
     function buildPseudografikAnnualStats(data, year, i18n) {
-        let html = '<div class="statistics-report" style="font-family: monospace; white-space: pre; font-size: 11px; color: #000000; line-height: 1.3;">';
+        let html = '<div class="statistics-report" style="font-family: monospace; white-space: pre; font-size: 11px; color: #000000; line-height: 1;">';
         
         // Title (centered)
         const titleLine = i18n.annual_stats.title_with_year.replace('{year}', year);

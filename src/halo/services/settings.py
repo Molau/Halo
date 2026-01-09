@@ -50,6 +50,18 @@ class Settings:
                         app_config['STARTUP_FILE_ENABLED'] = value in ('1', 'true', 'True')
                     elif key == 'STARTUP_FILE_PATH':
                         app_config['STARTUP_FILE_PATH'] = value
+                    elif key == 'DATE_DEFAULT_MODE':
+                        app_config['DATE_DEFAULT_MODE'] = value if value in ('none', 'current', 'previous', 'constant') else 'none'
+                    elif key == 'DATE_DEFAULT_MONTH':
+                        try:
+                            app_config['DATE_DEFAULT_MONTH'] = int(value)
+                        except ValueError:
+                            app_config['DATE_DEFAULT_MONTH'] = 1
+                    elif key == 'DATE_DEFAULT_YEAR':
+                        try:
+                            app_config['DATE_DEFAULT_YEAR'] = int(value)
+                        except ValueError:
+                            app_config['DATE_DEFAULT_YEAR'] = 2026
         except Exception:
             # On any error, keep existing defaults
             pass
@@ -63,6 +75,9 @@ class Settings:
             ['FIXED_OBSERVER', app_config.get('FIXED_OBSERVER', '')],
             ['STARTUP_FILE_ENABLED', '1' if app_config.get('STARTUP_FILE_ENABLED', False) else '0'],
             ['STARTUP_FILE_PATH', app_config.get('STARTUP_FILE_PATH', '')],
+            ['DATE_DEFAULT_MODE', app_config.get('DATE_DEFAULT_MODE', 'none')],
+            ['DATE_DEFAULT_MONTH', str(app_config.get('DATE_DEFAULT_MONTH', 1))],
+            ['DATE_DEFAULT_YEAR', str(app_config.get('DATE_DEFAULT_YEAR', 2026))],
         ]
         with open(cfg_file, 'w', encoding='utf-8', newline='') as f:
             writer = csv.writer(f)

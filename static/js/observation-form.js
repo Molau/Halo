@@ -23,6 +23,7 @@ class ObservationForm {
         await this.loadI18n();
         await this.loadObservers();
         await this.loadFixedObserver();
+        await this.loadDateDefault();
     }
     
     async loadI18n() {
@@ -54,6 +55,18 @@ class ObservationForm {
             this.fixedObserver = config.observer || '';
         } catch (e) {
             console.error('Error loading fixed observer:', e);
+        }
+    }
+    
+    async loadDateDefault() {
+        try {
+            // Use the helper function from main.js
+            const dateDefault = await getDateDefault();
+            if (dateDefault) {
+                this.dateDefault = dateDefault;
+            }
+        } catch (e) {
+            console.error('Error loading date default:', e);
         }
     }
     
@@ -92,6 +105,16 @@ class ObservationForm {
             // Disable all fields in edit/delete/view mode - user must click "Yes" to edit
             setTimeout(() => {
                 this.disableAllFields();
+            }, 0);
+        } else if (mode === 'add' && this.dateDefault) {
+            // Pre-fill date fields for new observations
+            setTimeout(() => {
+                if (this.fields.mm) {
+                    this.fields.mm.value = this.dateDefault.mm;
+                }
+                if (this.fields.jj) {
+                    this.fields.jj.value = this.dateDefault.jj;
+                }
             }, 0);
         }
         

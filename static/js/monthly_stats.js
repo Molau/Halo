@@ -7,7 +7,8 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Elements
     const filterDialog = document.getElementById('filter-dialog');
-    const monthYearInput = document.getElementById('month-year-input');
+    const monthSelect = document.getElementById('month-select');
+    const yearSelect = document.getElementById('year-select');
     const monthYearError = document.getElementById('month-year-error');
     const btnCancel = document.getElementById('btn-cancel-filter');
     const btnApply = document.getElementById('btn-apply-filter');
@@ -81,117 +82,98 @@ document.addEventListener('DOMContentLoaded', async function() {
         return false;
     }
 
-    // Validate month/year input
-    function validateMonthYear(input) {
-        const trimmed = input.trim();
-        const parts = trimmed.split(/\s+/);
+    // Validate month/year selection from dropdowns
+    function validateMonthYear() {
+        monthYearError.style.display = 'none';
         
-        if (parts.length !== 2) {
-            return {
-                valid: false,
-                error: i18n.monthly_stats?.error_invalid_format
-            };
+        const mm = monthSelect.value;
+        const jj = yearSelect.value;
+        
+        if (!mm || !jj) {
+            const msg = i18n.monthly_stats?.error_month_year_required;
+            monthYearError.textContent = msg;
+            monthYearError.style.display = 'block';
+            return null;
         }
-        
-        const mm = parseInt(parts[0]);
-        const jj = parseInt(parts[1]);
-        
-        if (isNaN(mm) || mm < 1 || mm > 12) {
-            return {
-                valid: false,
-                error: i18n.monthly_stats?.error_invalid_month
-            };
-        }
-        
-        if (isNaN(jj) || jj < 0 || jj > 99) {
-            return {
-                valid: false,
-                error: i18n.monthly_stats?.error_invalid_year
-            };
-        }
-        
-        return {
-            valid: true,
-            mm: mm,
-            jj: jj
+
+        return { 
+            mm: String(parseInt(mm)).padStart(2, '0'), 
+            jj: String(parseInt(jj)).padStart(2, '0')
         };
     }
 
-    // Show month/year error
-    function showMonthYearError(message) {
-        if (monthYearError) {
-            monthYearError.textContent = message;
-            monthYearError.style.display = 'block';
-            monthYearInput?.classList.add('is-invalid');
+    // Load date defaults (same helper used by monthly report)
+    async function loadDateDefault() {
+        try {
+            const dateDefault = await getDateDefault();
+            if (dateDefault) {
+                if (monthSelect) {
+                    monthSelect.value = dateDefault.month;
+                }
+                if (yearSelect) {
+                    yearSelect.value = dateDefault.jj;
+                }
+            }
+        } catch (error) {
+            console.error('Error loading date default:', error);
         }
     }
 
-    // Hide month/year error
-    function hideMonthYearError() {
-        if (monthYearError) {
-            monthYearError.style.display = 'none';
-            monthYearInput?.classList.remove('is-invalid');
+    // Populate year dropdown
+    function populateYears() {
+        const startYear = 1950;
+        const endYear = 2049;
+        
+        for (let year = startYear; year <= endYear; year++) {
+            const yy = String(year % 100).padStart(2, '0');
+            const option = document.createElement('option');
+            option.value = yy;
+            option.textContent = year;
+            yearSelect.appendChild(option);
         }
     }
 
     // Apply filter and generate statistics
     async function applyFilter() {
-        hideMonthYearError();
-        
-        // Validate month/year input
-        const monthYearValue = monthYearInput?.value || '';
-        if (!monthYearValue.trim()) {
-            showMonthYearError(i18n.monthly_stats?.error_month_year_required);
+        // Validate month/year
+        const dateInfo = validateMonthYear();
+        if (!dateInfo) {
+            monthSelect.focus();
             return;
         }
-        
-        const validation = validateMonthYear(monthYearValue);
-        if (!validation.valid) {
-            showMonthYearError(validation.error);
-            return;
-        }
-        
+
         // Show spinner
         if (applySpinner) applySpinner.style.display = 'inline-block';
         if (btnApply) btnApply.disabled = true;
         
         try {
             // Fetch monthly statistics
-            const url = `/api/monthly-stats?mm=${validation.mm}&jj=${validation.jj}`;
+            const url = `/api/monthly-stats?mm=${dateInfo.mm}&jj=${dateInfo.jj}`;
             const response = await fetch(url);
-            const data = await response.json();
             
             if (!response.ok) {
-                showMonthYearError(data.error);
-                return;
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                console.error('API error:', errorData);
+                throw new Error(errorData.error);
             }
             
-            if (data.count === 0) {
-                showMonthYearError(i18n.monthly_stats?.error_no_data);
-                return;
-            }
-            
-            // Store data for save/print
-            currentStatsData = data;
-            
-            // Debug: log the data
-
+            const data = await response.json();
 
             
             // Close filter dialog
             const modal = bootstrap.Modal.getInstance(filterDialog);
             modal?.hide();
-            
-            // Show results
+
+            // Display the statistics
             showStatistics(data);
-            
+
         } catch (error) {
-            console.error('Error fetching statistics:', error);
-            showMonthYearError('Error fetching statistics');
+            console.error('Error generating statistics:', error);
+            const errorMsg = i18n.ui.messages.error;
+            alert(errorMsg);
         } finally {
-            // Hide spinner
-            if (applySpinner) applySpinner.style.display = 'none';
-            if (btnApply) btnApply.disabled = false;
+            applySpinner.style.display = 'none';
+            btnApply.disabled = false;
         }
     }
 
@@ -561,9 +543,20 @@ document.addEventListener('DOMContentLoaded', async function() {
         btnApply.addEventListener('click', applyFilter);
     }
     
-    if (monthYearInput) {
-        monthYearInput.addEventListener('input', hideMonthYearError);
-    }
+    // Enter key support
+    monthSelect.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            applyFilter();
+        }
+    });
+
+    yearSelect.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            applyFilter();
+        }
+    });
     
     // Enter key support when filter dialog is visible
     const filterEnterKeyHandler = (e) => {
@@ -1039,10 +1032,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     async function initialize() {
         await loadI18n();
         
-        // Check if data is already loaded on the server (same as monthly_report.js)
+        // Populate year dropdown
+        populateYears();
+        
+        // Check if data is already loaded on the server
         const dataLoaded = await checkDataLoaded();
         
         if (dataLoaded) {
+            // Load date default and pre-fill month/year dropdowns
+            await loadDateDefault();
+            
             // Show filter dialog automatically with explicit backdrop configuration
             const modal = new bootstrap.Modal(filterDialog, {
                 backdrop: true,
@@ -1050,18 +1049,21 @@ document.addEventListener('DOMContentLoaded', async function() {
             });
             modal.show();
             
-            // Focus month/year input when modal is shown
+            // Focus month select when modal is shown
             filterDialog.addEventListener('shown.bs.modal', () => {
-                if (monthYearInput) {
-                    monthYearInput.focus();
+                if (monthSelect) {
+                    monthSelect.focus();
                 }
             });
         }
     }
 
+    // Setup event listeners for action buttons (OK, Print, Save)
+    setupActionButtons();
+
     // Build Pseudografik format statistics (original implementation)
     function buildPseudografikMonthlyStats(data, monthName, year, i18n) {
-        let html = '<div class="statistics-report" style="font-family: monospace; white-space: pre; font-size: 11px; color: #000000; line-height: 1.3;">';
+        let html = '<div class="statistics-report" style="font-family: monospace; white-space: pre; font-size: 11px; color: #000000; line-height: 1;">';
         
         // Title (centered)
         const titleLine = `${i18n.monthly_stats?.title} ${monthName} ${year}`;

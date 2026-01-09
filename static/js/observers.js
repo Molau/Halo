@@ -243,7 +243,7 @@ function goToPage(page) {
  */
 function displayObservers() {
     if (filteredObservers.length === 0) {
-        showWarningModal((i18n && i18n.messages && i18n.messages.no_observers) || 'Keine Beobachter gefunden');
+        showWarningModal((i18n && i18n.messages && i18n.messages.no_observers));
         return;
     }
     
@@ -283,7 +283,7 @@ function displayObservers() {
             <div class="modal-dialog modal-dialog-centered modal-xl">
                 <div class="modal-content">
                     <div class="modal-header py-1">
-                        <h6 class="modal-title mb-0">${(i18n && i18n.observers && i18n.observers.title) || 'Beobachter'} (${filteredObservers.length} ${recordsLabel})</h6>
+                        <h6 class="modal-title mb-0">${(i18n && i18n.observers && i18n.observers.title)} (${filteredObservers.length} ${recordsLabel})</h6>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body py-2" style="max-height: 70vh; overflow-y: auto;">
@@ -291,15 +291,15 @@ function displayObservers() {
                             <thead class="table-light sticky-top">
                                 <tr>
                                     <th>KK</th>
-                                    <th>${(i18n && i18n.observers && i18n.observers.name) || 'Name'}</th>
-                                    <th>${(i18n && i18n.observers && i18n.observers.since) || 'Seit'}</th>
-                                    <th>${(i18n && i18n.observers && i18n.observers.active) || 'Aktiv'}</th>
-                                    <th>${(i18n && i18n.observers && i18n.observers.primary_site) || 'HbOrt'}</th>
+                                    <th>${(i18n && i18n.observers && i18n.observers.name)}</th>
+                                    <th>${(i18n && i18n.observers && i18n.observers.since)}</th>
+                                    <th>${(i18n && i18n.observers && i18n.observers.active)}</th>
+                                    <th>${(i18n && i18n.observers && i18n.observers.primary_site)}</th>
                                     <th>GH</th>
-                                    <th>${(i18n && i18n.observers && i18n.observers.coordinates) || 'Koordinaten'}</th>
-                                    <th>${(i18n && i18n.observers && i18n.observers.secondary_site) || 'NbOrt'}</th>
+                                    <th>${(i18n && i18n.observers && i18n.observers.coordinates)}</th>
+                                    <th>${(i18n && i18n.observers && i18n.observers.secondary_site)}</th>
                                     <th>GN</th>
-                                    <th>${(i18n && i18n.observers && i18n.observers.coordinates) || 'Koordinaten'}</th>
+                                    <th>${(i18n && i18n.observers && i18n.observers.coordinates)}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -308,7 +308,7 @@ function displayObservers() {
                         </table>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">${(i18n && i18n.ui && i18n.ui.buttons && i18n.ui.buttons.close) || 'Schließen'}</button>
+                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">${(i18n && i18n.ui && i18n.ui.buttons && i18n.ui.buttons.close)}</button>
                     </div>
                 </div>
             </div>

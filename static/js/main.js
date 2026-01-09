@@ -170,6 +170,49 @@ function showConfirmDialog(title, message, onConfirm, onCancel, buttonLabels = n
     modal.show();
 }
 
+// Helper function to get default month and year based on date default setting
+async function getDateDefault() {
+    try {
+        const response = await fetch('/api/config/datedefault');
+        if (!response.ok) {
+            return null;
+        }
+        const config = await response.json();
+        
+        if (!config.mode || config.mode === 'none') {
+            return null;
+        }
+        
+        const now = new Date();
+        let month, year;
+        
+        if (config.mode === 'current') {
+            month = now.getMonth() + 1; // JavaScript months are 0-indexed
+            year = now.getFullYear();
+        } else if (config.mode === 'previous') {
+            month = now.getMonth(); // 0 = Dec of previous year, 1-11 = Jan-Nov of current year
+            if (month === 0) {
+                month = 12;
+                year = now.getFullYear() - 1;
+            } else {
+                year = now.getFullYear();
+            }
+        } else if (config.mode === 'constant') {
+            month = config.month || 1;
+            year = config.year || now.getFullYear();
+        }
+        
+        // Convert to 2-digit format for consistency with HALO data format
+        const mm = String(month).padStart(2, '0');
+        const jj = String(year % 100).padStart(2, '0'); // 2-digit year
+        
+        return { mm, jj, month, year };
+    } catch (error) {
+        console.error('Error fetching date default:', error);
+        return null;
+    }
+}
+
 // Setup hover dropdowns
 function setupHoverDropdowns() {
     const dropdowns = document.querySelectorAll('.nav-item.dropdown');
@@ -281,6 +324,10 @@ function handleMenuAction(action) {
             highlightSettingsMenu();
             showFixedObserverDialog();
             break;
+        case 'settings-datum':
+            highlightSettingsMenu();
+            showDatumDialog();
+            break;
         case 'settings-eingabeart':
             highlightSettingsMenu();
             showEingabeartDialog();
@@ -381,6 +428,14 @@ async function showAddObservationDialogNumeric() {
     } catch (e) {
         console.error('Error loading fixed observer:', e);
     }
+
+    // Get date default setting
+    let dateDefault = null;
+    try {
+        dateDefault = await getDateDefault();
+    } catch (e) {
+        console.error('Error loading date default:', e);
+    }
     
     const title = i18nStrings.observations.add_observation;
     const pattern = i18nStrings.observations.input_pattern;
@@ -425,6 +480,12 @@ async function showAddObservationDialogNumeric() {
     const input = document.getElementById('obs-code-input');
     const errEl = document.getElementById('obs-code-error');
     let eing = fixedObserver;  // Pre-fill with fixed observer KK
+    
+    // If date default is available, append MM and JJ after KK and O (positions 2-3)
+    if (dateDefault && eing.length >= 4) {
+        // Keep KK (2 chars) + O (1 char) + JJ (2 chars) + MM (2 chars)
+        eing = eing.substring(0, 3) + dateDefault.jj + dateDefault.mm + eing.substring(5);
+    }
 
     // Focus input as soon as modal is shown
     modalEl.addEventListener('shown.bs.modal', () => {
@@ -487,7 +548,25 @@ async function showAddObservationDialogNumeric() {
         const inSectorField = eing.length >= 35 && eing.length < 50;
         let candidate = eing + (inSectorField ? ch.toLowerCase() : ch);
         
-
+        // Auto-fill JJ and MM when user reaches position 3 (after KK + O)
+        if (candidate.length === 3 && dateDefault) {
+            // Validate up to position 3
+            const result = validateNumericProgress(candidate, observerCodes);
+            if (!result.ok) {
+                errEl.textContent = result.msg;
+                errEl.style.display = 'block';
+                ev.preventDefault();
+                return;
+            }
+            // Auto-fill JJ and MM
+            candidate = candidate + dateDefault.jj + dateDefault.mm;
+            eing = candidate;
+            input.value = eing;
+            errEl.style.display = 'none';
+            renderNumericGuide(eing);
+            ev.preventDefault();
+            return;
+        }
         
         // Auto-fill GG when g=0 or g=2 (after zz complete at position 28)
         if (candidate.length === 28) {
@@ -756,6 +835,14 @@ async function showAddObservationDialogMenu() {
         console.error('Error loading fixed observer:', e);
     }
 
+    // Get date default setting
+    let dateDefault = null;
+    try {
+        dateDefault = await getDateDefault();
+    } catch (e) {
+        console.error('Error loading date default:', e);
+    }
+
     const title = i18nStrings.observations.add_observation;
     
     // Build observer options with fixed observer pre-selected
@@ -810,7 +897,11 @@ async function showAddObservationDialogMenu() {
                                 <label class="form-label">MM - ${i18nStrings.fields.month} <span class="text-danger">*</span></label>
                                 <select class="form-select form-select-sm" id="menu-mm" required>
                                     <option value="">-- ${i18nStrings.fields.select} --</option>
-                                    ${Array.from({length: 12}, (_, i) => `<option value="${i+1}">${String(i+1).padStart(2, '0')}</option>`).join('')}
+                                    ${Array.from({length: 12}, (_, i) => {
+                                        const monthNum = i + 1;
+                                        const monthName = i18nStrings.months[monthNum];
+                                        return `<option value="${monthNum}">${String(monthNum).padStart(2, '0')} - ${monthName}</option>`;
+                                    }).join('')}
                                 </select>
                             </div>
                             <div class="col-md-4">
@@ -948,7 +1039,7 @@ async function showAddObservationDialogMenu() {
                                 <select class="form-select form-select-sm" id="menu-zz">
                                     <option value="-1">-- ${i18nStrings.fields.not_specified} --</option>
                                     ${Array.from({length: 99}, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')} h</option>`).join('')}
-                                    <option value="99">99 - ${i18nStrings.precipitation['99']}</option>
+                                    <option value="99">99 - ${i18nStrings.fields.not_specified}</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -1002,6 +1093,20 @@ async function showAddObservationDialogMenu() {
     const modalEl = document.getElementById('add-observation-menu-modal');
     const modal = new bootstrap.Modal(modalEl);
     modal.show();
+    
+    // Pre-fill MM and JJ with date default if available
+    if (dateDefault) {
+        setTimeout(() => {
+            const mmField = document.getElementById('menu-mm');
+            const jjField = document.getElementById('menu-jj');
+            if (mmField) {
+                mmField.value = dateDefault.month;
+            }
+            if (jjField) {
+                jjField.value = dateDefault.jj;
+            }
+        }, 100);
+    }
     
     const errEl = document.getElementById('menu-obs-error');
     const okBtn = document.getElementById('btn-add-obs-menu-ok');
@@ -5219,6 +5324,131 @@ async function showFixedObserverDialog() {
     }
 }
 
+// Show Datum (Date Default) dialog
+async function showDatumDialog() {
+    try {
+        const response = await fetch('/api/config/datedefault');
+        const config = await response.json();
+        const currentSetting = config.mode || 'none';
+        const currentMonth = config.month || 1;
+        const currentYear = config.year || new Date().getFullYear();
+        
+        // Generate month options
+        const monthOptions = [];
+        for (let m = 1; m <= 12; m++) {
+            const monthName = i18nStrings.months[m] || `Month ${m}`;
+            monthOptions.push(`<option value="${m}" ${m === currentMonth ? 'selected' : ''}>${monthName}</option>`);
+        }
+        
+        // Generate year options (1950-2049)
+        const yearOptions = [];
+        for (let y = 1950; y <= 2049; y++) {
+            yearOptions.push(`<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`);
+        }
+        
+        // Create Bootstrap modal
+        const modalHtml = `
+            <div class="modal fade" id="datum-modal" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">${i18nStrings.menus.settings.date_setting_title}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="mb-3">${i18nStrings.menus.settings.date_setting_question}</p>
+                            <div class="row mb-2">
+                                <div class="col-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="datum" id="date-none" value="none" ${currentSetting === 'none' ? 'checked' : ''}>
+                                        <label class="form-check-label" for="date-none">${i18nStrings.menus.settings.date_none}</label>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="datum" id="date-current" value="current" ${currentSetting === 'current' ? 'checked' : ''}>
+                                        <label class="form-check-label" for="date-current">${i18nStrings.menus.settings.date_current_month}</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="datum" id="date-previous" value="previous" ${currentSetting === 'previous' ? 'checked' : ''}>
+                                        <label class="form-check-label" for="date-previous">${i18nStrings.menus.settings.date_previous_month}</label>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="datum" id="date-constant" value="constant" ${currentSetting === 'constant' ? 'checked' : ''}>
+                                        <label class="form-check-label" for="date-constant">${i18nStrings.menus.settings.date_constant_month}</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="constant-month-inputs" style="display: ${currentSetting === 'constant' ? 'block' : 'none'}; margin-left: 25px;">
+                                <label class="form-label mb-2">${i18nStrings.menus.settings.date_select_month}</label>
+                                <div class="row g-2">
+                                    <div class="col-7">
+                                        <select class="form-select" id="constant-month">
+                                            ${monthOptions.join('')}
+                                        </select>
+                                    </div>
+                                    <div class="col-5">
+                                        <select class="form-select" id="constant-year">
+                                            ${yearOptions.join('')}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                            <button type="button" class="btn btn-primary" id="btn-datum-ok">${i18nStrings.common.ok}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        const modalEl = document.getElementById('datum-modal');
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+        
+        // Show/hide constant month inputs based on selection
+        const radioButtons = document.querySelectorAll('input[name="datum"]');
+        const constantInputs = document.getElementById('constant-month-inputs');
+        radioButtons.forEach(radio => {
+            radio.addEventListener('change', () => {
+                constantInputs.style.display = radio.value === 'constant' ? 'block' : 'none';
+            });
+        });
+        
+        document.getElementById('btn-datum-ok').addEventListener('click', async () => {
+            const selected = document.querySelector('input[name="datum"]:checked');
+            const newMode = selected ? selected.value : 'none';
+            const month = parseInt(document.getElementById('constant-month').value);
+            const year = parseInt(document.getElementById('constant-year').value);
+            
+            modal.hide();
+            
+            await fetch('/api/config/datedefault', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({mode: newMode, month: month, year: year})
+            });
+        });
+        
+        modalEl.addEventListener('hidden.bs.modal', () => {
+            clearMenuHighlights();
+            modalEl.remove();
+        });
+        
+    } catch (error) {
+        console.error('Date default dialog error:', error);
+    }
+}
+
 // Show Eingabeart dialog
 async function showEingabeartDialog() {
     try {
@@ -5354,13 +5584,16 @@ async function showAusgabeartDialog() {
 
 // Show version information dialog
 function showVersionDialog() {
-    const v = i18nStrings.menus.help.version_dialog || {};
-    const versionText = `<h4 class="text-center mb-4">${v.title}</h4>
-           <p class="mb-2"><strong>${v.date_label}:</strong> ${v.date}</p>
+    const v = i18nStrings.menus.help.version_dialog;
+    const versionNumber = i18nStrings.app.version;
+    const versionDate = i18nStrings.app.version_date;
+    const versionTitle = `${i18nStrings.app.title} ${versionNumber}`;
+
+    const versionText = `<h4 class="text-center mb-4">${versionTitle}</h4>
+           <p class="mb-2"><strong>${v.date_label}:</strong> ${versionDate}</p>
            <p class="mb-3"><strong>${v.author_label}:</strong> ${v.author}</p>
            <hr class="my-3">
            <p class="mb-2">${v.description}</p>
-           <p class="mb-2">${v.section}</p>
            <p class="mb-3">${v.workgroup}</p>
            <hr class="my-3">
            <p class="mb-1">Sirko Molau</p>
@@ -5374,7 +5607,7 @@ function showVersionDialog() {
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">${i18nStrings.help.version}</h5>
+                        <h5 class="modal-title">${i18nStrings.menus.help.version}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">

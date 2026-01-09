@@ -1066,6 +1066,47 @@ def outputmode() -> Dict[str, Any]:
         })
 
 
+@api_blueprint.route('/config/datedefault', methods=['GET', 'POST'])
+def datedefault() -> Dict[str, Any]:
+    """Get or set date default (Datumsvoreinstellung) - NEW FEATURE"""
+    from flask import current_app, request
+    
+    if request.method == 'POST':
+        data = request.get_json()
+        mode = data.get('mode', 'none')
+        month = data.get('month', 1)
+        year = data.get('year', 2026)
+        
+        if mode not in ['none', 'current', 'previous', 'constant']:
+            return jsonify({'error': 'Invalid mode. Must be none, current, previous, or constant'}), 400
+        
+        current_app.config['DATE_DEFAULT_MODE'] = mode
+        current_app.config['DATE_DEFAULT_MONTH'] = month
+        current_app.config['DATE_DEFAULT_YEAR'] = year
+        
+        # Persist settings
+        from pathlib import Path
+        root_path = Path(__file__).parent.parent.parent.parent
+        from halo.services.settings import Settings
+        Settings.save_from(current_app.config, root_path)
+        
+        return jsonify({
+            'success': True,
+            'mode': mode,
+            'month': month,
+            'year': year
+        })
+    else:
+        mode = current_app.config.get('DATE_DEFAULT_MODE', 'none')
+        month = current_app.config.get('DATE_DEFAULT_MONTH', 1)
+        year = current_app.config.get('DATE_DEFAULT_YEAR', 2026)
+        return jsonify({
+            'mode': mode,
+            'month': month,
+            'year': year
+        })
+
+
 @api_blueprint.route('/config/fixed_observer', methods=['GET', 'POST'])
 def fixed_observer() -> Dict[str, Any]:
     """Get or set fixed observer (fester Beobachter)"""
@@ -1683,9 +1724,15 @@ def get_annual_stats() -> Dict[str, Any]:
     
     try:
         jj_int = int(jj)
-        
-        if jj_int < 0 or jj_int > 99:
-            return jsonify({'error': 'Invalid year (0-99)'}), 400
+
+        # Accept both 2-digit and 4-digit years (1950-2049) and normalize to 2-digit
+        if 1950 <= jj_int <= 1999:
+            jj_int -= 1900
+        elif 2000 <= jj_int <= 2049:
+            jj_int -= 2000
+        elif jj_int < 0 or jj_int > 99:
+            return jsonify({'error': 'Invalid year (0-99 or 1950-2049)'}), 400
+
     except ValueError:
         return jsonify({'error': 'Invalid numeric parameter'}), 400
     
@@ -2426,12 +2473,9 @@ def update_observer(kk: str) -> Dict[str, Any]:
     
     try:
         # Write updated observers to CSV
-        print(f"DEBUG: Writing to: {halobeo_path}")
-        print(f"DEBUG: Updated {updated_count} entries for KK {kk}: VName={first_updated[1]}, NName={first_updated[2]}")
         with open(halobeo_path, 'w', encoding='utf-8', newline='') as f:
             writer = csv.writer(f)
             writer.writerows(observers)
-        print(f"DEBUG: Successfully wrote {len(observers)} observers to CSV")
         
         # Update config with modified list
         current_app.config['OBSERVERS'] = observers
@@ -2913,13 +2957,18 @@ def analyze_observations() -> Dict[str, Any]:
             data = _group_by_parameter(filtered_obs, param1, params, 'param1')
         else:
             # Two parameter analysis (cross-tabulation)
-            data = _group_by_two_parameters(filtered_obs, param1, param2, params)
+            data, debug_info = _group_by_two_parameters(filtered_obs, param1, param2, params)
         
-        return jsonify({
+        response_payload = {
             'success': True,
             'data': data,
             'total': len(filtered_obs)
-        })
+        }
+        # Include SH debug info when present
+        if param2 and param1 and (param1 == 'SH' or param2 == 'SH'):
+            response_payload['debug'] = debug_info
+
+        return jsonify(response_payload)
         
     except Exception as e:
         import traceback
@@ -3250,6 +3299,17 @@ def _apply_param_range_filter(observations, param_name, all_params, prefix):
                 result.append(obs)
         
         return result
+    elif param_name == 'HO_HU':
+        # Pillar height parameter - check both HO and HU values
+        result = []
+        for obs in observations:
+            ho = getattr(obs, 'HO', None)
+            hu = getattr(obs, 'HU', None)
+            # Include observation if either HO or HU is in range
+            if (ho is not None and from_val <= ho <= to_val) or \
+               (hu is not None and from_val <= hu <= to_val):
+                result.append(obs)
+        return result
     else:
         # Numeric range parameters
         result = []
@@ -3406,6 +3466,18 @@ def _matches_parameter(obs, param_name, param_value, all_params, prefix):
         else:
             return str(obs.EE).rstrip('*') == str(param_value)
     
+    elif param_name == 'HO_HU':
+        # Match if either HO or HU equals the requested height (only valid when >=0)
+        try:
+            param_value = int(param_value)
+        except (ValueError, TypeError):
+            return False
+        ho = getattr(obs, 'HO', None)
+        hu = getattr(obs, 'HU', None)
+        ho_match = ho is not None and ho >= 0 and ho == param_value
+        hu_match = hu is not None and hu >= 0 and hu == param_value
+        return ho_match or hu_match
+
     elif param_name == 'DD':
         # Duration with incomplete option
         incomplete_key = f'{prefix}_dd_incomplete'
@@ -3460,6 +3532,18 @@ def _group_by_parameter(observations, param_name, all_params, prefix):
             else:
                 sh_type = all_params.get('sh_type', 'mean')
                 value = _calculate_observation_solar_altitude(obs, observers, sh_type)
+        elif param_name == 'HO_HU':
+            # Light pillar heights: count both HO and HU if present (>=0)
+            ho = getattr(obs, 'HO', None)
+            hu = getattr(obs, 'HU', None)
+            added = False
+            if ho is not None and ho >= 0:
+                groups[str(ho)] += 1
+                added = True
+            if hu is not None and hu >= 0:
+                groups[str(hu)] += 1
+                added = True
+            value = None if added else None
         elif param_name == 'C':
             # Cirrus type with split option
             value = getattr(obs, 'C', None)
@@ -3498,12 +3582,22 @@ def _group_by_parameter(observations, param_name, all_params, prefix):
                     groups[str(right)] += 1
                     value = None  # Don't count again below
         elif param_name == 'SE':
-            # Sectors: count each octant letter (a-h) present in the sectors string
-            sector_letters = _extract_sector_letters(getattr(obs, 'sectors', ''))
-            # Only count observations that have sectors (skip those without)
+            # Sectors: count octants present or visible
+            # V=2 (complete halo): all segments a-h are visible
+            # V=1 (incomplete halo): only explicitly listed segments are visible
+            # No segments: "nicht zutreffend" - skip this observation entirely
+            v = getattr(obs, 'V', None)
+            if v == 2:
+                # Complete halo: count all segments a-h
+                sector_letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+            else:
+                # Incomplete halo: extract explicit sectors
+                sector_letters = _extract_sector_letters(getattr(obs, 'sectors', ''))
+            
+            # Only count observations that have sectors (skip "nicht zutreffend")
             for letter in sector_letters:
                 groups[letter] += 1
-            value = None  # Already counted
+            continue  # Skip further processing for this observation
         else:
             value = getattr(obs, param_name, None)
         
@@ -3519,8 +3613,8 @@ def _group_by_parameter(observations, param_name, all_params, prefix):
         
         # Use unformatted key for grouping to avoid duplicates
         if value is None:
-            if param_name in ['C', 'EE']:
-                # For C and EE parameters with split, we already added the component values above
+            if param_name in ['C', 'EE', 'HO_HU']:
+                # For split/combined parameters, component values may already be counted
                 pass
             else:
                 group_key = 'keine Angabe'  # "not observed"
@@ -3660,6 +3754,18 @@ def _group_by_two_parameters(observations, param1_name, param2_name, all_params)
     observers = None
     if param1_name == 'SH' or param2_name == 'SH':
         observers = current_app.config.get('OBSERVERS', [])
+
+    # Debug counters for SH and HO_HU calculations
+    hohu_debug = {
+        'processed': 0,
+        'samples': []
+    }
+    sh_debug = {
+        'param1_attempts': 0,
+        'param1_none': 0,
+        'param2_attempts': 0,
+        'param2_none': 0,
+    }
     
     for obs in observations:
         # Get values for both parameters
@@ -3672,9 +3778,13 @@ def _group_by_two_parameters(observations, param1_name, param2_name, all_params)
         elif param1_name == 'SH':
             if obs.O != 1 or obs.g == 1:
                 val1 = None
+                sh_debug['param1_none'] += 1
             else:
                 sh_type = all_params.get('sh_type', 'mean')
                 val1 = _calculate_observation_solar_altitude(obs, observers, sh_type)
+                sh_debug['param1_attempts'] += 1
+                if val1 is None:
+                    sh_debug['param1_none'] += 1
         else:
             val1 = getattr(obs, param1_name, None)
         
@@ -3686,9 +3796,13 @@ def _group_by_two_parameters(observations, param1_name, param2_name, all_params)
         elif param2_name == 'SH':
             if obs.O != 1 or obs.g == 1:
                 val2 = None
+                sh_debug['param2_none'] += 1
             else:
                 sh_type = all_params.get('sh_type', 'mean')
                 val2 = _calculate_observation_solar_altitude(obs, observers, sh_type)
+                sh_debug['param2_attempts'] += 1
+                if val2 is None:
+                    sh_debug['param2_none'] += 1
         else:
             val2 = getattr(obs, param2_name, None)
         
@@ -3709,8 +3823,30 @@ def _group_by_two_parameters(observations, param1_name, param2_name, all_params)
         
         # Handle C (cirrus) splitting for param1
         if param1_name == 'SE':
-            sector_letters = _extract_sector_letters(getattr(obs, 'sectors', ''))
-            val1_list = sector_letters if sector_letters else []
+            # Sectors: count octants present or visible
+            # V=2 (complete halo): all segments a-h are visible
+            # V=1 (incomplete halo): only explicitly listed segments are visible
+            v = getattr(obs, 'V', None)
+            if v == 2:
+                # Complete halo: count all segments a-h
+                val1_list = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+            else:
+                # Incomplete halo: extract explicit sectors
+                sector_letters = _extract_sector_letters(getattr(obs, 'sectors', ''))
+                val1_list = sector_letters if sector_letters else []
+        elif param1_name == 'HO_HU':
+            ho = getattr(obs, 'HO', None)
+            hu = getattr(obs, 'HU', None)
+            val1_list = []
+            if ho is not None and ho >= 0:
+                val1_list.append(str(ho))
+            if hu is not None and hu >= 0:
+                val1_list.append(str(hu))
+            if not val1_list:
+                val1_list = ['keine Angabe']
+            if len(hohu_debug['samples']) < 5:
+                hohu_debug['samples'].append({'obs': obs.__dict__.get('KK', None), 'ho': ho, 'hu': hu, 'val1_list': list(val1_list)})
+            hohu_debug['processed'] += 1
         elif param1_name == 'C' and val1 is not None and all_params.get('param1_c_split'):
             c_value = int(val1) if isinstance(val1, (int, str)) else val1
             if c_value == 4:  # C4 (Ci + Cc) → count as both C1 and C2
@@ -3737,8 +3873,30 @@ def _group_by_two_parameters(observations, param1_name, param2_name, all_params)
         
         # Handle C (cirrus) splitting for param2
         if param2_name == 'SE':
-            sector_letters = _extract_sector_letters(getattr(obs, 'sectors', ''))
-            val2_list = sector_letters if sector_letters else []
+            # Sectors: count octants present or visible
+            # V=2 (complete halo): all segments a-h are visible
+            # V=1 (incomplete halo): only explicitly listed segments are visible
+            v = getattr(obs, 'V', None)
+            if v == 2:
+                # Complete halo: count all segments a-h
+                val2_list = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+            else:
+                # Incomplete halo: extract explicit sectors
+                sector_letters = _extract_sector_letters(getattr(obs, 'sectors', ''))
+                val2_list = sector_letters if sector_letters else []
+        elif param2_name == 'HO_HU':
+            ho = getattr(obs, 'HO', None)
+            hu = getattr(obs, 'HU', None)
+            val2_list = []
+            if ho is not None and ho >= 0:
+                val2_list.append(str(ho))
+            if hu is not None and hu >= 0:
+                val2_list.append(str(hu))
+            if not val2_list:
+                val2_list = ['keine Angabe']
+            if param1_name != 'HO_HU' and len(hohu_debug['samples']) < 5:
+                hohu_debug['samples'].append({'obs': obs.__dict__.get('KK', None), 'ho': ho, 'hu': hu, 'val2_list': list(val2_list)})
+            hohu_debug['processed'] += 1
         elif param2_name == 'C' and val2 is not None and all_params.get('param2_c_split'):
             c_value = int(val2) if isinstance(val2, (int, str)) else val2
             if c_value == 4:  # C4 (Ci + Cc) → count as both C1 and C2
@@ -3767,18 +3925,27 @@ def _group_by_two_parameters(observations, param1_name, param2_name, all_params)
         for v1 in val1_list:
             for v2 in val2_list:
                 groups[v1][v2] += 1
+
+    # Debug: summarize HO_HU counts before range expansion
+    if (param1_name == 'HO_HU' or param2_name == 'HO_HU'):
+        hohu_total = 0
+        hohu_rows = []
+        for k1, inner in groups.items():
+            for k2, cnt in inner.items():
+                hohu_total += cnt
+                if len(hohu_rows) < 5 and cnt > 0:
+                    hohu_rows.append((k1, k2, cnt))
     
-    # Convert to dict of dicts
-    result = {}
-    for k, v in groups.items():
-        result[k] = dict(v)
-    
-    # Generate all values for param1 range
+    # Generate all values for param1 range FIRST
+    # Only fill ranges for parameters where all values in range are meaningful
     param1_from_key = 'param1_from'
     param1_to_key = 'param1_to'
     param1_range_values = []
     
-    if param1_from_key in all_params and param1_to_key in all_params:
+    # Parameters that support complete range filling (every value exists/is meaningful)
+    rangeable_params = ['ZZ', 'MM', 'TT', 'JJ', 'DD', 'C', 'dd', 'SH', 'EE', 'GG', 'KK', 'HO_HU']
+    
+    if param1_name in rangeable_params and param1_from_key in all_params and param1_to_key in all_params:
         from_val = all_params[param1_from_key]
         to_val = all_params[param1_to_key]
         
@@ -3794,6 +3961,33 @@ def _group_by_two_parameters(observations, param1_name, param2_name, all_params)
                             param1_range_values = list(range(from_val, 100)) + list(range(0, to_val + 1))
                         else:
                             param1_range_values = list(range(from_val, to_val + 1))
+                    elif param1_name == 'EE':
+                        # Halo types - only those defined in i18n
+                        from halo.resources.i18n import get_i18n
+                        i18n = get_i18n()
+                        valid_ee = set(int(k) for k in i18n.strings['halo_types'].keys())
+                        param1_range_values = []
+                        for val in range(from_val, to_val + 1):
+                            if val in valid_ee:
+                                param1_range_values.append(val)
+                    elif param1_name == 'GG':
+                        # Geographic regions - only those defined in i18n
+                        from halo.resources.i18n import get_i18n
+                        i18n = get_i18n()
+                        valid_gg = set(int(k) for k in i18n.strings['geographic_regions'].keys())
+                        param1_range_values = []
+                        for val in range(from_val, to_val + 1):
+                            if val in valid_gg:
+                                param1_range_values.append(val)
+                    elif param1_name == 'KK':
+                        # Observers - show all that exist in observer database, regardless of observations
+                        observers = current_app.config.get('OBSERVERS', [])
+                        # Observers are lists, KK is at index 0
+                        existing_kk = sorted(set(int(obs[0]) for obs in observers))
+                        param1_range_values = []
+                        for val in range(from_val, to_val + 1):
+                            if val in existing_kk:
+                                param1_range_values.append(val)
                     else:
                         param1_range_values = list(range(from_val, to_val + 1))
             except (ValueError, TypeError):
@@ -3804,7 +3998,7 @@ def _group_by_two_parameters(observations, param1_name, param2_name, all_params)
     param2_to_key = 'param2_to'
     param2_range_values = []
     
-    if param2_from_key in all_params and param2_to_key in all_params:
+    if param2_name in rangeable_params and param2_from_key in all_params and param2_to_key in all_params:
         from_val = all_params[param2_from_key]
         to_val = all_params[param2_to_key]
         
@@ -3820,24 +4014,79 @@ def _group_by_two_parameters(observations, param1_name, param2_name, all_params)
                             param2_range_values = list(range(from_val, 100)) + list(range(0, to_val + 1))
                         else:
                             param2_range_values = list(range(from_val, to_val + 1))
+                    elif param2_name == 'EE':
+                        # Halo types - only those defined in i18n
+                        from halo.resources.i18n import get_i18n
+                        i18n = get_i18n()
+                        valid_ee = set(int(k) for k in i18n.strings['halo_types'].keys())
+                        param2_range_values = []
+                        for val in range(from_val, to_val + 1):
+                            if val in valid_ee:
+                                param2_range_values.append(val)
+                    elif param2_name == 'GG':
+                        # Geographic regions - only those defined in i18n
+                        from halo.resources.i18n import get_i18n
+                        i18n = get_i18n()
+                        valid_gg = set(int(k) for k in i18n.strings['geographic_regions'].keys())
+                        param2_range_values = []
+                        for val in range(from_val, to_val + 1):
+                            if val in valid_gg:
+                                param2_range_values.append(val)
+                    elif param2_name == 'KK':
+                        # Observers - show all that exist in observer database, regardless of observations
+                        observers = current_app.config.get('OBSERVERS', [])
+                        # Observers are lists, KK is at index 0
+                        existing_kk = sorted(set(int(obs[0]) for obs in observers))
+                        param2_range_values = []
+                        for val in range(from_val, to_val + 1):
+                            if val in existing_kk:
+                                param2_range_values.append(val)
                     else:
                         param2_range_values = list(range(from_val, to_val + 1))
             except (ValueError, TypeError):
                 pass
     
-    # Fill in missing rows and columns
-    if param1_range_values:
-        for val in param1_range_values:
-            str_val = str(val)
-            if str_val not in result:
-                result[str_val] = {}
+    # Build complete result table with pre-initialization strategy
+    # Step 1: Determine which param1 and param2 values to include
     
+    # Convert param1_range_values to string keys for display
+    param1_values_to_show = []
+    if param1_range_values:
+        param1_values_to_show = [str(v % 100) if param1_name == 'JJ' else str(v) for v in param1_range_values]
+    else:
+        # Use all param1 values that appear in observations
+        param1_values_to_show = sorted(groups.keys())
+    
+    # Collect all param2 values from observations
+    param2_from_observations = set()
+    for p1_val in groups:
+        param2_from_observations.update(groups[p1_val].keys())
+    
+    # Determine param2 values to show
+    param2_values_to_show = []
     if param2_range_values:
-        for param1_val in result:
-            for val in param2_range_values:
-                str_val = str(val)
-                if str_val not in result[param1_val]:
-                    result[param1_val][str_val] = 0
+        param2_values_to_show = [str(v % 100) if param2_name == 'JJ' else str(v) for v in param2_range_values]
+    else:
+        # Use all param2 values that appear in observations
+        param2_values_to_show = sorted(param2_from_observations)
+    
+    # Step 2: Initialize result table with all param1 × param2 combinations = 0
+    result = {}
+    for p1_val in param1_values_to_show:
+        result[p1_val] = {}
+        for p2_val in param2_values_to_show:
+            result[p1_val][p2_val] = 0
+    
+    # Step 3: Fill in counts from groups
+    for p1_val in groups:
+        if p1_val not in result:
+            # This shouldn't happen if we set up param1_values_to_show correctly
+            result[p1_val] = {}
+        for p2_val in groups[p1_val]:
+            if p2_val not in result[p1_val]:
+                # This shouldn't happen if we set up param2_values_to_show correctly
+                result[p1_val][p2_val] = 0
+            result[p1_val][p2_val] = groups[p1_val][p2_val]
     
     # Remove combined types when split is enabled (they will have 0 counts)
     # For param1
@@ -3861,8 +4110,27 @@ def _group_by_two_parameters(observations, param1_name, param2_name, all_params)
         for param1_val in result:
             for combined_ee in combined_ee_list:
                 result[param1_val].pop(combined_ee, None)
-    
-    return result
+
+    # Emit debug info for SH calculations to diagnose empty tables
+    if (param1_name == 'SH' or param2_name == 'SH'):
+        if current_app and current_app.logger:
+            current_app.logger.debug(
+                "SH debug: param1_attempts=%s param1_none=%s param2_attempts=%s param2_none=%s",
+                sh_debug['param1_attempts'],
+                sh_debug['param1_none'],
+                sh_debug['param2_attempts'],
+                sh_debug['param2_none']
+            )
+        # Also print to stdout in case logger level filters debug
+        try:
+            print(
+                f"SH debug: param1_attempts={sh_debug['param1_attempts']} param1_none={sh_debug['param1_none']} "
+                f"param2_attempts={sh_debug['param2_attempts']} param2_none={sh_debug['param2_none']}"
+            )
+        except Exception:
+            pass
+
+    return result, sh_debug
 
 
 def _format_parameter_value(value, param_name, all_params, prefix):
@@ -3904,6 +4172,13 @@ def _format_parameter_value(value, param_name, all_params, prefix):
         try:
             altitude = int(value)
             return str(altitude)
+        except (ValueError, TypeError):
+            return str(value)
+
+    # For HO_HU (light pillar heights), return numeric string
+    if param_name == 'HO_HU':
+        try:
+            return str(int(value))
         except (ValueError, TypeError):
             return str(value)
     

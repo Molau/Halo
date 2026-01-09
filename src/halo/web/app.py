@@ -36,6 +36,9 @@ def create_app(config=None):
         'JSON_AS_ASCII': False,  # Support Unicode characters (umlauts)
         'INPUT_MODE': 'N',  # Default: N=Number entry, M=Menu entry
         'OUTPUT_MODE': 'P',  # Default: P=Pseudografik, H=HTML-Tabellen
+        'DATE_DEFAULT_MODE': 'none',  # Default: none, current, previous, constant
+        'DATE_DEFAULT_MONTH': 1,  # Month for constant mode
+        'DATE_DEFAULT_YEAR': 2026,  # Year for constant mode
         'LOADED_FILE': None,
         'OBSERVATIONS': [],
         'OBSERVERS': [],  # Observer metadata from halobeo.csv
@@ -64,11 +67,10 @@ def create_app(config=None):
                 app.config['LOADED_FILE'] = startup_file
                 app.config['DIRTY'] = False
                 app.config['AUTO_LOADED'] = True  # Flag for showing notification
-                print(f"Auto-loaded {len(observations)} observations from {startup_file}")
             except Exception as e:
-                print(f"Warning: Failed to auto-load startup file {startup_file}: {e}")
+                pass
         else:
-            print(f"Warning: Configured startup file not found: {data_path}")
+            pass
 
     # Load observer metadata from resources/halobeo.csv
     observers_file = root_path / 'resources' / 'halobeo.csv'
@@ -77,9 +79,8 @@ def create_app(config=None):
         with open(observers_file, 'r', encoding='utf-8') as f:
             reader = csv.reader(f)
             app.config['OBSERVERS'] = list(reader)
-        print(f"Loaded {len(app.config['OBSERVERS'])} observer records from halobeo.csv")
     else:
-        print(f"Warning: Observer metadata file not found: {observers_file}")
+        pass
     
     # Enable CORS for API endpoints
     CORS(app, resources={r"/api/*": {"origins": "*"}})

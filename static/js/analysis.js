@@ -167,8 +167,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                 return kkA - kkB;
             });
             
-            console.log('Loaded observers:', observers.length);
-
         } catch (error) {
             console.error('Error loading observers:', error);
             observers = [];
@@ -392,13 +390,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                 ];
             
             case 'EE':
-                // Only halo types 1-77 and 99 (exclude 78-98)
+                // Use all halo types defined in i18n
                 const haloTypes = [];
-                for (let i = 1; i <= 77; i++) {
-                    const haloName = i18n.halo_types[String(i)];
-                    haloTypes.push({ value: i, display: `${String(i).padStart(2, '0')} - ${haloName}` });
+                const haloTypeKeys = Object.keys(i18n.halo_types).map(k => parseInt(k)).sort((a, b) => a - b);
+                for (const eeNum of haloTypeKeys) {
+                    const haloName = i18n.halo_types[String(eeNum)];
+                    haloTypes.push({ value: eeNum, display: `${String(eeNum).padStart(2, '0')} - ${haloName}` });
                 }
-                haloTypes.push({ value: 99, display: `99 - ${i18n.halo_types['99']}` });
                 return haloTypes;
             
             case 'DD':
@@ -476,12 +474,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Special handling for GG (geographic region) - filter out non-existent regions
         if (paramCode === 'GG') {
-            const validRegions = [1,2,3,4,5,6,7,8,9,10,11,16,17,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39];
             const ggNum = parseInt(rawValue);
-            if (!validRegions.includes(ggNum)) {
+            const regionName = i18n.geographic_regions[String(ggNum)];
+            if (!regionName) {
                 return null; // Return null if region doesn't exist (will be filtered out)
             }
-            const regionName = i18n.geographic_regions[String(ggNum)];
             return `${String(ggNum).padStart(2, '0')} - ${regionName}`;
         }
 
@@ -513,14 +510,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             return `${hoursVal} ${hourText}`;
         }
         
-        // Special handling for EE (halo type) - filter out non-existent types (78-98)
+        // Special handling for EE (halo type) - filter out non-existent types
         if (paramCode === 'EE') {
             const eeNum = parseInt(rawValue);
-            // Valid halo types: 1-77 and 99
-            if (eeNum < 1 || (eeNum > 77 && eeNum !== 99)) {
+            const haloName = i18n.halo_types[String(eeNum)];
+            if (!haloName) {
                 return null; // Return null if halo type doesn't exist (will be filtered out)
             }
-            const haloName = i18n.halo_types[String(eeNum)];
             return `${String(eeNum).padStart(2, '0')} - ${haloName}`;
         }
         
@@ -1366,11 +1362,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             param1_from: param1FromSelect.value,
             param1_to: param1ToSelect.value,
             param2: param2Select.value,
+            param2_from: param2FromSelect.value,
+            param2_to: param2ToSelect.value,
             filter1: filter1Select.value,
             filter2: filter2Select.value
         };
 
-        // Handle special cases
+        // Handle special cases - these override the default from/to with parameter-specific ranges
         if (param1Select.value === 'TT') {
             // Day parameter - add month, year, and day range
             selectedParams.param1_month = param1MonthSelect.value;
@@ -1378,9 +1376,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             selectedParams.param1_from = param1DayFromSelect.value;
             selectedParams.param1_to = param1DayToSelect.value;
         } else if (param1Select.value === 'ZZ') {
-            // Time parameter - add timezone selection
+            // Time parameter - add timezone selection and range
             const selectedTz = document.querySelector('input[name="param1-timezone"]:checked');
             selectedParams.param1_timezone = selectedTz.value; // 'cet' or 'local'
+            selectedParams.param1_from = param1FromSelect.value;
+            selectedParams.param1_to = param1ToSelect.value;
         } else if (param1Select.value === 'SH') {
             // Solar altitude parameter - add time calculation method and range
             const selectedSh = document.querySelector('input[name="param1-sh-time"]:checked');
@@ -1415,9 +1415,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             selectedParams.param2_from = param2DayFromSelect.value;
             selectedParams.param2_to = param2DayToSelect.value;
         } else if (param2Select.value === 'ZZ') {
-            // Time parameter - add timezone selection
+            // Time parameter - add timezone selection and range
             const selectedTz = document.querySelector('input[name="param2-timezone"]:checked');
             selectedParams.param2_timezone = selectedTz.value; // 'cet' or 'local'
+            selectedParams.param2_from = param2FromSelect.value;
+            selectedParams.param2_to = param2ToSelect.value;
         } else if (param2Select.value === 'SH') {
             // Solar altitude parameter - add time calculation method and range
             const selectedSh = document.querySelector('input[name="param2-sh-time"]:checked');
@@ -1548,9 +1550,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             const result = await response.json();
 
-            
             // Display the result
             displayAnalysisResult(result, selectedParams);
+            
         } catch (error) {
             console.error('Analysis error:', error);
             showWarningModal('Fehler: ' + error.message);
@@ -2416,7 +2418,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const colTotal = columnTotals[col];
                 const colPercentage = result.total > 0 ? ((colTotal / result.total) * 100).toFixed(1) : '0.0';
                 const colLabel = formatParamValue(params.param2, col);
-                header.push(`${colLabel} (Σ=${colTotal} - ${colPercentage}%)`);
+                header.push(`${colLabel} (Σ=${colTotal} (Σ=${colPercentage}%))`);
             });
             lines.push(header.map(escapeCsv).join(','));
 
@@ -2437,7 +2439,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const rowPercentage = result.total > 0 ? ((rowTotal / result.total) * 100).toFixed(1) : '0.0';
                 const rowLabel = formatParamValue(params.param1, param1Val);
 
-                const row = [rowLabel, `${rowTotal} (${rowPercentage}%)`];
+                const row = [rowLabel, `(Σ=${rowTotal} (Σ=${rowPercentage}%))`];
                 columns.forEach(col => {
                     const val = rowData[col] !== undefined ? rowData[col] : 0;
                     row.push(val);
@@ -2446,7 +2448,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             });
 
             // Totals row
-            const totalsRow = [i18n.analysis_results.total, `${result.total} (100%)`];
+            const totalsRow = [i18n.analysis_results.total, `(Σ=${result.total} - 100.0%)`];
             columns.forEach(col => {
                 const colTotal = columnTotals[col];
                 const colPercentage = result.total > 0 ? ((colTotal / result.total) * 100).toFixed(1) : '0.0';
@@ -2508,26 +2510,52 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Build two parameter cross-tabulation table
     function buildTwoParameterTable(data, param1Name, param2Name, total, percentageMode, param1Code, param2Code) {
-        // Extract all unique param2 values (columns) and sort them
-        const param2Values = new Set();
-        Object.values(data).forEach(row => {
-            Object.keys(row).forEach(col => param2Values.add(col));
-        });
-        const columns = Array.from(param2Values).sort((a, b) => {
-            // Try numeric sort first
+        // Pre-sort helpers
+        const sortKeys = (arr) => arr.sort((a, b) => {
             const numA = parseFloat(a);
             const numB = parseFloat(b);
             if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
             return a.localeCompare(b);
         });
         
-        // Calculate column totals
+        // Extract all unique param2 values (columns) and sort them
+        const param2Values = new Set();
+        Object.values(data).forEach(row => {
+            Object.keys(row).forEach(col => param2Values.add(col));
+        });
+        const columns = sortKeys(Array.from(param2Values));
+        
+        // Rows
+        const param1Values = sortKeys(Object.keys(data));
+
+        // Precompute totals and cell percentages
+        const rowTotals = {};
         const columnTotals = {};
-        columns.forEach(col => {
-            columnTotals[col] = 0;
-            Object.values(data).forEach(row => {
-                const val = row[col] !== undefined ? row[col] : 0;
-                columnTotals[col] += val;
+        const cells = {};
+        columns.forEach(col => columnTotals[col] = 0);
+        
+        // First pass: counts and row totals
+        param1Values.forEach(r => {
+            const rowData = data[r];
+            let rSum = 0;
+            columns.forEach(c => {
+                const count = rowData[c] !== undefined ? rowData[c] : 0;
+                rSum += count;
+                columnTotals[c] += count;
+            });
+            rowTotals[r] = rSum;
+        });
+        
+        // Second pass: build cell metric map
+        param1Values.forEach(r => {
+            const rowData = data[r];
+            cells[r] = {};
+            columns.forEach(c => {
+                const count = rowData[c] !== undefined ? rowData[c] : 0;
+                const pGlobal = total > 0 ? (count / total) * 100 : 0;
+                const pRow = rowTotals[r] > 0 ? (count / rowTotals[r]) * 100 : 0;
+                const pCol = columnTotals[c] > 0 ? (count / columnTotals[c]) * 100 : 0;
+                cells[r][c] = { count, pGlobal, pRow, pCol };
             });
         });
         
@@ -2543,9 +2571,27 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Add column headers with totals
         columns.forEach(col => {
             const colTotal = columnTotals[col];
-            const colPercentage = total > 0 ? ((colTotal / total) * 100).toFixed(1) : '0.0';
+            let colPercentage;
+            if (percentageMode === 'param2') {
+                // Spaltensumme mode: each column = 100%
+                colPercentage = '100.0%';
+            } else if (percentageMode === 'param1') {
+                // Zeilensumme mode: column header shows average of percentages in this column
+                let sum = 0;
+                let count = 0;
+                param1Values.forEach(r => {
+                    if (cells[r][col].count > 0) {
+                        sum += cells[r][col].pRow;
+                        count++;
+                    }
+                });
+                colPercentage = count > 0 ? 'Ø=' + (sum / count).toFixed(1) + '%' : 'Ø=0.0%';
+            } else {
+                // Global mode: show actual percentage
+                colPercentage = total > 0 ? '(Σ=' + ((colTotal / total) * 100).toFixed(1) + '%)' : '(Σ=0.0%)';
+            }
             const colLabel = formatParamValue(param2Code, col);
-            html += `<th>${colLabel}<br/>(Σ=${colTotal} - ${colPercentage}%)</th>`;
+            html += `<th>${colLabel}<br/>(Σ=${colTotal} ${colPercentage})</th>`;
         });
         
         html += `
@@ -2554,51 +2600,45 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <tbody>
         `;
         
-        // Build table rows
-        const param1Values = Object.keys(data).sort((a, b) => {
-            const numA = parseFloat(a);
-            const numB = parseFloat(b);
-            if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-            return a.localeCompare(b);
-        });
-        
         param1Values.forEach(param1Val => {
-            const rowData = data[param1Val];
-            
-            // Calculate row total
-            let rowTotal = 0;
-            columns.forEach(col => {
-                rowTotal += rowData[col] !== undefined ? rowData[col] : 0;
-            });
-            
-            const rowPercentage = total > 0 ? ((rowTotal / total) * 100).toFixed(1) : '0.0';
+            const rowTotal = rowTotals[param1Val];
+            let rowPercentage;
+            if (percentageMode === 'param1') {
+                // Zeilensumme mode: each row = 100%
+                rowPercentage = '(Σ=100.0%)';
+            } else if (percentageMode === 'param2') {
+                // Spaltensumme mode: row header shows average of percentages in this row
+                let sum = 0;
+                let count = 0;
+                columns.forEach(c => {
+                    if (cells[param1Val][c].count > 0) {
+                        sum += cells[param1Val][c].pCol;
+                        count++;
+                    }
+                });
+                rowPercentage = count > 0 ? '(Ø=' + (sum / count).toFixed(1) + '%)' : '(Ø=0.0%)';
+            } else {
+                // Global mode: show actual percentage
+                rowPercentage = total > 0 ? '(Σ=' + ((rowTotal / total) * 100).toFixed(1) + '%)' : '(Σ=0.0%)';
+            }
             const rowLabel = formatParamValue(param1Code, param1Val);
             
             html += `
                 <tr>
                     <td>${rowLabel}</td>
-                    <td class="text-end">(Σ=${rowTotal} - ${rowPercentage}%)</td>
+                    <td class="text-end">(Σ=${rowTotal} ${rowPercentage})</td>
             `;
             
             // Add data cells with percentages
             columns.forEach(col => {
-                const count = rowData[col] !== undefined ? rowData[col] : 0;
-                let percentage;
+                const cell = cells[param1Val][col];
+                const percentage = (percentageMode === 'param1')
+                    ? cell.pRow.toFixed(1)
+                    : (percentageMode === 'param2')
+                        ? cell.pCol.toFixed(1)
+                        : cell.pGlobal.toFixed(1);
                 
-                // Calculate percentage based on mode
-                if (percentageMode === 'param1') {
-                    // Row percentage - each row sums to 100%
-                    percentage = rowTotal > 0 ? ((count / rowTotal) * 100).toFixed(1) : '0.0';
-                } else if (percentageMode === 'param2') {
-                    // Column percentage - each column sums to 100%
-                    const colTotal = columnTotals[col];
-                    percentage = colTotal > 0 ? ((count / colTotal) * 100).toFixed(1) : '0.0';
-                } else {
-                    // Global percentage - based on grand total
-                    percentage = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
-                }
-                
-                html += `<td class="text-end">${count} ${i18n.analysis_results.observation_abbr} - ${percentage}%</td>`;
+                html += `<td class="text-end">${cell.count} ${i18n.analysis_results.observation_abbr} - ${percentage}%</td>`;
             });
             
             html += `</tr>`;
@@ -2614,7 +2654,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Build Pseudografik format analysis table (full implementation)
     function buildPseudografikAnalysisTable(result, params, param1Name, param2Name, restrictions, i18n) {
-        let html = '<div style="font-family: monospace; white-space: pre; font-size: 11px; line-height: 1.0;">';
+        let html = '<div style="font-family: monospace; white-space: pre; font-size: 11px; line-height: 1;">';
         
         // Build table first to get its width, then add centered title
         let tableHtml = '';
@@ -2755,35 +2795,80 @@ document.addEventListener('DOMContentLoaded', async function() {
             });
         });
         
-        // First pass: calculate actual column widths
-        let maxCol1Width = param1Name.length;
-        let maxCol2Width = param2Name.length;
-        
-        // Check row labels width
+        // Precompute row totals and cell metrics
         const param1Values = Object.keys(data).sort((a, b) => {
             const numA = parseFloat(a);
             const numB = parseFloat(b);
             if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
             return a.localeCompare(b);
         });
+        const rowTotals = {};
+        param1Values.forEach(param1Val => {
+            const rowData = data[param1Val];
+            let rSum = 0;
+            columns.forEach(col => {
+                rSum += rowData[col] !== undefined ? rowData[col] : 0;
+            });
+            rowTotals[param1Val] = rSum;
+        });
+        const cells = {};
+        param1Values.forEach(param1Val => {
+            const rowData = data[param1Val];
+            cells[param1Val] = {};
+            columns.forEach(col => {
+                const count = rowData[col] !== undefined ? rowData[col] : 0;
+                const pGlobal = total > 0 ? (count / total) * 100 : 0;
+                const pRow = rowTotals[param1Val] > 0 ? (count / rowTotals[param1Val]) * 100 : 0;
+                const pCol = columnTotals[col] > 0 ? (count / columnTotals[col]) * 100 : 0;
+                cells[param1Val][col] = { count, pGlobal, pRow, pCol };
+            });
+        });
+
+        // First pass: calculate actual column widths
+        // Combined first column: param1Name + row label + total
+        let maxCombinedWidth = param1Name.length + 3 + param2Name.length + 2; // ' ' + name1 + ' | ' + name2 + ' '
+        let labelWidth = 0; // width for row label in first column
+        let totalCountWidthFirst = 0; // width for Σ count in first column
+        let totalPercWidthFirst = 0; // width for percentage in first column
         
+        // Check row labels width + totals
         param1Values.forEach(param1Val => {
             const rowLabel = formatParamValue(param1Code, param1Val);
-            maxCol1Width = Math.max(maxCol1Width, rowLabel.length);
-            
-            // Calculate row total width
-            const rowData = data[param1Val];
-            let rowTotal = 0;
-            columns.forEach(col => {
-                rowTotal += rowData[col] !== undefined ? rowData[col] : 0;
-            });
-            const rowPercentage = total > 0 ? ((rowTotal / total) * 100).toFixed(1) : '0.0';
-            const totalText = 'Σ=' + rowTotal + ' ' + rowPercentage + '%';
-            maxCol2Width = Math.max(maxCol2Width, totalText.length);
+            labelWidth = Math.max(labelWidth, rowLabel.length);
+
+            // Use precomputed row total
+            const rowTotal = rowTotals[param1Val];
+            let rowPercentageStr;
+            if (percentageMode === 'param1') {
+                // Zeilensumme mode: each row = 100%
+                rowPercentageStr = '(Σ=100.0%)';
+            } else if (percentageMode === 'param2') {
+                // Spaltensumme mode: row header shows average of percentages in this row
+                let sum = 0;
+                let count = 0;
+                columns.forEach(c => {
+                    if (cells[param1Val][c].count > 0) {
+                        sum += cells[param1Val][c].pCol;
+                        count++;
+                    }
+                });
+                rowPercentageStr = count > 0 ? '(Ø=' + (sum / count).toFixed(1) + '%)' : '(Ø=0.0%)';
+            } else {
+                // Global mode: show actual percentage
+                rowPercentageStr = total > 0 ? '(Σ=' + ((rowTotal / total) * 100).toFixed(1) + '%)' : '(Σ=0.0%)';
+            }
+            totalCountWidthFirst = Math.max(totalCountWidthFirst, String(rowTotal).length);
+            totalPercWidthFirst = Math.max(totalPercWidthFirst, rowPercentageStr.length);
         });
+
+        // Ensure combined width fits aligned first-column core content
+        const firstColCoreLen = labelWidth + 3 + (2 + totalCountWidthFirst + 1 + totalPercWidthFirst); // label + ' | ' + 'Σ=' + total + ' ' + perc
+        maxCombinedWidth = Math.max(maxCombinedWidth, firstColCoreLen);
         
         // Calculate data cell widths (one width per column)
         const cellWidths = [];
+        const countColWidths = [];
+        const percColWidths = [];
         const obsAbbr = i18n.analysis_results.observation_abbr || 'B';
         const alignNumericParam1 = param1Code === 'DD' || param1Code === 'zz';
         
@@ -2794,69 +2879,100 @@ document.addEventListener('DOMContentLoaded', async function() {
             const headerText = colLabel + ' Σ=' + colTotal;
             const percentText = '(' + colPercentage + '%)';
             
+            // Start with header-driven width
             let maxCellWidth = Math.max(headerText.length, percentText.length);
-            
-            // Check all data cells in this column
+
+            // Determine fixed subfield widths per column (count and percentage) using precomputed cells
+            let countWidth = 0;
+            let percWidth = 0;
             param1Values.forEach(param1Val => {
-                const rowData = data[param1Val];
-                const count = rowData[col] !== undefined ? rowData[col] : 0;
-                const rowTotal = Object.values(rowData).reduce((sum, val) => sum + val, 0);
-                
-                let percentage;
-                if (percentageMode === 'param1') {
-                    percentage = rowTotal > 0 ? ((count / rowTotal) * 100).toFixed(1) : '0.0';
-                } else if (percentageMode === 'param2') {
-                    const colTotal = columnTotals[col];
-                    percentage = colTotal > 0 ? ((count / colTotal) * 100).toFixed(1) : '0.0';
-                } else {
-                    percentage = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
-                }
-                
-                const cellText = count + ' ' + obsAbbr + ' - ' + percentage + '%';
-                maxCellWidth = Math.max(maxCellWidth, cellText.length);
+                const cell = cells[param1Val][col];
+                const pctVal = (percentageMode === 'param1') ? cell.pRow : (percentageMode === 'param2') ? cell.pCol : cell.pGlobal;
+                const percStr = pctVal.toFixed(1) + '%';
+                countWidth = Math.max(countWidth, String(cell.count).length);
+                percWidth = Math.max(percWidth, percStr.length);
             });
-            
+
+            // Core content length for data cell with aligned subfields
+            const coreLen = countWidth + 1 + obsAbbr.length + 3 + percWidth; // count + ' ' + obsAbbr + ' - ' + perc
+            maxCellWidth = Math.max(maxCellWidth, coreLen);
+
+            // Save widths for rendering and push final cell width
+            countColWidths.push(countWidth);
+            percColWidths.push(percWidth);
             cellWidths.push(maxCellWidth);
         });
         
-        const col1Width = maxCol1Width;
-        const col2Width = maxCol2Width;
+        // Calculate fixed center padding per column using coreLen
+        const centerPaddings = [];
+        columns.forEach((col, idx) => {
+            const coreLen = countColWidths[idx] + 1 + obsAbbr.length + 3 + percColWidths[idx];
+            const centerPad = Math.floor((cellWidths[idx] - coreLen) / 2);
+            centerPaddings.push(Math.max(0, centerPad));
+        });
+        
+        const combinedWidth = maxCombinedWidth;
         const totalCellWidth = cellWidths.reduce((sum, w) => sum + w + 3, 0); // +3 per cell for borders and spaces
-        const tableWidth = col1Width + col2Width + totalCellWidth + 6; // +6 for first two columns borders and spaces
+        const tableWidth = combinedWidth + totalCellWidth + 4; // +4 for borders and spaces
         
         // Table header
-        html += '╔' + '═'.repeat(col1Width + 2) + '╦' + '═'.repeat(col2Width + 2);
+        html += '╔' + '═'.repeat(combinedWidth + 2);
         cellWidths.forEach(w => {
             html += '╦' + '═'.repeat(w + 2);
         });
         html += '╗\n';
         
-        // First header row with param names
-        const header1 = ' ' + param1Name.padEnd(col1Width) + ' ';
-        html += '║' + header1 + '║';
+        // First header row with param names combined, centered
+        const headerCombinedText = (param1Name + ' \\ ' + param2Name);
+        const headerCombinedLeftPad = Math.max(0, Math.floor((combinedWidth - headerCombinedText.length) / 2));
+        const headerCombinedRightPad = Math.max(0, combinedWidth - headerCombinedLeftPad - headerCombinedText.length);
+        const headerCombined = ' ' + ' '.repeat(headerCombinedLeftPad) + headerCombinedText + ' '.repeat(headerCombinedRightPad) + ' ';
+        html += '║' + headerCombined;
         
-        // Parameter 2 name with columns
+        // Parameter 2 columns (centered column headers)
         columns.forEach((col, idx) => {
-            const colLabel = formatParamValue(param2Code, col);
-            const cellText = ' ' + colLabel.padEnd(cellWidths[idx]) + ' ';
+            const colLabel = formatParamValue(param2Code, col) || String(col);
+            const leftPad = Math.max(0, Math.floor((cellWidths[idx] - colLabel.length) / 2));
+            const rightPad = Math.max(0, cellWidths[idx] - leftPad - colLabel.length);
+            const cellText = ' ' + ' '.repeat(leftPad) + colLabel + ' '.repeat(rightPad) + ' ';
             html += '║' + cellText;
         });
         html += '║\n';
         
-        // Second header row with param2Name and column totals
-        const header2 = ' ' + param2Name.padEnd(col2Width) + ' ';
-        html += '║' + ' '.repeat(col1Width + 2) + '║' + header2;
+        // Second header row with column totals and percentages
+        const headerSpace = ' '.repeat(combinedWidth + 2);
+        html += '║' + headerSpace;
         
-        // Column headers with totals and percentages
+        // Column headers with totals and percentages (centered)
         columns.forEach((col, idx) => {
             const colTotal = columnTotals[col];
-            const colPercentage = total > 0 ? ((colTotal / total) * 100).toFixed(1) : '0.0';
-            const headerText = 'Σ=' + colTotal + ' (' + colPercentage + '%)';
-            const cellText = ' ' + headerText.padEnd(cellWidths[idx]) + ' ';
+            let colPercentageStr;
+            if (percentageMode === 'param2') {
+                // Spaltensumme mode: each column = 100%
+                colPercentageStr = '100.0%';
+            } else if (percentageMode === 'param1') {
+                // Zeilensumme mode: column header shows average of percentages in this column
+                let sum = 0;
+                let count = 0;
+                param1Values.forEach(r => {
+                    if (cells[r][col].count > 0) {
+                        sum += cells[r][col].pRow;
+                        count++;
+                    }
+                });
+                colPercentageStr = count > 0 ? 'Ø=' + (sum / count).toFixed(1) + '%' : 'Ø=0.0%';
+            } else {
+                // Global mode: show actual percentage
+                colPercentageStr = total > 0 ? '(Σ=' + ((colTotal / total) * 100).toFixed(1) + '%)' : '(Σ=0.0%)';
+            }
+            const headerText = 'Σ=' + colTotal + ' ' + colPercentageStr;
+            const leftPad = Math.max(0, Math.floor((cellWidths[idx] - headerText.length) / 2));
+            const rightPad = Math.max(0, cellWidths[idx] - leftPad - headerText.length);
+            const cellText = ' ' + ' '.repeat(leftPad) + headerText + ' '.repeat(rightPad) + ' ';
             html += '║' + cellText;
         });
         html += '║\n';
-        html += '╠' + '═'.repeat(col1Width + 2) + '╬' + '═'.repeat(col2Width + 2);
+        html += '╠' + '═'.repeat(combinedWidth + 2);
         cellWidths.forEach(w => {
             html += '╬' + '═'.repeat(w + 2);
         });
@@ -2864,52 +2980,61 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Data rows
         param1Values.forEach((param1Val, rowIndex) => {
-            const rowData = data[param1Val];
+            // Use precomputed row total
+            const rowTotal = rowTotals[param1Val];
+            let rowPercentageStr;
+            if (percentageMode === 'param1') {
+                // Zeilensumme mode: each row = 100%
+                rowPercentageStr = '(Σ=100.0%)';
+            } else if (percentageMode === 'param2') {
+                // Spaltensumme mode: row header shows average of percentages in this row
+                let sum = 0;
+                let count = 0;
+                columns.forEach(c => {
+                    if (cells[param1Val][c].count > 0) {
+                        sum += cells[param1Val][c].pCol;
+                        count++;
+                    }
+                });
+                rowPercentageStr = count > 0 ? '(Ø=' + (sum / count).toFixed(1) + '%)' : '(Ø=0.0%)';
+            } else {
+                // Global mode: show actual percentage
+                rowPercentageStr = total > 0 ? '(Σ=' + ((rowTotal / total) * 100).toFixed(1) + '%)' : '(Σ=0.0%)';
+            }
+            const rowLabel = formatParamValue(param1Code, param1Val) || String(param1Val);
+            const totalText = 'Σ=' + rowTotal + ' ' + rowPercentageStr;
             
-            // Calculate row total
-            let rowTotal = 0;
-            columns.forEach(col => {
-                rowTotal += rowData[col] !== undefined ? rowData[col] : 0;
-            });
+            // Combined first column with aligned subparts and centered as a whole
+            const labelStr = (alignNumericParam1 ? rowLabel.padStart(labelWidth) : rowLabel.padEnd(labelWidth));
+            const totalStr = 'Σ=' + String(rowTotal).padStart(totalCountWidthFirst) + ' ' + rowPercentageStr.padStart(totalPercWidthFirst);
+            const combinedCore = labelStr + ' | ' + totalStr;
+            const firstColLeftPad = Math.max(0, Math.floor((combinedWidth - combinedCore.length) / 2));
+            const firstColRightPad = Math.max(0, combinedWidth - firstColLeftPad - combinedCore.length);
+            const combinedCell = ' ' + ' '.repeat(firstColLeftPad) + combinedCore + ' '.repeat(firstColRightPad) + ' ';
             
-            const rowPercentage = total > 0 ? ((rowTotal / total) * 100).toFixed(1) : '0.0';
-            const rowLabel = formatParamValue(param1Code, param1Val);
-            
-            // Row label (right-align durations)
-            const alignedRowLabel = alignNumericParam1
-                ? rowLabel.padStart(col1Width)
-                : rowLabel.padEnd(col1Width);
-            const col1 = ' ' + alignedRowLabel + ' ';
-            const totalText = 'Σ=' + rowTotal + ' ' + rowPercentage + '%';
-            const col2 = ' ' + totalText.padEnd(col2Width) + ' ';
-            
-            html += '║' + col1 + '║' + col2;
+            html += '║' + combinedCell;
             
             // Data cells
             columns.forEach((col, idx) => {
-                const count = rowData[col] !== undefined ? rowData[col] : 0;
-                let percentage;
-                
-                // Calculate percentage based on mode
-                if (percentageMode === 'param1') {
-                    percentage = rowTotal > 0 ? ((count / rowTotal) * 100).toFixed(1) : '0.0';
-                } else if (percentageMode === 'param2') {
-                    const colTotal = columnTotals[col];
-                    percentage = colTotal > 0 ? ((count / colTotal) * 100).toFixed(1) : '0.0';
-                } else {
-                    percentage = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
-                }
-                
-                const cellText = count + ' ' + obsAbbr + ' - ' + percentage + '%';
-                const cell = ' ' + cellText.padStart(cellWidths[idx]) + ' ';
-                html += '║' + cell;
+                const cellMetrics = cells[param1Val][col];
+                const pctVal = (percentageMode === 'param1') ? cellMetrics.pRow : (percentageMode === 'param2') ? cellMetrics.pCol : cellMetrics.pGlobal;
+                // Build aligned inner content: right-align count and percentage per column widths
+                const countStr = String(cellMetrics.count).padStart(countColWidths[idx]);
+                const percStr = (pctVal.toFixed(1) + '%').padStart(percColWidths[idx]);
+                const core = countStr + ' ' + obsAbbr + ' - ' + percStr;
+
+                // Apply fixed column center padding
+                const leftPad = ' '.repeat(centerPaddings[idx]);
+                const rightPad = ' '.repeat(cellWidths[idx] - centerPaddings[idx] - core.length);
+                const cellRendered = ' ' + leftPad + core + rightPad + ' ';
+                html += '║' + cellRendered;
             });
             
             html += '║\n';
         });
         
         // Table footer
-        html += '╚' + '═'.repeat(col1Width + 2) + '╩' + '═'.repeat(col2Width + 2);
+        html += '╚' + '═'.repeat(combinedWidth + 2);
         cellWidths.forEach(w => {
             html += '╩' + '═'.repeat(w + 2);
         });
