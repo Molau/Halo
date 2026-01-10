@@ -809,6 +809,16 @@
     "file_info": {
       "file": "Datei",
       "observations_count": "Beobachtungen"
+    },
+    "statistics": {
+      "footnote_ee_days": "1) = EE (Sonne) &nbsp; 2) = Tage (Sonne) &nbsp; 3) = Tage (Mond) &nbsp; 4) = Tage (gesamt)",
+      "table_day": "Tag",
+      "table_ee_sun": "EE(Sonne)",
+      "table_days_sun": "Tage(Sonne)",
+      "table_days_moon": "Tage(Mond)",
+      "table_days_total": "Tage(gesamt)",
+      "box_days_1_15": "║  1.   2.   3.   4.   5.║  6.   7.   8.   9.  10.║ 11.  12.  13.  14.  15.║ 16. ║",
+      "box_days_16_31": "║ 17.  18.  19.  20.║ 21.  22.  23.  24.  25.║ 26.  27.  28.  29.  30.║ 31.║ ges ║"
     }
   }
 }

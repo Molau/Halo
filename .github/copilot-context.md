@@ -102,6 +102,39 @@
 - **Status**: ✓ Implemented
 - **Implementation**: JSON resource files in `resources/` directory
 
+### 5a. Internationalization (i18n) Scope - Decision #017
+- **Date**: 2026-01-10
+- **Status**: ✓ Approved
+- **Principle**: Put in i18n ONLY text that would need translation for a new language
+- **What MUST be in i18n** (translatable UI text):
+  - User-visible labels, messages, titles, prompts
+  - Error messages, warnings, confirmations
+  - Table headers, column names (when user-facing)
+  - Button labels, menu items
+  - Help text, descriptions, explanations
+  - Any text that would change when adding French, Spanish, etc.
+- **What CAN stay hardcoded** (non-translatable):
+  - Technical data format strings: `KKOJJ MMTTg`, `ZZZZd DDNCc`, etc.
+  - Pseudographic/box-drawing table structures: `║`, `╔`, `═`, etc.
+  - Technical identifiers and codes
+  - Field position markers, layout characters
+  - Anything that doesn't change meaning in a new language
+- **Fail Fast Rule** (Decision #015):
+  - No fallbacks: `i18n?.field || 'default'` is **FORBIDDEN**
+  - All i18n fields accessed directly: `i18n.field`
+  - Missing i18n keys cause immediate errors (intended behavior)
+  - This prevents silent failures and ensures consistency
+- **Examples**:
+  - ✓ Translatable → i18n: "Tag", "Sonne", "Monatsmeldung", "Fehler beim Laden"
+  - ✓ Hardcodable: `║ KKOJJ MMTTg ║`, `╠═══╬═══╣`, `KKOJJ MMTTg ZZZZd DDNCc`
+  - ✗ Wrong: `Tag` hardcoded in JavaScript for HTML output
+  - ✗ Wrong: `i18n.months || ['Jan', 'Feb', ...]` fallback pattern
+- **Implementation Guidelines**:
+  - Check if text would be different in another language
+  - If yes → must be i18n key
+  - If no → can remain hardcoded
+  - Always access i18n without optional chaining or fallbacks
+
 ### 6. Code Reuse and DRY Principle
 - **Decision**: Always reuse existing code, data structures, and patterns instead of duplicating
 - **Rationale**: 

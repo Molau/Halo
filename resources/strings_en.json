@@ -362,8 +362,8 @@
     "error_no_data": "No observations found for the specified period.",
     "observer_overview": "Observer Overview",
     "ee_overview": "Solar Halo Overview",
-    "rare_halos": "Occurrences above EE 12",
-    "rare_halos_none": "In {month} no occurrences above EE 12.",
+    "rare_halos": "Events above EE 12",
+    "rare_halos_none": "In {month} no events above EE 12.",
     "activity_title": "Halo Activity",
     "activity_real": "real",
     "activity_relative": "relative",
@@ -803,6 +803,16 @@
     "file_info": {
       "file": "File",
       "observations_count": "observations"
+    },
+    "statistics": {
+      "footnote_ee_days": "1) = EE (Sun) &nbsp; 2) = Days (Sun) &nbsp; 3) = Days (Moon) &nbsp; 4) = Days (Total)",
+      "table_day": "Day",
+      "table_ee_sun": "EE(Sun)",
+      "table_days_sun": "Days(Sun)",
+      "table_days_moon": "Days(Moon)",
+      "table_days_total": "Days(Total)",
+      "box_days_1_15": "║  1.   2.   3.   4.   5.║  6.   7.   8.   9.  10.║ 11.  12.  13.  14.  15.║ 16. ║",
+      "box_days_16_31": "║ 17.  18.  19.  20.║ 21.  22.  23.  24.  25.║ 26.  27.  28.  29.  30.║ 31.║ ges ║"
     }
   }
 }

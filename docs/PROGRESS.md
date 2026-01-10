@@ -147,3 +147,10 @@
 ---
 
 ## Notes
+
+### Updates (January 10, 2026)
+- Added Markdown output for monthly statistics within annual statistics workflow:
+   - New Markdown renderer mirrors HTML tables (Monthly Activity, EE Sun/Moon, Observer Distribution, Phenomena).
+   - Output mode 'M' renders Markdown in modal (uses `marked` if available).
+   - Save-as `.md` implemented with filename `<year>.md`.
+   - Changes in [static/js/annual_stats.js](../static/js/annual_stats.js).

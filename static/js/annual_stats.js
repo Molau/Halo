@@ -5,6 +5,29 @@ document.addEventListener('DOMContentLoaded', async function() {
     let i18n = null;
     let currentStatsData = null; // Store current stats data for save/print
 
+    // Default fallback i18n structure with statistics section
+    const defaultI18n = {
+        monthly_stats: {},
+        ui: { messages: {} },
+        statistics: {
+            footnote_ee_days: '1) = EE (Sonne) &nbsp; 2) = Tage (Sonne) &nbsp; 3) = Tage (Mond) &nbsp; 4) = Tage (gesamt)',
+            table_day: 'Tag',
+            table_ee_sun: 'EE(Sonne)',
+            table_days_sun: 'Tage(Sonne)',
+            table_days_moon: 'Tage(Mond)',
+            table_days_total: 'Tage(gesamt)',
+            box_days_1_15: '║  1.   2.   3.   4.   5.║  6.   7.   8.   9.  10.║ 11.  12.  13.  14.  15.║ 16. ║',
+            box_days_16_31: '║ 17.  18.  19.  20.║ 21.  22.  23.  24.  25.║ 26.  27.  28.  29.  30.║ 31.║ ges ║'
+        }
+    };
+
+    // Helper function to escape HTML
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     // Elements
     const filterDialog = document.getElementById('filter-dialog');
     const yearSelect = document.getElementById('year-select');
@@ -21,11 +44,21 @@ document.addEventListener('DOMContentLoaded', async function() {
             const lang = langData.language || 'de';
 
             const i18nResponse = await fetch(`/api/i18n/${lang}`);
-            i18n = await i18nResponse.json();
+            const loadedI18n = await i18nResponse.json();
+            
+            // Merge loaded i18n with defaults to ensure statistics section exists
+            i18n = {
+                ...defaultI18n,
+                ...loadedI18n,
+                statistics: {
+                    ...defaultI18n.statistics,
+                    ...(loadedI18n.statistics || {})
+                }
+            };
 
         } catch (error) {
             console.error('Error loading i18n:', error);
-            i18n = { monthly_stats: {}, ui: { messages: {} } };
+            i18n = JSON.parse(JSON.stringify(defaultI18n)); // Deep copy
         }
     }
     
@@ -215,8 +248,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (outputMode === 'P') {
             // Pseudografik format (current implementation)
             html = buildPseudografikAnnualStats(data, year, i18n);
+        } else if (outputMode === 'M') {
+            // Markdown format: render to HTML using marked library
+            const md = buildMarkdownAnnualStats(data, year, i18n);
+            if (window.marked && typeof window.marked.parse === 'function') {
+                // Render markdown to HTML with GitHub styling
+                html = `<div class="markdown-body" style="padding:20px; background-color: white;">${window.marked.parse(md)}</div>`;
+            } else {
+                // Fallback: show raw markdown in monospace
+                html = `<div class="statistics-report" style="font-family: monospace; white-space: pre; font-size: 12px; line-height: 1.5; padding: 20px;">${escapeHtml(md)}</div>`;
+            }
         } else {
-            // HTML-Tabellen format (stub)
+            // HTML-Tabellen format
             html = buildHTMLTableAnnualStats(data, year, i18n);
         }
         
@@ -638,20 +681,20 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Render chart
         renderChart(currentStatsData);
         
-        // Hide results modal
-        const resultsModal = bootstrap.Modal.getInstance(document.getElementById('results-modal'));
-        resultsModal?.hide();
-        
-        // Show chart modal
+        // Show chart modal (keep results modal open behind)
         const chartModalElement = document.getElementById('chart-modal');
         const chartModal = new bootstrap.Modal(chartModalElement);
         
-        // Prevent ESC key from propagating to parent modal
+        // Prevent ESC key from closing the parent results modal
         chartModalElement.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
+                e.preventDefault();
                 e.stopPropagation();
+                // Close only the chart modal, not the parent
+                const modal = bootstrap.Modal.getInstance(chartModalElement);
+                modal?.hide();
             }
-        });
+        }, true); // Use capture phase to handle before Bootstrap
         
         // Set focus to chart modal after it's shown to capture ESC key
         chartModalElement.addEventListener('shown.bs.modal', () => {
@@ -801,7 +844,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         let content, mimeType, filename;
         
-        if (outputMode === 'H') {
+        if (outputMode === 'M') {
+            // Markdown mode: save as .md
+            filename = `${year}.md`;
+            content = buildMarkdownAnnualStats(currentStatsData, year, i18n);
+            mimeType = 'text/markdown;charset=utf-8';
+        } else if (outputMode === 'H') {
             // HTML-Tabellen mode: save as CSV
             filename = `${year}.csv`;
             content = generateStatsCSV(currentStatsData, year);
@@ -1300,5 +1348,144 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         html += '</div>';
         return html;
+    }
+
+    // Build Markdown format annual statistics (pipe tables from HTML format)
+    function buildMarkdownAnnualStats(data, year, i18n) {
+        let md = `# ${i18n.annual_stats.title_with_year.replace('{year}', year)}\n\n`;
+        
+        // Table 1: Monthly Activity
+        if (data.monthly_stats && data.totals) {
+            md += '| ' + i18n.annual_stats.table_month + ' | ';
+            md += i18n.annual_stats.table_sun + ' EE | ' + i18n.annual_stats.table_sun + ' ' + i18n.annual_stats.table_days + ' | ';
+            md += i18n.annual_stats.table_moon + ' EE | ' + i18n.annual_stats.table_moon + ' ' + i18n.annual_stats.table_days + ' | ';
+            md += i18n.annual_stats.table_total + ' EE | ' + i18n.annual_stats.table_total + ' ' + i18n.annual_stats.table_days + ' | ';
+            md += i18n.annual_stats.table_real + ' | ' + i18n.annual_stats.table_relative + ' |\n';
+            
+            md += '|---|---:|---:|---:|---:|---:|---:|---:|---:|\n';
+            
+            for (let mm = 1; mm <= 12; mm++) {
+                const mmStr = mm.toString();
+                const monthData = data.monthly_stats[mmStr] || {};
+                md += '| ' + i18n.months[mmStr] + ' | ';
+                md += (monthData.sun_ee || 0) + ' | ' + (monthData.sun_days || 0) + ' | ';
+                md += (monthData.moon_ee || 0) + ' | ' + (monthData.moon_days || 0) + ' | ';
+                md += (monthData.total_ee || 0) + ' | ' + (monthData.total_days || 0) + ' | ';
+                md += (monthData.real || 0).toFixed(1) + ' | ' + (monthData.relative || 0).toFixed(1) + ' |\n';
+            }
+            
+            // Totals row
+            md += '| **' + i18n.annual_stats.table_total + '** | ';
+            md += '**' + (data.totals.sun_ee || 0) + '** | **' + (data.totals.sun_days || 0) + '** | ';
+            md += '**' + (data.totals.moon_ee || 0) + '** | **' + (data.totals.moon_days || 0) + '** | ';
+            md += '**' + (data.totals.total_ee || 0) + '** | **' + (data.totals.total_days || 0) + '** | ';
+            md += '**' + (data.totals.real || 0).toFixed(1) + '** | **' + (data.totals.relative || 0).toFixed(1) + '** |\n\n';
+        }
+        
+        // Table 2: EE Observations
+        if (data.sun_ee_counts || data.moon_ee_counts) {
+            md += `## ${i18n.annual_stats.ee_observed_title}\n\n`;
+        }
+        
+        // Sun halos
+        if (data.sun_ee_counts && Object.keys(data.sun_ee_counts).length > 0) {
+            md += `### ${i18n.annual_stats.ee_sun_label}\n\n`;
+            md += '| EE |';
+            const sunEEs = Object.keys(data.sun_ee_counts).map(Number).sort((a,b)=>a-b);
+            for (const ee of sunEEs) {
+                md += ' ' + ee.toString().padStart(2, '0') + ' |';
+            }
+            md += '\n|---|';
+            for (let i = 0; i < sunEEs.length; i++) {
+                md += '---:|';
+            }
+            md += '\n| ' + i18n.annual_stats.ee_count_label + ' |';
+            for (const ee of sunEEs) {
+                md += ' ' + (data.sun_ee_counts[ee] || 0) + ' |';
+            }
+            md += '\n\n';
+        }
+        
+        // Moon halos
+        if (data.moon_ee_counts && Object.keys(data.moon_ee_counts).length > 0) {
+            md += `### ${i18n.annual_stats.ee_moon_label}\n\n`;
+            md += '| EE |';
+            const moonEEs = Object.keys(data.moon_ee_counts).map(Number).sort((a,b)=>a-b);
+            for (const ee of moonEEs) {
+                md += ' ' + ee.toString().padStart(2, '0') + ' |';
+            }
+            md += '\n|---|';
+            for (let i = 0; i < moonEEs.length; i++) {
+                md += '---:|';
+            }
+            md += '\n| ' + i18n.annual_stats.ee_count_label + ' |';
+            for (const ee of moonEEs) {
+                md += ' ' + (data.moon_ee_counts[ee] || 0) + ' |';
+            }
+            md += '\n\n';
+        }
+        
+        // Table 3: Observer Distribution
+        if (data.observer_distribution && data.observer_distribution.length > 0) {
+            md += `## ${i18n.annual_stats.observer_dist_title}\n\n`;
+            md += '| ' + i18n.annual_stats.observer_dist_kk + ' | ';
+            md += i18n.annual_stats.observer_dist_ee01 + ' | ' + i18n.annual_stats.observer_dist_percent + ' | ';
+            md += i18n.annual_stats.observer_dist_ee02 + ' | ' + i18n.annual_stats.observer_dist_percent + ' | ';
+            md += i18n.annual_stats.observer_dist_ee03 + ' | ' + i18n.annual_stats.observer_dist_percent + ' | ';
+            md += i18n.annual_stats.observer_dist_ee567 + ' | ' + i18n.annual_stats.observer_dist_percent + ' | ';
+            md += i18n.annual_stats.observer_dist_ee17 + ' | ';
+            md += i18n.annual_stats.observer_dist_ee_so + ' | ';
+            md += i18n.annual_stats.observer_dist_ht_ges + ' |\n';
+            md += '|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n';
+            
+            for (const obs of data.observer_distribution) {
+                md += '| ' + obs.kk.toString().padStart(2, '0') + ' | ';
+                md += obs.ee01 + ' | ' + obs.pct01.toFixed(1) + ' | ';
+                md += obs.ee02 + ' | ' + obs.pct02.toFixed(1) + ' | ';
+                md += obs.ee03 + ' | ' + obs.pct03.toFixed(1) + ' | ';
+                md += obs.ee567 + ' | ' + obs.pct567.toFixed(1) + ' | ';
+                md += obs.ee17 + ' | ' + obs.total_sun_ee + ' | ' + obs.total_days + ' |\n';
+            }
+            md += '\n';
+        }
+        
+        // Table 4: Phenomena
+        if (data.phenomena && data.phenomena.length > 0) {
+            md += `## ${i18n.annual_stats.phenomena_title}\n\n`;
+            md += '| ' + i18n.annual_stats.phenomena_date + ' | KK | GG | ' + i18n.annual_stats.phenomena_time + ' | O |';
+            const eeColumns = [1, 2, 3, 5, 6, 7, 8, 9, 11, 12];
+            for (const ee of eeColumns) {
+                md += ' EE' + ee.toString().padStart(2, '0') + ' |';
+            }
+            md += ' ' + i18n.annual_stats.phenomena_other_ee + ' |\n';
+            md += '|---|---:|---:|---|---:|';
+            for (let i = 0; i < eeColumns.length; i++) {
+                md += '---:|';
+            }
+            md += '---|\n';
+            
+            for (const phenom of data.phenomena) {
+                md += '| ' + phenom.tt.toString().padStart(2, '0') + '.' + phenom.mm.toString().padStart(2, '0') + ' | ';
+                md += phenom.kk.toString().padStart(2, '0') + ' | ';
+                md += phenom.gg.toString().padStart(2, '0') + ' | ';
+                md += phenom.zs.toString().padStart(2, ' ') + 'h ' + phenom.zm.toString().padStart(2, '0') + 'm | ';
+                md += phenom.o + ' |';
+                
+                // EE types 01-12
+                for (const ee of eeColumns) {
+                    md += phenom.ee_types.includes(ee) ? ' X |' : ' |';
+                }
+                
+                // Further EE
+                const furtherEE = phenom.ee_types.filter(ee => ee > 12).map(ee => ee.toString().padStart(2, '0'));
+                md += ' ' + furtherEE.join(' ') + ' |\n';
+            }
+            md += '\n';
+        } else {
+            md += `## ${i18n.annual_stats.phenomena_title}\n\n`;
+            md += i18n.annual_stats.phenomena_none + '\n\n';
+        }
+        
+        return md;
     }
 });

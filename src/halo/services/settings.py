@@ -71,6 +71,7 @@ class Settings:
         cfg_file = Settings._cfg_path(root_path)
         rows = [
             ['INPUT_MODE', app_config.get('INPUT_MODE', 'N')],
+            ['OUTPUT_MODE', app_config.get('OUTPUT_MODE', 'P')],
             ['ACTIVE_OBSERVERS_ONLY', '1' if app_config.get('ACTIVE_OBSERVERS_ONLY', False) else '0'],
             ['FIXED_OBSERVER', app_config.get('FIXED_OBSERVER', '')],
             ['STARTUP_FILE_ENABLED', '1' if app_config.get('STARTUP_FILE_ENABLED', False) else '0'],

@@ -414,9 +414,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Markdown format: render to HTML if 'marked' is available, else show raw markdown
             const md = buildMarkdownSource(data, i18n);
             if (window.marked && typeof window.marked.parse === 'function') {
-                html = `<div class="markdown-body" style="padding:16px;">${window.marked.parse(md)}</div>`;
+                html = `<div class="markdown-body" style="padding:20px; background-color: white;">${window.marked.parse(md)}</div>`;
             } else {
-                html = `<div class="analysis-results"><pre style="font-family: monospace; font-size: 12px; line-height: 1.5;">${md}</pre></div>`;
+                html = `<div class="analysis-results" style="padding: 20px;"><pre style="font-family: monospace; font-size: 12px; line-height: 1.5;">${md}</pre></div>`;
             }
         } else {
             // HTML-Tabellen format
