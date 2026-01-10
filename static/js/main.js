@@ -1724,15 +1724,14 @@ async function checkForUpdates() {
                         modal.hide();
                         modalEl.remove();
                         
-                        // Show success message
-                        const successMsg = i18nStrings.update?.manual_restart || i18nStrings.update?.success || 'Update complete. Please restart the application manually.';
-                        const { modal: successModal, modalEl: successModalEl } = showSuccessModal(title, successMsg);
+                        // Wait briefly for Flask to restart, then reload page
+                        const successMsg = i18nStrings.update?.success || 'Update complete. Reloading...';
+                        const { modal: successModal, modalEl: successModalEl } = showInfoModal(title, successMsg);
                         
-                        // Wait for user to close success modal, then resolve
-                        successModalEl.addEventListener('hidden.bs.modal', () => {
-                            successModalEl.remove();
-                            resolve();
-                        });
+                        // Give Flask 2 seconds to restart, then reload
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
                     } catch (e) {
                         const errTpl = i18nStrings.update?.error || 'Update failed: {error}';
                         const errMsg = errTpl.replace('{error}', String(e));
