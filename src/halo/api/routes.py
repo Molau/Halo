@@ -1754,7 +1754,7 @@ def get_monthly_report() -> Dict[str, Any]:
             content = _format_monthly_report_markdown(data, i18n)
             return Response(content, mimetype='text/markdown; charset=utf-8')
     else:
-        return jsonify({'error': f'Invalid format: {output_format}. Use json, text, html, or markdown.'}), 400
+        return jsonify({'error': f'Invalid format: {output_format}. Use json, text, or markdown.'}), 400
 
 
 
@@ -2548,7 +2548,7 @@ def get_monthly_stats() -> Dict[str, Any]:
         img_data = _generate_monthly_stats_bar_chart(data, mm_int, jj_int, i18n)
         return Response(img_data, mimetype='image/png')
     else:
-        return jsonify({'error': f'Invalid format: {output_format}. Use json, text, html, markdown, linegraph, or bargraph.'}), 400
+        return jsonify({'error': f'Invalid format: {output_format}. Use json, text, markdown, linegraph, or bargraph.'}), 400
 
 
 def _generate_monthly_stats_chart(data: Dict[str, Any], mm: int, jj: int, i18n) -> bytes:
@@ -3762,7 +3762,7 @@ def get_annual_stats() -> Dict[str, Any]:
         img_data = _generate_annual_stats_bar_chart(data, jj_int, i18n)
         return Response(img_data, mimetype='image/png')
     else:
-        return jsonify({'error': f'Invalid format: {output_format}. Use json, text, html, markdown, linegraph, or bargraph.'}), 400
+        return jsonify({'error': f'Invalid format: {output_format}. Use json, text, markdown, linegraph, or bargraph.'}), 400
 
 
 
