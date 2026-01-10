@@ -38,12 +38,6 @@ This document provides workflow guidance for GitHub Copilot when working on the 
 - **Content**: Field definitions, validation rules, dependencies
 - **Status**: Reference only - cannot be changed without breaking compatibility
 
-### Tier 4: PROGRESS.md - Current Status ✏️
-- **Location**: `docs/PROGRESS.md`
-- **Authority**: DYNAMIC - Update freely as work progresses
-- **Purpose**: Track what's completed, in progress, and next steps
-- **Usage**: Status updates, task tracking, progress documentation
-
 ---
 
 ## Core Principles (from copilot-context.md)
