@@ -29,10 +29,11 @@
   },
   "update": {
     "title": "Neue Version verfügbar",
-    "message": "Eine neue Version ist verfügbar: {latest} (aktuell: {current}). Möchten Sie die neue Version herunterladen und installieren?",
+    "message": "Eine neue Version ist verfügbar: {latest} vom {latestDate} (aktuell: {current} vom {currentDate}). Möchten Sie die neue Version herunterladen und installieren?",
     "downloading": "Aktualisierung wird heruntergeladen...",
-    "success": "Aktualisierung erfolgreich. Anwendung wird neu gestartet...",
-    "error": "Aktualisierung fehlgeschlagen: {error}"
+    "success": "Aktualisierung erfolgreich. Bitte Flask-Server manuell neu starten (Strg+C, dann 'python run.py').",
+    "error": "Aktualisierung fehlgeschlagen: {error}",
+    "manual_restart": "Aktualisierung abgeschlossen. Bitte beenden Sie die Anwendung und starten Sie sie manuell neu."
   },
   "action": {
     "select_month": "Monat auswählen",

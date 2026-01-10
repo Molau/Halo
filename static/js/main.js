@@ -1680,6 +1680,7 @@ async function checkForUpdates() {
         const repo = window.UPDATE_REPO;
         if (!repo) return;
         const current = i18nStrings.app?.version || '0.0.0';
+        const currentDate = i18nStrings.app?.version_date || '';
         const resp = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
             signal: AbortSignal.timeout(5000)  // 5 second timeout
         });
@@ -1690,10 +1691,15 @@ async function checkForUpdates() {
         const json = await resp.json();
         const latestTag = json.tag_name || json.name || '';
         const latest = latestTag.replace(/^v/, '');
+        const latestDate = json.published_at ? new Date(json.published_at).toLocaleDateString() : '';
         if (isNewerVersion(latest, current)) {
             const title = i18nStrings.update?.title || 'Update';
-            const msgTpl = i18nStrings.update?.message || 'New version {latest} (current {current}). Update?';
-            const message = msgTpl.replace('{latest}', latest).replace('{current}', current);
+            const msgTpl = i18nStrings.update?.message || 'New version {latest} from {latestDate} (current {current} from {currentDate}). Update?';
+            const message = msgTpl
+                .replace('{latest}', latest)
+                .replace('{latestDate}', latestDate)
+                .replace('{current}', current)
+                .replace('{currentDate}', currentDate);
             showConfirmDialog(title, message, async () => {
                 try {
                     const downloading = i18nStrings.update?.downloading || 'Downloading update...';
@@ -1705,10 +1711,9 @@ async function checkForUpdates() {
                     });
                     const updJson = await updResp.json();
                     if (updResp.ok && updJson.success) {
-                        await fetch('/api/restart', { method: 'POST' });
-                        const successMsg = i18nStrings.update?.success || 'Update successful. Restarting...';
+                        const successMsg = i18nStrings.update?.manual_restart || i18nStrings.update?.success || 'Update complete. Please restart the application manually.';
                         showInfoModal(title, successMsg);
-                        setTimeout(() => window.location.reload(), 1500);
+                        // Don't auto-restart - prevents Windows file locking issues in debug mode
                     } else {
                         const err = updJson.error || (await updResp.text());
                         const errTpl = i18nStrings.update?.error || 'Update failed: {error}';

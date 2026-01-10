@@ -414,10 +414,11 @@
   },
   "update": {
     "title": "New Version Available",
-    "message": "A new version is available: {latest} (current: {current}). Do you want to download and install it?",
+    "message": "A new version is available: {latest} from {latestDate} (current: {current} from {currentDate}). Do you want to download and install it?",
     "downloading": "Downloading update...",
-    "success": "Update successful. Restarting application...",
-    "error": "Update failed: {error}"
+    "success": "Update successful. Please manually restart Flask server (Ctrl+C, then 'python run.py').",
+    "error": "Update failed: {error}",
+    "manual_restart": "Update complete. Please exit the application and restart it manually."
   },
   "errors": {
     "unknown_observer": "Unknown observer code"
