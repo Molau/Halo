@@ -132,6 +132,13 @@ footer {
     text-align: center !important;
 }
 
+/* First column (row headers) should match header blue */
+.analysis-table tbody th {
+    background-color: #5555ff !important;
+    color: white !important;
+    border-color: #3333dd !important;
+}
+
 /* Monthly report header should be left-aligned to match monospace content */
 .analysis-table thead th.monthly-report-header {
     text-align: left !important;

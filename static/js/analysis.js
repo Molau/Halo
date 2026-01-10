@@ -167,6 +167,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 return kkA - kkB;
             });
             
+            // observers loaded successfully
+
         } catch (error) {
             console.error('Error loading observers:', error);
             observers = [];
@@ -390,13 +392,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                 ];
             
             case 'EE':
-                // Use all halo types defined in i18n
+                // Only halo types 1-77 and 99 (exclude 78-98)
                 const haloTypes = [];
-                const haloTypeKeys = Object.keys(i18n.halo_types).map(k => parseInt(k)).sort((a, b) => a - b);
-                for (const eeNum of haloTypeKeys) {
-                    const haloName = i18n.halo_types[String(eeNum)];
-                    haloTypes.push({ value: eeNum, display: `${String(eeNum).padStart(2, '0')} - ${haloName}` });
+                for (let i = 1; i <= 77; i++) {
+                    const haloName = i18n.halo_types[String(i)];
+                    haloTypes.push({ value: i, display: `${String(i).padStart(2, '0')} - ${haloName}` });
                 }
+                haloTypes.push({ value: 99, display: `99 - ${i18n.halo_types['99']}` });
                 return haloTypes;
             
             case 'DD':
@@ -474,11 +476,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Special handling for GG (geographic region) - filter out non-existent regions
         if (paramCode === 'GG') {
+            const validRegions = [1,2,3,4,5,6,7,8,9,10,11,16,17,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39];
             const ggNum = parseInt(rawValue);
-            const regionName = i18n.geographic_regions[String(ggNum)];
-            if (!regionName) {
+            if (!validRegions.includes(ggNum)) {
                 return null; // Return null if region doesn't exist (will be filtered out)
             }
+            const regionName = i18n.geographic_regions[String(ggNum)];
             return `${String(ggNum).padStart(2, '0')} - ${regionName}`;
         }
 
@@ -510,13 +513,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             return `${hoursVal} ${hourText}`;
         }
         
-        // Special handling for EE (halo type) - filter out non-existent types
+        // Special handling for EE (halo type) - filter out non-existent types (78-98)
         if (paramCode === 'EE') {
             const eeNum = parseInt(rawValue);
-            const haloName = i18n.halo_types[String(eeNum)];
-            if (!haloName) {
+            // Valid halo types: 1-77 and 99
+            if (eeNum < 1 || (eeNum > 77 && eeNum !== 99)) {
                 return null; // Return null if halo type doesn't exist (will be filtered out)
             }
+            const haloName = i18n.halo_types[String(eeNum)];
             return `${String(eeNum).padStart(2, '0')} - ${haloName}`;
         }
         
@@ -1362,13 +1366,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             param1_from: param1FromSelect.value,
             param1_to: param1ToSelect.value,
             param2: param2Select.value,
-            param2_from: param2FromSelect.value,
-            param2_to: param2ToSelect.value,
             filter1: filter1Select.value,
             filter2: filter2Select.value
         };
 
-        // Handle special cases - these override the default from/to with parameter-specific ranges
+        // Handle special cases
         if (param1Select.value === 'TT') {
             // Day parameter - add month, year, and day range
             selectedParams.param1_month = param1MonthSelect.value;
@@ -1376,11 +1378,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             selectedParams.param1_from = param1DayFromSelect.value;
             selectedParams.param1_to = param1DayToSelect.value;
         } else if (param1Select.value === 'ZZ') {
-            // Time parameter - add timezone selection and range
+            // Time parameter - add timezone selection
             const selectedTz = document.querySelector('input[name="param1-timezone"]:checked');
             selectedParams.param1_timezone = selectedTz.value; // 'cet' or 'local'
-            selectedParams.param1_from = param1FromSelect.value;
-            selectedParams.param1_to = param1ToSelect.value;
         } else if (param1Select.value === 'SH') {
             // Solar altitude parameter - add time calculation method and range
             const selectedSh = document.querySelector('input[name="param1-sh-time"]:checked');
@@ -1415,11 +1415,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             selectedParams.param2_from = param2DayFromSelect.value;
             selectedParams.param2_to = param2DayToSelect.value;
         } else if (param2Select.value === 'ZZ') {
-            // Time parameter - add timezone selection and range
+            // Time parameter - add timezone selection
             const selectedTz = document.querySelector('input[name="param2-timezone"]:checked');
             selectedParams.param2_timezone = selectedTz.value; // 'cet' or 'local'
-            selectedParams.param2_from = param2FromSelect.value;
-            selectedParams.param2_to = param2ToSelect.value;
         } else if (param2Select.value === 'SH') {
             // Solar altitude parameter - add time calculation method and range
             const selectedSh = document.querySelector('input[name="param2-sh-time"]:checked');
@@ -1550,9 +1548,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             const result = await response.json();
 
+            
             // Display the result
             displayAnalysisResult(result, selectedParams);
-            
         } catch (error) {
             console.error('Analysis error:', error);
             showWarningModal('Fehler: ' + error.message);
@@ -1626,6 +1624,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                 // Two parameters - show cross-tabulation
                 const percentageMode = params.percentage_mode;
                 resultHtml = buildTwoParameterTable(result.data, param1Name, param2Name, result.total, percentageMode, params.param1, params.param2);
+            }
+        } else if (outputMode === 'M') {
+            // Markdown format: generate markdown and render if possible
+            const md = generateAnalysisMarkdown();
+            if (window.marked && typeof window.marked.parse === 'function') {
+                resultHtml = `<div class="markdown-body">${window.marked.parse(md)}</div>`;
+            } else {
+                resultHtml = `<pre style="white-space: pre-wrap;">${md}</pre>`;
             }
         } else {
             // Pseudografik format (title and restrictions are included in the table itself)
@@ -2313,6 +2319,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             filename = `analysis_${param1}_${timestamp}.csv`;
             content = generateAnalysisCsv();
             mimeType = 'text/csv;charset=utf-8';
+        } else if (outputMode === 'M') {
+            // Markdown mode: save as .md
+            filename = `analysis_${param1}_${timestamp}.md`;
+            content = generateAnalysisMarkdown();
+            mimeType = 'text/markdown;charset=utf-8';
         } else {
             // Pseudografik mode: save as TXT with content from modal
             filename = `analysis_${param1}_${timestamp}.txt`;
@@ -2418,7 +2429,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const colTotal = columnTotals[col];
                 const colPercentage = result.total > 0 ? ((colTotal / result.total) * 100).toFixed(1) : '0.0';
                 const colLabel = formatParamValue(params.param2, col);
-                header.push(`${colLabel} (Σ=${colTotal} (Σ=${colPercentage}%))`);
+                header.push(`${colLabel} Σ=${colTotal} (Σ=${colPercentage}%)`);
             });
             lines.push(header.map(escapeCsv).join(','));
 
@@ -2439,7 +2450,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const rowPercentage = result.total > 0 ? ((rowTotal / result.total) * 100).toFixed(1) : '0.0';
                 const rowLabel = formatParamValue(params.param1, param1Val);
 
-                const row = [rowLabel, `(Σ=${rowTotal} (Σ=${rowPercentage}%))`];
+                const row = [rowLabel, `Σ=${rowTotal} (Σ=${rowPercentage}%)`];
                 columns.forEach(col => {
                     const val = rowData[col] !== undefined ? rowData[col] : 0;
                     row.push(val);
@@ -2448,13 +2459,150 @@ document.addEventListener('DOMContentLoaded', async function() {
             });
 
             // Totals row
-            const totalsRow = [i18n.analysis_results.total, `(Σ=${result.total} - 100.0%)`];
+            const totalsRow = [i18n.analysis_results.total, `Σ=${result.total} (Σ=100%)`];
             columns.forEach(col => {
                 const colTotal = columnTotals[col];
                 const colPercentage = result.total > 0 ? ((colTotal / result.total) * 100).toFixed(1) : '0.0';
                 totalsRow.push(`${colTotal} (${colPercentage}%)`);
             });
             lines.push(totalsRow.map(escapeCsv).join(','));
+        }
+
+        return lines.join('\n');
+    }
+    
+    // Generate Markdown version of analysis result (title + table)
+    function generateAnalysisMarkdown() {
+        if (!lastAnalysisResult || !lastAnalysisParams) return '';
+
+        const params = lastAnalysisParams;
+        const result = lastAnalysisResult;
+
+        const param1Name = i18n.analysis_dialog.param_names[params.param1];
+        const param2Name = params.param2 ? i18n.analysis_dialog.param_names[params.param2] : '';
+        const titleText = params.param2
+            ? `${i18n.analysis_results.title_two_params}: ${param1Name} ${i18n.analysis_results.and} ${param2Name}`
+            : `${i18n.analysis_results.title_one_param}: ${param1Name}`;
+
+        const restrictions = [];
+        if (params.filter1) {
+            const filterName = i18n.analysis_dialog.param_names[params.filter1];
+            restrictions.push(`${filterName} = ${params.filter1_value}`);
+        }
+        if (params.filter2) {
+            const filterName = i18n.analysis_dialog.param_names[params.filter2];
+            restrictions.push(`${filterName} = ${params.filter2_value}`);
+        }
+
+        const escapeCell = (text) => String(text ?? '').replaceAll('|', '\\|');
+
+        const lines = [];
+        lines.push(`#### ${escapeCell(titleText)}`);
+        if (restrictions.length > 0) {
+            lines.push(`_${escapeCell(i18n.analysis_results.restrictions)}: ${escapeCell(restrictions.join(', '))}_`);
+        }
+        lines.push('');
+
+        if (!params.param2) {
+            // Single-parameter table
+            lines.push(`| **${escapeCell(param1Name)}** | ${escapeCell(i18n.analysis_results.count)} (Σ=${result.total} ${escapeCell(i18n.analysis_results.observations)}) |`);
+            lines.push('| --- | --- |');
+            for (const item of result.data) {
+                const displayKey = formatParamValue(params.param1, item.key);
+                const percentage = result.total > 0 ? ((item.count / result.total) * 100).toFixed(1) : '0.0';
+                lines.push(`| **${escapeCell(displayKey)}** | ${item.count} (${percentage}%) |`);
+            }
+        } else {
+            // Two-parameter cross-tab (Markdown)
+            const data = result.data;
+
+            // Collect sorted param2 values (columns)
+            const param2Values = new Set();
+            Object.values(data).forEach(row => {
+                Object.keys(row).forEach(col => param2Values.add(col));
+            });
+            const columns = Array.from(param2Values).sort((a, b) => {
+                const numA = parseFloat(a);
+                const numB = parseFloat(b);
+                if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+                return String(a).localeCompare(String(b));
+            });
+
+            // Column totals
+            const columnTotals = {};
+            columns.forEach(col => {
+                columnTotals[col] = 0;
+                Object.values(data).forEach(row => {
+                    columnTotals[col] += row[col] !== undefined ? row[col] : 0;
+                });
+            });
+
+            // Header row: param names with overall total in brackets
+            const firstHeader = `**${escapeCell(param1Name)} \\ ${escapeCell(param2Name)}** (Σ=${result.total})`;
+            let headerLine = `| ${firstHeader} |`;
+            columns.forEach(col => {
+                const colTotal = columnTotals[col];
+                const colPercentage = result.total > 0 ? ((colTotal / result.total) * 100).toFixed(1) : '0.0';
+                const colLabel = formatParamValue(params.param2, col);
+                headerLine += ` **${escapeCell(colLabel)}** Σ=${colTotal} (Σ=${colPercentage}%) |`;
+            });
+            lines.push(headerLine);
+
+            // Separator row (one for param1, one for each param2 column)
+            let sepLine = '| --- |';
+            columns.forEach(() => { sepLine += ' --- |'; });
+            lines.push(sepLine);
+
+            // Rows
+            const param1Values = Object.keys(data).sort((a, b) => {
+                const numA = parseFloat(a);
+                const numB = parseFloat(b);
+                if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+                return String(a).localeCompare(String(b));
+            });
+
+            // Row totals
+            const rowTotals = {};
+            param1Values.forEach(param1Val => {
+                const rowData = data[param1Val];
+                let rowTotal = 0;
+                columns.forEach(col => { rowTotal += rowData[col] !== undefined ? rowData[col] : 0; });
+                rowTotals[param1Val] = rowTotal;
+            });
+
+            // Build rows: merge label and row total into first cell
+            param1Values.forEach(param1Val => {
+                const rowData = data[param1Val];
+                const rowTotal = rowTotals[param1Val];
+                const rowPercentage = result.total > 0 ? ((rowTotal / result.total) * 100).toFixed(1) : '0.0';
+                const rowLabel = formatParamValue(params.param1, param1Val);
+
+                // First cell contains label and row total
+                let rowLine = `| **${escapeCell(rowLabel)}** Σ=${rowTotal} (Σ=${rowPercentage}%) |`;
+                columns.forEach(col => {
+                    const count = rowData[col] !== undefined ? rowData[col] : 0;
+                    let pct = 0.0;
+                    if (params.percentage_mode === 'param1') {
+                        pct = rowTotal > 0 ? ((count / rowTotal) * 100) : 0;
+                    } else if (params.percentage_mode === 'param2') {
+                        const colTotal = columnTotals[col];
+                        pct = colTotal > 0 ? ((count / colTotal) * 100) : 0;
+                    } else {
+                        pct = result.total > 0 ? ((count / result.total) * 100) : 0;
+                    }
+                    rowLine += ` ${count} (${pct.toFixed(1)}%) |`;
+                });
+                lines.push(rowLine);
+            });
+
+            // Totals row: merge label and total into first cell
+            let totalsLine = `| **${escapeCell(i18n.analysis_results.total)}** Σ=${result.total} (Σ=100%) |`;
+            columns.forEach(col => {
+                const colTotal = columnTotals[col];
+                const colPercentage = result.total > 0 ? ((colTotal / result.total) * 100).toFixed(1) : '0.0';
+                totalsLine += ` ${colTotal} (${colPercentage}%) |`;
+            });
+            lines.push(totalsLine);
         }
 
         return lines.join('\n');
@@ -2478,7 +2626,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         let html = `
             <table class="table table-bordered analysis-table">
                 <thead>
-                    <tr>
+                    <tr class="table-primary">
                         <th>${paramName}</th>
                         <th>${i18n.analysis_results.count} (Σ=${total} ${i18n.analysis_results.observations})</th>
                     </tr>
@@ -2495,7 +2643,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             html += `
                 <tr>
                     <td>${displayKey}</td>
-                    <td class="text-end">${count} ${i18n.analysis_results.observation_s} - ${percentage}%</td>
+                    <td cass="text-end">${count} ${i18n.analysis_results.observation_s} - ${percentage}%</td>
                 </tr>
             `;
         }
@@ -2564,8 +2712,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             <table class="table table-bordered analysis-table">
                 <thead>
                     <tr>
-                        <th>${param1Name}</th>
-                        <th>${param2Name}</th>
+                        <th>${param1Name} \\ ${param2Name} (Σ=${total})</th>
         `;
         
         // Add column headers with totals
@@ -2588,10 +2735,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 colPercentage = count > 0 ? 'Ø=' + (sum / count).toFixed(1) + '%' : 'Ø=0.0%';
             } else {
                 // Global mode: show actual percentage
-                colPercentage = total > 0 ? '(Σ=' + ((colTotal / total) * 100).toFixed(1) + '%)' : '(Σ=0.0%)';
+                colPercentage = total > 0 ? ((colTotal / total) * 100).toFixed(1) + '%' : '0.0%';
             }
             const colLabel = formatParamValue(param2Code, col);
-            html += `<th>${colLabel}<br/>(Σ=${colTotal} ${colPercentage})</th>`;
+            html += `<th><strong>${colLabel}</strong><br/>Σ=${colTotal} (Σ=${colPercentage})</th>`;
         });
         
         html += `
@@ -2619,14 +2766,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                 rowPercentage = count > 0 ? '(Ø=' + (sum / count).toFixed(1) + '%)' : '(Ø=0.0%)';
             } else {
                 // Global mode: show actual percentage
-                rowPercentage = total > 0 ? '(Σ=' + ((rowTotal / total) * 100).toFixed(1) + '%)' : '(Σ=0.0%)';
+                rowPercentage = total > 0 ? ((rowTotal / total) * 100).toFixed(1) + '%' : '0.0%';
             }
             const rowLabel = formatParamValue(param1Code, param1Val);
             
             html += `
                 <tr>
-                    <td>${rowLabel}</td>
-                    <td class="text-end">(Σ=${rowTotal} ${rowPercentage})</td>
+                    <th scope="row" class="bg-primary text-white"><strong>${rowLabel}</strong><br/>Σ=${rowTotal} (Σ=${rowPercentage})</th>
             `;
             
             // Add data cells with percentages
@@ -2654,7 +2800,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Build Pseudografik format analysis table (full implementation)
     function buildPseudografikAnalysisTable(result, params, param1Name, param2Name, restrictions, i18n) {
-        let html = '<div style="font-family: monospace; white-space: pre; font-size: 11px; line-height: 1;">';
+        let html = '<div style="font-family: monospace; white-space: pre; font-size: 11px; line-height: 1.0;">';
         
         // Build table first to get its width, then add centered title
         let tableHtml = '';
@@ -2855,7 +3001,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 rowPercentageStr = count > 0 ? '(Ø=' + (sum / count).toFixed(1) + '%)' : '(Ø=0.0%)';
             } else {
                 // Global mode: show actual percentage
-                rowPercentageStr = total > 0 ? '(Σ=' + ((rowTotal / total) * 100).toFixed(1) + '%)' : '(Σ=0.0%)';
+                rowPercentageStr = total > 0 ? ((rowTotal / total) * 100).toFixed(1) + '%' : '0.0%';
             }
             totalCountWidthFirst = Math.max(totalCountWidthFirst, String(rowTotal).length);
             totalPercWidthFirst = Math.max(totalPercWidthFirst, rowPercentageStr.length);
@@ -2923,7 +3069,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         html += '╗\n';
         
         // First header row with param names combined, centered
-        const headerCombinedText = (param1Name + ' \\ ' + param2Name);
+        const headerCombinedText = (param1Name + ' | ' + param2Name);
         const headerCombinedLeftPad = Math.max(0, Math.floor((combinedWidth - headerCombinedText.length) / 2));
         const headerCombinedRightPad = Math.max(0, combinedWidth - headerCombinedLeftPad - headerCombinedText.length);
         const headerCombined = ' ' + ' '.repeat(headerCombinedLeftPad) + headerCombinedText + ' '.repeat(headerCombinedRightPad) + ' ';
@@ -2931,7 +3077,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Parameter 2 columns (centered column headers)
         columns.forEach((col, idx) => {
-            const colLabel = formatParamValue(param2Code, col) || String(col);
+            const colLabel = formatParamValue(param2Code, col);
             const leftPad = Math.max(0, Math.floor((cellWidths[idx] - colLabel.length) / 2));
             const rightPad = Math.max(0, cellWidths[idx] - leftPad - colLabel.length);
             const cellText = ' ' + ' '.repeat(leftPad) + colLabel + ' '.repeat(rightPad) + ' ';
@@ -2963,9 +3109,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                 colPercentageStr = count > 0 ? 'Ø=' + (sum / count).toFixed(1) + '%' : 'Ø=0.0%';
             } else {
                 // Global mode: show actual percentage
-                colPercentageStr = total > 0 ? '(Σ=' + ((colTotal / total) * 100).toFixed(1) + '%)' : '(Σ=0.0%)';
+                colPercentageStr = total > 0 ? ((colTotal / total) * 100).toFixed(1) + '%' : '0.0%';
             }
-            const headerText = 'Σ=' + colTotal + ' ' + colPercentageStr;
+            const headerText = 'Σ=' + colTotal + ' (' + colPercentageStr + ')';
             const leftPad = Math.max(0, Math.floor((cellWidths[idx] - headerText.length) / 2));
             const rightPad = Math.max(0, cellWidths[idx] - leftPad - headerText.length);
             const cellText = ' ' + ' '.repeat(leftPad) + headerText + ' '.repeat(rightPad) + ' ';
@@ -2999,9 +3145,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                 rowPercentageStr = count > 0 ? '(Ø=' + (sum / count).toFixed(1) + '%)' : '(Ø=0.0%)';
             } else {
                 // Global mode: show actual percentage
-                rowPercentageStr = total > 0 ? '(Σ=' + ((rowTotal / total) * 100).toFixed(1) + '%)' : '(Σ=0.0%)';
+                rowPercentageStr = total > 0 ? ((rowTotal / total) * 100).toFixed(1) + '%' : '0.0%';
             }
-            const rowLabel = formatParamValue(param1Code, param1Val) || String(param1Val);
+            const rowLabel = formatParamValue(param1Code, param1Val);
             const totalText = 'Σ=' + rowTotal + ' ' + rowPercentageStr;
             
             // Combined first column with aligned subparts and centered as a whole
