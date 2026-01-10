@@ -107,7 +107,6 @@ This document provides workflow guidance for GitHub Copilot when working on the 
 
 **For minor updates** (bug fixes, UI tweaks):
 - Update code directly
-- Update PROGRESS.md if significant
 - No approval needed
 
 **For new features or deviations**:
@@ -132,7 +131,6 @@ This document provides workflow guidance for GitHub Copilot when working on the 
 - **Data structures** → `H_TYPES.PAS` and `HALO_DATA_FORMAT.md`
 - **Validation rules** → `H_EING.PAS` and `HALO_DATA_FORMAT.md`
 - **Why something is implemented a certain way** → Read [copilot-context.md](copilot-context.md)
-- **What's completed/in progress** → Read [PROGRESS.md](../docs/PROGRESS.md)
 - **Current code patterns** → Search HALOpy codebase (`src/halo/`, `static/js/`, `templates/`)
 
 ### Common Questions
@@ -173,10 +171,7 @@ A: Always reuse existing patterns. Check `showWarningModal()`, Bootstrap modal p
    - Field definitions and validation
    - Community standard, not changeable
 
-4. **PROGRESS.md = STATUS** (Update freely)
-   - What's completed, in progress, next steps
-   - Implementation notes and discoveries
-   - Current status and blockers
+<!-- PROGRESS.md section removed: migration complete; status tracking discontinued -->
 
 ---
 
