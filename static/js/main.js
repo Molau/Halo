@@ -457,8 +457,8 @@ async function showAddObservationDialogNumeric() {
                         <div id="obs-code-error" class="text-danger mt-1" style="display:none; font-size: 12px;"></div>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-add-obs-ok">${i18nStrings.common.ok}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="btn-add-obs-ok">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -789,17 +789,9 @@ async function showAddObservationDialogNumeric() {
             modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
             
             // Show success notification
-            const successMsg = document.createElement('div');
-            successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-            successMsg.style.cssText = 'z-index:9999;min-width:300px;';
             const obsText = currentLanguage === 'de' ? 'Beobachtung' : 'Observation';
             const addedText = currentLanguage === 'de' ? 'hinzugefügt' : 'added';
-            successMsg.innerHTML = `
-                <strong>✓</strong> 1 ${obsText} ${addedText}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            document.body.appendChild(successMsg);
-            setTimeout(() => successMsg.remove(), 3000);
+            showNotification(`<strong>✓</strong> 1 ${obsText} ${addedText}`);
         } catch (e) {
             errEl.textContent = e.message;
             errEl.style.display = 'block';
@@ -1086,8 +1078,8 @@ async function showAddObservationDialogMenu() {
                         <div class="alert alert-danger mt-2" id="menu-obs-error" style="display:none;"></div>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-add-obs-menu-ok" disabled>${i18nStrings.common.ok}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="btn-add-obs-menu-ok" disabled>${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -1364,17 +1356,9 @@ async function showAddObservationDialogMenu() {
             modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
             
             // Show success notification
-            const successMsg = document.createElement('div');
-            successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-            successMsg.style.cssText = 'z-index:9999;min-width:300px;';
             const obsText = currentLanguage === 'de' ? 'Beobachtung' : 'Observation';
             const addedText = currentLanguage === 'de' ? 'hinzugefügt' : 'added';
-            successMsg.innerHTML = `
-                <strong>✓</strong> 1 ${obsText} ${addedText}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            document.body.appendChild(successMsg);
-            setTimeout(() => successMsg.remove(), 3000);
+            showNotification(`<strong>✓</strong> 1 ${obsText} ${addedText}`);
         } catch (e) {
             errEl.textContent = e.message;
             errEl.style.display = 'block';
@@ -2343,8 +2327,8 @@ async function showGroupModifyDialogMenu(filteredObs) {
                         </div>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-modify-group-ok">${i18nStrings.common.ok}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="btn-modify-group-ok">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -2613,9 +2597,9 @@ async function showDeleteConfirmDialog(obs, currentNum, totalNum, callback) {
                         <div style="font-size: 14px; line-height: 1.6; background-color: #f8f9fa; padding: 10px; border-radius: 4px;">${obsDisplay}</div>
                     </div>
                     <div class="modal-footer py-2">
-                        <button type="button" class="btn btn-secondary btn-sm" id="btn-delete-cancel">${cancelText}</button>
-                        <button type="button" class="btn btn-outline-primary btn-sm" id="btn-delete-no">${noText}</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-delete-yes">${yesText}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-delete-cancel">${cancelText}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-delete-no">${noText}</button>
+                        <button type="button" class="btn btn-danger btn-sm px-3" id="btn-delete-yes">${yesText}</button>
                     </div>
                 </div>
             </div>
@@ -2723,9 +2707,9 @@ async function showModifyConfirmDialog(obs, currentNum, totalNum, callback) {
                         <div style="font-size: 14px; line-height: 1.6; background-color: #f8f9fa; padding: 10px; border-radius: 4px;">${obsDisplay}</div>
                     </div>
                     <div class="modal-footer py-2">
-                        <button type="button" class="btn btn-secondary btn-sm" id="btn-modify-cancel">${cancelText}</button>
-                        <button type="button" class="btn btn-outline-primary btn-sm" id="btn-modify-no">${noText}</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-modify-yes">${yesText}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-modify-cancel">${cancelText}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-modify-no">${noText}</button>
+                        <button type="button" class="btn btn-danger btn-sm px-3" id="btn-modify-yes">${yesText}</button>
                     </div>
                 </div>
             </div>
@@ -3519,15 +3503,7 @@ async function showStartupFileDialog() {
                             body: JSON.stringify({enabled: true, file_path: file.name})
                         });
                         // Show success message
-                        const successMsg = document.createElement('div');
-                        successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-                        successMsg.style.cssText = 'z-index:9999;min-width:300px;';
-                        successMsg.innerHTML = `
-                            <strong>✓</strong> ${i18nStrings.menus.settings.startup_file_changed}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        `;
-                        document.body.appendChild(successMsg);
-                        setTimeout(() => successMsg.remove(), 3000);
+                        showNotification(`<strong>✓</strong> ${i18nStrings.menus.settings.startup_file_changed}`);
                     }
                 };
                 fileInput.click();
@@ -3539,15 +3515,7 @@ async function showStartupFileDialog() {
                     body: JSON.stringify({enabled: false, file_path: ''})
                 });
                 // Show success message
-                const successMsg = document.createElement('div');
-                successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-                successMsg.style.cssText = 'z-index:9999;min-width:300px;';
-                successMsg.innerHTML = `
-                    <strong>✓</strong> ${i18nStrings.menus.settings.startup_file_disabled}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                `;
-                document.body.appendChild(successMsg);
-                setTimeout(() => successMsg.remove(), 3000);
+                showNotification(`<strong>✓</strong> ${i18nStrings.menus.settings.startup_file_disabled}`);
             }
         });
 
@@ -3772,8 +3740,8 @@ async function showSelectDialog() {
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-select-ok">${i18nStrings.common.ok}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="btn-select-ok">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -4350,18 +4318,10 @@ async function showSelectDialog() {
                     : `${keptCount} observations kept, ${deletedCount} deleted. Saved as ${filename}`;
                 
                 // Show success alert at top of window
-                const successMsg = document.createElement('div');
-                successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-                successMsg.style.cssText = 'z-index:9999;min-width:300px;';
-                successMsg.innerHTML = `
-                    <strong>✓</strong> ${message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                `;
-                document.body.appendChild(successMsg);
+                showNotification(`<strong>✓</strong> ${message}`);
                 
                 // Auto-remove after 3 seconds and return to main
                 setTimeout(() => {
-                    successMsg.remove();
                     window.location.href = '/';
                 }, 3000);
             }
@@ -4558,8 +4518,8 @@ async function showNewFileDialog() {
                         <input type="text" id="new-filename" class="form-control">
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
-                        <button type="button" class="btn btn-primary" id="ok-new">${i18nStrings.common.ok}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="ok-new">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -4644,7 +4604,8 @@ async function saveFile() {
         
         if (response.ok && result.success) {
             window.haloData.isDirty = false;
-            updateFileInfoDisplay(window.haloData.fileName, window.haloData.observations.length);
+            // Use count from server response, not local array length
+            updateFileInfoDisplay(result.filename, result.count);
             
             // Clean up autosave file
             await fetch('/api/file/cleanup_autosave', {method: 'POST'});
@@ -4687,8 +4648,8 @@ async function showSaveAsDialog() {
                         <input type="text" class="form-control" id="saveas-filename" placeholder="${(window.haloData.fileName || 'alle.csv').replace(/\.[^.]+$/, '')}" value="${(window.haloData.fileName || '').replace(/\.[^.]+$/, '')}">
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
-                        <button type="button" class="btn btn-primary" id="saveas-ok">${i18nStrings.common.ok}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="saveas-ok">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -4804,12 +4765,8 @@ async function processSaveAs(filename) {
 
 // Helper function - shows a toast message in top-right corner
 function showMessage(text, type = 'info') {
-    const msg = document.createElement('div');
-    const bgColor = type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#007bff';
-    msg.style.cssText = `position:fixed;top:20px;right:20px;background:${bgColor};color:white;padding:15px 20px;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,0.2);z-index:10000;font-size:14px;max-width:400px;`;
-    msg.textContent = text;
-    document.body.appendChild(msg);
-    setTimeout(() => msg.remove(), 3000);
+    // Legacy function - delegate to standardized showNotification()
+    showNotification(text, type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info');
 }
 
 // Auto-save helper function
@@ -4938,7 +4895,7 @@ function showErrorDialog(message, onClose = null) {
                         <p>${message}</p>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">${i18nStrings.common.ok}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -4995,7 +4952,7 @@ function showSuccessModal(title, message) {
                         <p class="mb-0">${message}</p>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">OK</button>
                     </div>
                 </div>
             </div>
@@ -5119,29 +5076,13 @@ async function continueLoadFile() {
             
             // Show success message
             const obsText = i18nStrings.ui.messages.observations;
-            const successMsg = document.createElement('div');
-            successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-            successMsg.style.cssText = 'z-index:9999;min-width:300px;';
-            successMsg.innerHTML = `
-                <strong>✓</strong> ${window.haloData.observations.length} ${obsText} ${i18nStrings.dialogs.success.loaded_from} "${file.name}" ${i18nStrings.dialogs.success.geladen}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            document.body.appendChild(successMsg);
-            setTimeout(() => successMsg.remove(), 3000);
+            showNotification(`<strong>✓</strong> ${window.haloData.observations.length} ${obsText} ${i18nStrings.dialogs.success.loaded_from} "${file.name}" ${i18nStrings.dialogs.success.geladen}`);
         } catch (error) {
             bsModal.hide();
             setTimeout(() => loadingModal.remove(), 300);
             console.error('Error loading file:', error);
             
-            const errorMsg = document.createElement('div');
-            errorMsg.className = 'alert alert-danger alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-            errorMsg.style.cssText = 'z-index:9999;min-width:300px;';
-            errorMsg.innerHTML = `
-                <strong>✗</strong> ${i18nStrings.dialogs.file_error.error_loading_file}: ${error.message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            document.body.appendChild(errorMsg);
-            setTimeout(() => errorMsg.remove(), 5000);
+            showNotification(`<strong>✗</strong> ${i18nStrings.dialogs.file_error.error_loading_file}: ${error.message}`, 'danger', 5000);
         }
     });
     
@@ -5252,28 +5193,14 @@ async function continueMergeFile() {
             
             // Show success message with count of added observations
             // (addedCount already computed above)
-            const successMsg = document.createElement('div');
-            successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-            successMsg.style.cssText = 'z-index:9999;min-width:300px;';
             const obsText = i18nStrings.ui.messages.observations;
-            successMsg.innerHTML = `
-                <strong>✓</strong> ${addedCount} ${obsText} ${i18nStrings.dialogs.success.hinzugefuegt} "${file.name}"
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            document.body.appendChild(successMsg);
-            setTimeout(() => successMsg.remove(), 3000);
+            showNotification(`<strong>✓</strong> ${addedCount} ${obsText} ${i18nStrings.dialogs.success.hinzugefuegt} "${file.name}"`);
         } catch (error) {
             bsModal.hide();
             setTimeout(() => loadingModal.remove(), 300);
             console.error('Error merging file:', error);
             
-            const errorMsg = document.createElement('div');
-            errorMsg.className = 'alert alert-danger alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-            errorMsg.style.cssText = 'z-index:9999;min-width:300px;';
-            errorMsg.innerHTML = `
-                <strong>✗</strong> ${i18nStrings.dialogs.file_error.error_loading_file}: ${error.message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
+            showNotification(`<strong>✗</strong> ${i18nStrings.dialogs.file_error.error_loading_file}: ${error.message}`, 'danger', 5000);
             document.body.appendChild(errorMsg);
             setTimeout(() => errorMsg.remove(), 5000);
         }
@@ -5336,17 +5263,9 @@ async function checkAndDisplayFileInfo() {
                 
                 // Show notification if file was auto-loaded
                 if (status.auto_loaded) {
-                    const successMsg = document.createElement('div');
-                    successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-                    successMsg.style.cssText = 'z-index:9999;min-width:300px;';
                     const loadedText = currentLanguage === 'de' ? 'geladen' : 'loaded';
                     const recordsText = currentLanguage === 'de' ? 'Datensätze' : 'records';
-                    successMsg.innerHTML = `
-                        <strong>✓</strong> ${status.filename} ${loadedText} (${status.count} ${recordsText})
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    `;
-                    document.body.appendChild(successMsg);
-                    setTimeout(() => successMsg.remove(), 3000);
+                    showNotification(`<strong>✓</strong> ${status.filename} ${loadedText} (${status.count} ${recordsText})`);
                 }
             } else {
                 // No data loaded
@@ -5380,7 +5299,7 @@ function showWarningModal(message) {
                         <p>${message}</p>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">${i18nStrings.common.ok}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -5394,6 +5313,37 @@ function showWarningModal(message) {
         clearMenuHighlights();
         modalEl.remove();
     });
+}
+
+// ============================================================================
+// STANDARD NOTIFICATION DISPLAY - Decision #019
+// ============================================================================
+// All temporary messages (success, info, warnings) use this standardized format:
+// - Green alert bar at top-center
+// - Auto-dismisses after 3 seconds
+// - User can manually close with X button
+// - z-index: 9999 (always on top)
+
+function showNotification(message, type = 'success', duration = 3000) {
+    const notification = document.createElement('div');
+    const alertClass = {
+        'success': 'alert-success',
+        'info': 'alert-info',
+        'warning': 'alert-warning',
+        'danger': 'alert-danger'
+    }[type] || 'alert-success';
+    
+    notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3`;
+    notification.style.cssText = 'z-index:9999;min-width:300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    
+    if (duration > 0) {
+        setTimeout(() => notification.remove(), duration);
+    }
 }
 
 // Show Fixed Observer dialog
@@ -5433,8 +5383,8 @@ async function showFixedObserverDialog() {
                             </select>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
-                            <button type="button" class="btn btn-primary" id="btn-fixed-observer-ok">${i18nStrings.common.ok}</button>
+                            <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                            <button type="button" class="btn btn-primary btn-sm px-3" id="btn-fixed-observer-ok">${i18nStrings.common.ok}</button>
                         </div>
                     </div>
                 </div>
@@ -5547,8 +5497,8 @@ async function showDatumDialog() {
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
-                            <button type="button" class="btn btn-primary" id="btn-datum-ok">${i18nStrings.common.ok}</button>
+                            <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                            <button type="button" class="btn btn-primary btn-sm px-3" id="btn-datum-ok">${i18nStrings.common.ok}</button>
                         </div>
                     </div>
                 </div>
@@ -5622,8 +5572,8 @@ async function showEingabeartDialog() {
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
-                            <button type="button" class="btn btn-primary" id="btn-eingabeart-ok">${i18nStrings.common.ok}</button>
+                            <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                            <button type="button" class="btn btn-primary btn-sm px-3" id="btn-eingabeart-ok">${i18nStrings.common.ok}</button>
                         </div>
                     </div>
                 </div>
@@ -5692,8 +5642,8 @@ async function showAusgabeartDialog() {
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
-                            <button type="button" class="btn btn-primary" id="btn-ausgabeart-ok">${i18nStrings.common.ok}</button>
+                            <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                            <button type="button" class="btn btn-primary btn-sm px-3" id="btn-ausgabeart-ok">${i18nStrings.common.ok}</button>
                         </div>
                     </div>
                 </div>
@@ -6259,15 +6209,7 @@ async function showAddObserverDialog(formData = null) {
             modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
             
             // Show success message
-            const successMsg = document.createElement('div');
-            successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-            successMsg.style.cssText = 'z-index:9999;min-width:300px;';
-            successMsg.innerHTML = `
-                <strong>✓</strong> ${i18n.success_added}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            document.body.appendChild(successMsg);
-            setTimeout(() => successMsg.remove(), 3000);
+            showNotification(`<strong>✓</strong> ${i18n.success_added}`);
             
         } catch (e) {
             const formData = observerData;
@@ -6474,16 +6416,10 @@ async function showDeleteObserverConfirmDialog(observer, sites) {
             modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
             
             // Show success message
-            const successMsg = document.createElement('div');
-            successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-            successMsg.style.cssText = 'z-index:9999;min-width:300px;';
-            successMsg.innerHTML = `
-                <strong>✓</strong> ${i18n.success_deleted}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            document.body.appendChild(successMsg);
+            showNotification(`<strong>✓</strong> ${i18n.success_deleted}`);
+            
+            // Reload page after 2 seconds if on observers page
             setTimeout(() => {
-                successMsg.remove();
                 if (window.location.pathname === '/observers') {
                     window.location.reload();
                 }
@@ -6731,17 +6667,10 @@ function showEditBaseDataDialog(observer) {
             modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
             
             // Show success message
-            const successMsg = document.createElement('div');
-            successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-            successMsg.style.cssText = 'z-index:9999;min-width:300px;';
-            successMsg.innerHTML = `
-                <strong>✓</strong> ${i18n.success_updated}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            document.body.appendChild(successMsg);
+            showNotification(`<strong>✓</strong> ${i18n.success_updated}`);
+            
+            // Reload the page if we're on the observers page
             setTimeout(() => {
-                successMsg.remove();
-                // Reload the page if we're on the observers page
                 if (window.location.pathname === '/observers') {
                     window.location.reload();
                 }
@@ -7017,16 +6946,9 @@ async function showAddSiteDialog(observer) {
             modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
             
             // Show success message
-            const successMsg = document.createElement('div');
-            successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-            successMsg.style.cssText = 'z-index:9999;min-width:300px;';
-            successMsg.innerHTML = `
-                <strong>✓</strong> ${i18n.success_added}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            document.body.appendChild(successMsg);
+            showNotification(`<strong>✓</strong> ${i18n.success_added}`);
+            
             setTimeout(() => {
-                successMsg.remove();
                 if (window.location.pathname === '/observers') {
                     window.location.reload();
                 }
@@ -7602,16 +7524,9 @@ async function showEditSiteFormDialog(observer, sites, currentIndex) {
             modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
             
             // Show success message
-            const successMsg = document.createElement('div');
-            successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-            successMsg.style.cssText = 'z-index:9999;min-width:300px;';
-            successMsg.innerHTML = `
-                <strong>✓</strong> ${i18n.success_updated}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            document.body.appendChild(successMsg);
+            showNotification(`<strong>✓</strong> ${i18n.success_updated}`);
+            
             setTimeout(() => {
-                successMsg.remove();
                 if (window.location.pathname === '/observers') {
                     window.location.reload();
                 }
@@ -7909,16 +7824,9 @@ async function showDeleteSiteConfirmDialog(observer, sites, currentIndex = 0) {
             modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
             
             // Show success message
-            const successMsg = document.createElement('div');
-            successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-            successMsg.style.cssText = 'z-index:9999;min-width:300px;';
-            successMsg.innerHTML = `
-                <strong>✓</strong> ${i18n.success_deleted}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            document.body.appendChild(successMsg);
+            showNotification(`<strong>✓</strong> ${i18n.success_deleted}`);
+            
             setTimeout(() => {
-                successMsg.remove();
                 if (window.location.pathname === '/observers') {
                     window.location.reload();
                 }

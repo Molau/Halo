@@ -146,10 +146,10 @@
       "date_none": "no default",
       "date_current_month": "current month",
       "date_previous_month": "previous month",
-      "date_constant_month": "constant month",
+      "date_constant_month": "fixed month",
       "date_select_month": "Select month and year:",
       "date_setting_changed": "Date default setting changed.",
-      "input_type": "Input Type",
+      "input_type": "Input Format",
       "data_dir": "Data Path",
       "observers": "Observer Management",
       "language": "Language",
@@ -303,7 +303,7 @@
     "monthly_stats": "Monthly Statistics",
     "annual_stats": "Annual Statistics",
     "annual_stats_description": "Select a year to view annual statistics.",
-    "yearly_stats": "Yearly Statistics"
+    "yearly_stats": "Annual Statistics"
   },
   "annual_stats": {
     "title": "Annual Statistics",
@@ -399,6 +399,8 @@
     "save": "Save",
     "print": "Print",
     "chart": "Chart",
+    "line_chart": "Line Chart",
+    "bar_chart": "Bar Chart",
     "next": "Next",
     "previous": "Previous",
     "warning": "Warning",

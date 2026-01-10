@@ -5,6 +5,11 @@
 flask>=3.0.0
 flask-cors>=4.0.0
 
+# Graphics
+matplotlib>=3.7.0
+numpy>=1.24.0
+scipy>=1.10.0
+
 # Testing
 pytest>=7.0.0
 pytest-qt>=4.0.0

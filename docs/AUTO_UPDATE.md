@@ -122,7 +122,7 @@ When an update is available:
 - Verify sufficient disk space
 
 **Application doesn't restart**:
-- Manually restart using `python run.py`
+- Manually restart using `python halo.py`
 - Check console for error messages
 
 ## Security Considerations

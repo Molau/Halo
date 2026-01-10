@@ -179,8 +179,8 @@ async function showAddSiteDialog(observer) {
                         </form>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${common.cancel}</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-add-site-ok">${common.ok}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="btn-add-site-ok">${common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -259,16 +259,9 @@ async function showAddSiteDialog(observer) {
             modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
             
             // Show success message
-            const successMsg = document.createElement('div');
-            successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-            successMsg.style.cssText = 'z-index:9999;min-width:300px;';
-            successMsg.innerHTML = `
-                <strong>✓</strong> ${i18n.success_added}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            document.body.appendChild(successMsg);
+            showNotification(`<strong>✓</strong> ${i18n.success_added}`);
+            
             setTimeout(() => {
-                successMsg.remove();
                 if (window.location.pathname === '/observers') {
                     window.location.reload();
                 }
@@ -331,8 +324,8 @@ function showEditSiteConfirmDialog(observer, sites, currentIndex) {
                         </table>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${common.no}</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-confirm-edit-site">${common.yes}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${common.no}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="btn-confirm-edit-site">${common.yes}</button>
                     </div>
                 </div>
             </div>
@@ -414,9 +407,9 @@ function showDeleteSiteConfirmDialog(observer, sites, currentIndex) {
                         <p class="text-muted small">${i18n.delete_site_info}</p>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${common.no}</button>
-                        <button type="button" class="btn btn-danger btn-sm" id="btn-delete-site">${common.yes}</button>
-                        ${currentIndex < sites.length - 1 ? `<button type="button" class="btn btn-info btn-sm" id="btn-next-site">${common.next}</button>` : ''}
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${common.no}</button>
+                        <button type="button" class="btn btn-danger btn-sm px-3" id="btn-delete-site">${common.yes}</button>
+                        ${currentIndex < sites.length - 1 ? `<button type="button" class="btn btn-info btn-sm px-3" id="btn-next-site">${common.next}</button>` : ''}
                     </div>
                 </div>
             </div>
@@ -445,16 +438,9 @@ function showDeleteSiteConfirmDialog(observer, sites, currentIndex) {
             modalEl.addEventListener('hidden.bs.modal', () => {
                 modalEl.remove();
                 // Show success and reload
-                const successMsg = document.createElement('div');
-                successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-                successMsg.style.cssText = 'z-index:9999;min-width:300px;';
-                successMsg.innerHTML = `
-                    <strong>✓</strong> ${i18n.success_deleted}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                `;
-                document.body.appendChild(successMsg);
+                showNotification(`<strong>✓</strong> ${i18n.success_deleted}`);
+                
                 setTimeout(() => {
-                    successMsg.remove();
                     if (window.location.pathname === '/observers') {
                         window.location.reload();
                     }

@@ -80,15 +80,15 @@ def update_from_github(repo: str, tag: str | None, root_path: Path) -> dict:
 def restart_server(root_path: Path) -> None:
     """Spawn a new server process and exit the current one."""
     try:
-        run_py = root_path / 'run.py'
+        halo_py = root_path / 'halo.py'
         python_exec = sys.executable
         shutil.which(python_exec)
-        os.spawnl(os.P_NOWAIT, python_exec, python_exec, str(run_py))
+        os.spawnl(os.P_NOWAIT, python_exec, python_exec, str(halo_py))
     except Exception:
         import subprocess
         python_exec = sys.executable
-        run_py = root_path / 'run.py'
-        subprocess.Popen([python_exec, str(run_py)])
+        halo_py = root_path / 'halo.py'
+        subprocess.Popen([python_exec, str(halo_py)])
     finally:
         os._exit(0)
 

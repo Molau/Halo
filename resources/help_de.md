@@ -15,7 +15,27 @@ HALOpy läuft als Web-Anwendung im aktuellen Desktop-Browser (Firefox, Chrome, E
 
 ### 2.2 Installation
 
-Installieren Sie HALOpy, indem Sie das Projektverzeichnis bereitstellen (z.B. aus dem Git-Repository oder als Zip). Voraussetzung ist Python 3.x; alle Abhängigkeiten werden systemweit mit `pip install -r requirements.txt` eingerichtet. Starten Sie den Server mit `python run.py`; anschließend öffnen Sie HALOpy im Browser über http://localhost:5000. Die Daten- und Ressourcendateien liegen im Projekt (z.B. data/, resources/), spezielle Treiber oder Installer sind nicht erforderlich.
+**Voraussetzung: Python Installation**
+
+* **Windows**: Python ist NICHT in Windows enthalten. Laden Sie Python 3.10+ von [python.org](https://www.python.org/downloads/) herunter und installieren Sie es. Während der Installation aktivieren Sie "Add Python to PATH". `pip` wird automatisch mitinstalliert.
+* **Linux**: Meist vorinstalliert. Falls nicht: `sudo apt install python3 python3-pip` (Debian/Ubuntu) oder entsprechendes Kommando für Ihre Distribution.
+* **macOS**: Vorinstalliert ab macOS 10.15+, aber Sie können eine neuere Version über [Homebrew](https://brew.sh) installieren: `brew install python3`
+
+**HALOpy Installation und Start:**
+
+*Windows (PowerShell/CMD):*
+```powershell
+pip install -r requirements.txt
+python halo.py
+```
+
+*Linux/macOS:*
+```bash
+pip3 install -r requirements.txt
+python3 halo.py
+```
+
+Anschließend öffnen Sie HALOpy im Browser über http://localhost:5000. Die Daten- und Ressourcendateien liegen im Projekt (z.B. data/, resources/), spezielle Treiber oder Installer sind nicht erforderlich.
 
 ## 3. Aufbau des Programms
 
@@ -35,7 +55,11 @@ Dialoge (z.B. Warnungen, Laden/Speichern) erscheinen als modale Overlays mit abg
 
 ### 3.3 Programmstart
 
-Starten Sie den Server mit `python run.py`. Nach dem Start öffnen Sie HALOpy im Browser (Standard: http://localhost:5000). Je nach Konfiguration kann beim Einstieg automatisch eine definierte Beobachtungsdatei geladen werden; andernfalls wählen Sie die Datei (CSV) über die Web-Oberfläche und arbeiten damit im Serverspeicher. Crash-Recovery ist aktiv: Falls während einer Sitzung eine Wiederherstellungsdatei mit der Endung `$$$` angelegt wurde, bietet HALOpy beim nächsten Start an, diese zu übernehmen, um Änderungen nicht zu verlieren. Nicht gespeicherte Änderungen werden zusätzlich beim Dateiwechsel oder Beenden abgefragt.
+Starten Sie den Server:
+* Windows: `python halo.py`
+* Linux/macOS: `python3 halo.py`
+
+Nach dem Start öffnen Sie HALOpy im Browser (Standard: http://localhost:5000). Je nach Konfiguration kann beim Einstieg automatisch eine definierte Beobachtungsdatei geladen werden; andernfalls wählen Sie die Datei (CSV) über die Web-Oberfläche und arbeiten damit im Serverspeicher. Crash-Recovery ist aktiv: Falls während einer Sitzung eine Wiederherstellungsdatei mit der Endung `$$$` angelegt wurde, bietet HALOpy beim nächsten Start an, diese zu übernehmen, um Änderungen nicht zu verlieren. Nicht gespeicherte Änderungen werden zusätzlich beim Dateiwechsel oder Beenden abgefragt.
 
 Ein eigenes Endemenü existiert in der Web-Version nicht. Beenden Sie die Sitzung, indem Sie den Browser-Tab schließen oder zur Startseite zurückkehren. Bei offenen, nicht gespeicherten Änderungen werden Sie vor dem Laden einer anderen Datei gewarnt.
 

@@ -7,6 +7,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     let fixedObserver = '';
     let currentReportData = null; // Store current report data for save/print
 
+    // Helper function to escape HTML
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     // Elements
     const filterDialog = document.getElementById('filter-dialog');
     const observerSelect = document.getElementById('observer-select');
@@ -50,7 +57,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                             <p>${message}</p>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-primary btn-sm px-4" data-bs-dismiss="modal">${i18n.common.ok}</button>
+                            <button type="button" class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">${i18n.common.ok}</button>
                         </div>
                     </div>
                 </div>
@@ -388,39 +395,51 @@ document.addEventListener('DOMContentLoaded', async function() {
             console.error('Error fetching output mode:', error);
         }
         
-        // Use i18n month names
-        const monthName = i18n.months?.[data.mm] || data.mm;
-        
-        // Format title
-        const year = data.jj < 50 ? 2000 + data.jj : 1900 + data.jj;
-        const title = i18n.monthly_report.report_title_template
-            .replace('{observer}', data.observer_name)
-            .replace('{month}', monthName)
-            .replace('{year}', year);
-        
         // Modal title shows i18n title
         reportTitle.textContent = i18n.output?.monthly_report;
         
         // Expose output mode for save/print helpers
         window.currentOutputMode = outputMode;
         
-        // Build report content based on output mode
+        // Fetch formatted report from server
         let html = '';
+        let formatParam;
         
         if (outputMode === 'P') {
-            // Pseudografik format (current implementation)
-            html = buildPseudografikReport(data, i18n);
+            formatParam = 'text';
         } else if (outputMode === 'M') {
-            // Markdown format: render to HTML if 'marked' is available, else show raw markdown
-            const md = buildMarkdownSource(data, i18n);
-            if (window.marked && typeof window.marked.parse === 'function') {
-                html = `<div class="markdown-body" style="padding:20px; background-color: white;">${window.marked.parse(md)}</div>`;
-            } else {
-                html = `<div class="analysis-results" style="padding: 20px;"><pre style="font-family: monospace; font-size: 12px; line-height: 1.5;">${md}</pre></div>`;
-            }
+            formatParam = 'markdown';
         } else {
-            // HTML-Tabellen format
-            html = buildHTMLTableReport(data, i18n);
+            formatParam = 'html';
+        }
+        
+        try {
+            const response = await fetch(`/api/monthly-report?kk=${data.kk}&mm=${data.mm}&jj=${data.jj}&format=${formatParam}`);
+            let content;
+            
+            if (formatParam === 'html') {
+                // HTML format returns JSON; convert to HTML table
+                const jsonData = await response.json();
+                html = buildHTMLTableReport(jsonData, i18n);
+            } else {
+                // Text and markdown formats return text
+                content = await response.text();
+                
+                if (formatParam === 'text') {
+                    // Display as preformatted text with tight line spacing
+                    html = `<pre style="font-family: 'Courier New', monospace; white-space: pre-wrap; word-wrap: break-word; padding: 20px; background-color: white; border: 1px solid #ddd; line-height: 1;">${escapeHtml(content)}</pre>`;
+                } else if (formatParam === 'markdown') {
+                    // Render markdown to HTML
+                    if (window.marked && typeof window.marked.parse === 'function') {
+                        html = `<div class="markdown-body" style="padding:20px; background-color: white;">${window.marked.parse(content)}</div>`;
+                    } else {
+                        html = `<pre style="font-family: monospace; white-space: pre; padding: 20px;">${escapeHtml(content)}</pre>`;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching monthly report:', error);
+            html = `<p style="color: red; padding: 20px;">Error loading report: ${escapeHtml(error.message)}</p>`;
         }
         
         reportContent.innerHTML = html;
@@ -434,74 +453,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Wire up action buttons
         setupActionButtons();
-    }
-    
-    // Build Pseudografik format report (original implementation)
-    function buildPseudografikReport(data, i18n) {
-        // Use i18n month names
-        const monthName = i18n.months?.[data.mm] || data.mm;
-        
-        // Format title
-        const year = data.jj < 50 ? 2000 + data.jj : 1900 + data.jj;
-        const title = i18n.monthly_report.report_title_template
-            .replace('{observer}', data.observer_name)
-            .replace('{month}', monthName)
-            .replace('{year}', year);
-        
-        let html = '<pre style="font-family: monospace; font-size: 14px; line-height: 1;">';
-        
-        // Header box
-        const titlePadLeft = Math.floor((122 - title.length) / 2);
-        html += ' '.repeat(titlePadLeft) + title + '\n';
-        html += ' '.repeat(titlePadLeft) + '═'.repeat(title.length) + '\n\n';
-        html += '╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗\n';
-        const sectors = i18n.monthly_report.sectors;
-        const remarks = i18n.monthly_report.remarks;
-        const headerLine = `KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ${sectors.padEnd(15)} ${remarks.padEnd(47)}`;
-        html += '║ ' + headerLine.substring(0, 118).padEnd(118) + ' ║\n';
-        html += '╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣\n';
-        // Title line inside box
-        
-        // Observations
-        let lastDay = -1;
-        for (const obs of data.observations) {
-            // Add separator line between different days
-            if (lastDay !== -1 && obs.TT !== lastDay) {
-                html += '╟────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╢\n';
-            }
-            
-            try {
-                html += '║ ' + kurzausgabe(obs) + ' ║\n';
-            } catch (err) {
-                console.error('Error formatting observation:', obs, err);
-                html += '║ ERROR formatting observation                                                                                           ║\n';
-            }
-            lastDay = obs.TT;
-        }
-        
-        // No observations message
-        if (data.observations.length === 0) {
-            const noObsMsg = i18n.ui?.messages?.no_observations;
-            const padding = Math.floor((118 - noObsMsg.length) / 2);
-            html += '║' + ' '.repeat(120) + '║\n';
-            html += '║' + ' '.repeat(padding) + noObsMsg + ' '.repeat(120 - padding - noObsMsg.length) + '║\n';
-            html += '║' + ' '.repeat(120) + '║\n';
-        }
-        
-        // Footer
-        html += '╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣\n';
-        let hbLine = i18n.monthly_report.main_location + ': ' + data.observer_hbort;
-        let nbLine = i18n.monthly_report.secondary_location + ': ' + data.observer_nbort;
-        const hbPadLeft = Math.floor((122 - hbLine.length) / 2);
-        hbLine = ' '.repeat(hbPadLeft) + hbLine;
-        nbLine = ' '.repeat(hbPadLeft) + nbLine;
-        html += '║' + hbLine.substring(0, 118).padEnd(120, ' ') + '║\n';
-        html += '║' + nbLine.substring(0, 118).padEnd(120, ' ') + '║\n';
-        html += '╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝\n';
-        
-        html += '</pre>';
-        
-        return html;
     }
     
     // Build HTML-Tabellen format report (implementation)
@@ -525,7 +476,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         html += '<table class="table table-bordered analysis-table">';
         html += '<thead>';
         html += '<tr>';
-        html += '<th class="monthly-report-header">KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18n.monthly_report.sectors + ' ' + i18n.monthly_report.remarks + '</th>';
+        html += '<th class="monthly-report-header" style="font-family: monospace; white-space: pre;">KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18n.monthly_report.sectors + ' ' + i18n.monthly_report.remarks + '</th>';
         html += '</tr>';
         html += '</thead>';
         html += '<tbody>';
@@ -557,50 +508,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         html += '</div>';
         
         return html;
-    }
-    
-    // Build Markdown source text for report
-    function buildMarkdownSource(data, i18n) {
-        // Use i18n month names
-        const monthName = i18n.months?.[data.mm] || data.mm;
-        
-        // Format title
-        const year = data.jj < 50 ? 2000 + data.jj : 1900 + data.jj;
-        const title = i18n.monthly_report.report_title_template
-            .replace('{observer}', data.observer_name)
-            .replace('{month}', monthName)
-            .replace('{year}', year);
-        
-        let md = `# ${title}\n\n`;
-        
-        // Header line (HALO key format) with fixed padding to align columns
-        md += '```\n';
-        const sectorsLabel = i18n.monthly_report.sectors;
-        const remarksLabel = i18n.monthly_report.remarks;
-        const headerLine = `KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ${sectorsLabel.padEnd(15)} ${remarksLabel.padEnd(47)}`;
-        md += headerLine + '\n';
-        md += '```\n\n';
-        
-        // Observations using kurzausgabe format
-        if (data.observations.length === 0) {
-            const noObsMsg = i18n.ui?.messages?.no_observations;
-            md += `**${noObsMsg}**\n\n`;
-        } else {
-            md += '```\n';
-            for (const obs of data.observations) {
-                const line = kurzausgabe(obs);
-                md += line + '\n';
-            }
-            md += '```\n\n';
-        }
-        
-        // Footer with observer locations
-        md += `## ${i18n.monthly_report.main_location}\n`;
-        md += `${data.observer_hbort}\n\n`;
-        md += `## ${i18n.monthly_report.secondary_location}\n`;
-        md += `${data.observer_nbort}\n`;
-        
-        return md;
     }
     
     // Generate plain text report content for save/print (generates based on output mode)
@@ -785,7 +692,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Save button - format based on output mode
         if (btnSave) {
-            btnSave.onclick = () => {
+            btnSave.onclick = async () => {
                 if (!currentReportData) return;
                 
                 // Use globally exposed output mode
@@ -797,18 +704,26 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const jjPadded = String(data.jj).padStart(2, '0');
                 
                 if (outputMode === 'M') {
-                    // Save as Markdown file (lowercase filename)
+                    // Save as Markdown file (lowercase filename) - fetch from server
                     const filename = `${kkPadded}-${monthShort.toLowerCase()}${jjPadded}.md`;
-                    const reportText = buildMarkdownSource(data, i18n);
-                    const blob = new Blob([reportText], { type: 'text/markdown;charset=utf-8' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
+                    
+                    try {
+                        const response = await fetch(`/api/monthly-report?kk=${data.kk}&mm=${data.mm}&jj=${data.jj}&format=markdown`);
+                        const reportText = await response.text();
+                        
+                        const blob = new Blob([reportText], { type: 'text/markdown;charset=utf-8' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    } catch (error) {
+                        console.error('Error fetching markdown for save:', error);
+                        alert('Error saving markdown file');
+                    }
                 } else {
                     // Save as CSV file (lowercase filename) for H and P modes
                     const filename = `${kkPadded}-${monthShort.toLowerCase()}${jjPadded}.csv`;

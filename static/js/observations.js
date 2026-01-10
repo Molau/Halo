@@ -66,15 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function showWarning(message) {
-        const warningAlert = document.createElement('div');
-        warningAlert.className = 'alert alert-warning alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-        warningAlert.style.cssText = 'z-index:9999;min-width:300px;max-width:500px;';
-        warningAlert.innerHTML = `
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        document.body.appendChild(warningAlert);
-        setTimeout(() => warningAlert.remove(), 5000);
+        showNotification(message, 'warning', 5000);
     }
     
     // Filter form elements

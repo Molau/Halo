@@ -38,12 +38,49 @@ The original HALO software used compressed binary files (.HAL, .BEO). To migrate
 2. Use the settings above to generate compatible CSV files
 3. Import into HALOpy
 
+## Installation
+
+### Prerequisites
+
+**Python Installation:**
+
+- **Windows**: Python is NOT included with Windows. Download and install Python 3.10+ from [python.org](https://www.python.org/downloads/). During installation, check "Add Python to PATH". `pip` is included automatically.
+
+- **Linux**: Usually pre-installed. If not: `sudo apt install python3 python3-pip` (Debian/Ubuntu) or equivalent for your distribution.
+
+- **macOS**: Pre-installed on macOS 10.15+, but you may want to install a newer version via [Homebrew](https://brew.sh): `brew install python3`
+
+**Verify Installation:**
+
+*Windows (PowerShell/CMD):*
+```powershell
+python --version
+pip --version
+```
+
+*Linux/macOS:*
+```bash
+python3 --version
+pip3 --version
+```
+
+Both should show Python 3.10+ and pip version.
+
 ## Deployment Options
 
 ### Local Development
+
+**Windows (PowerShell/CMD):**
+```powershell
+pip install -r requirements.txt
+python halo.py
+# Opens browser at http://localhost:5000
+```
+
+**Linux/macOS:**
 ```bash
 pip install -r requirements.txt
-python run.py
+python halo.py
 # Opens browser at http://localhost:5000
 ```
 

@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                             <p>${message}</p>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">${i18n.common.ok}</button>
+                            <button type="button" class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">${i18n.common.ok}</button>
                         </div>
                     </div>
                 </div>
@@ -242,25 +242,45 @@ document.addEventListener('DOMContentLoaded', async function() {
             resultsTitle.textContent = i18n.annual_stats.title;
         }
         
-        // Build statistics HTML based on output mode
+        // Fetch formatted statistics from server
         let html = '';
+        let formatParam;
         
         if (outputMode === 'P') {
-            // Pseudografik format (current implementation)
-            html = buildPseudografikAnnualStats(data, year, i18n);
+            formatParam = 'text';
         } else if (outputMode === 'M') {
-            // Markdown format: render to HTML using marked library
-            const md = buildMarkdownAnnualStats(data, year, i18n);
-            if (window.marked && typeof window.marked.parse === 'function') {
-                // Render markdown to HTML with GitHub styling
-                html = `<div class="markdown-body" style="padding:20px; background-color: white;">${window.marked.parse(md)}</div>`;
-            } else {
-                // Fallback: show raw markdown in monospace
-                html = `<div class="statistics-report" style="font-family: monospace; white-space: pre; font-size: 12px; line-height: 1.5; padding: 20px;">${escapeHtml(md)}</div>`;
-            }
+            formatParam = 'markdown';
         } else {
-            // HTML-Tabellen format
-            html = buildHTMLTableAnnualStats(data, year, i18n);
+            formatParam = 'html';
+        }
+        
+        try {
+            const response = await fetch(`/api/annual-stats?jj=${data.jj}&format=${formatParam}`);
+            let content;
+            
+            if (formatParam === 'html') {
+                // HTML format returns JSON; convert to HTML tables
+                const jsonData = await response.json();
+                html = buildHTMLTableAnnualStats(jsonData, year, i18n);
+            } else {
+                // Text and markdown formats return text
+                content = await response.text();
+                
+                if (formatParam === 'text') {
+                    // Display as preformatted text with tight line spacing
+                    html = `<pre style="font-family: 'Courier New', monospace; white-space: pre-wrap; word-wrap: break-word; padding: 20px; background-color: white; border: 1px solid #ddd; line-height: 1;">${escapeHtml(content)}</pre>`;
+                } else if (formatParam === 'markdown') {
+                    // Render markdown to HTML
+                    if (window.marked && typeof window.marked.parse === 'function') {
+                        html = `<div class="markdown-body" style="padding:20px; background-color: white;">${window.marked.parse(content)}</div>`;
+                    } else {
+                        html = `<pre style="font-family: monospace; white-space: pre; padding: 20px;">${escapeHtml(content)}</pre>`;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching annual statistics:', error);
+            html = `<p style="color: red; padding: 20px;">Error loading statistics: ${escapeHtml(error.message)}</p>`;
         }
         
         statsContent.innerHTML = html;
@@ -439,7 +459,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             const titlePadding = Math.max(0, Math.floor((74 - titleLine.length) / 2));
             html += ' '.repeat(titlePadding) + titleLine + '\n';
             html += ' '.repeat(titlePadding) + '═'.repeat(titleLine.length) + '\n\n';
-            html += '      ' + i18n.annual_stats.phenomena_none + '\n';
+            const phenomenaNoneText = i18n.annual_stats.phenomena_none;
+            const phenomenaPadding = Math.max(0, Math.floor((74 - phenomenaNoneText.length) / 2));
+            html += ' '.repeat(phenomenaPadding) + phenomenaNoneText + '\n';
             return html;
         }
         
@@ -623,11 +645,19 @@ document.addEventListener('DOMContentLoaded', async function() {
             btnOk.focus();
         }
         
-        // Chart button
-        const btnChart = document.getElementById('btn-stats-chart');
-        if (btnChart) {
-            btnChart.onclick = () => {
+        // Chart buttons for line graph
+        const btnChartLine = document.getElementById('btn-stats-chart-line');
+        if (btnChartLine) {
+            btnChartLine.onclick = () => {
                 showChart();
+            };
+        }
+        
+        // Chart buttons for bar graph
+        const btnChartBar = document.getElementById('btn-stats-chart-bar');
+        if (btnChartBar) {
+            btnChartBar.onclick = () => {
+                showBarChart();
             };
         }
         
@@ -663,7 +693,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         resultsModal._keyHandler = keyHandler;
     }
     
-    // Show chart
+    // Show chart - render with Chart.js for interactive display
     function showChart() {
         if (!currentStatsData) return;
         
@@ -672,55 +702,30 @@ document.addEventListener('DOMContentLoaded', async function() {
                      `20${currentStatsData.jj.toString().padStart(2, '0')}`;
         
         // Set chart title
-        const chartTitle = document.getElementById('chart-printable-title');
+        const chartTitle = document.getElementById('chart-printable-title-line');
         if (chartTitle) {
             chartTitle.textContent = i18n.annual_stats.chart_title.replace('{year}', year);
             chartTitle.style.display = 'block';
         }
         
-        // Render chart
-        renderChart(currentStatsData);
+        // Set chart subtitle with observation count
+        const chartSubtitle = document.getElementById('chart-subtitle-line');
+        if (chartSubtitle) {
+            const totalEE = currentStatsData?.totals?.total_ee || 0;
+            chartSubtitle.textContent = `berechnet aus ${totalEE} Einzelbeobachtungen`;
+        }
         
-        // Show chart modal (keep results modal open behind)
-        const chartModalElement = document.getElementById('chart-modal');
-        const chartModal = new bootstrap.Modal(chartModalElement);
-        
-        // Prevent ESC key from closing the parent results modal
-        chartModalElement.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                e.preventDefault();
-                e.stopPropagation();
-                // Close only the chart modal, not the parent
-                const modal = bootstrap.Modal.getInstance(chartModalElement);
-                modal?.hide();
-            }
-        }, true); // Use capture phase to handle before Bootstrap
-        
-        // Set focus to chart modal after it's shown to capture ESC key
-        chartModalElement.addEventListener('shown.bs.modal', () => {
-            chartModalElement.focus();
-        }, { once: true });
-        
-        chartModal.show();
-        
-        // Wire up chart buttons
-        setupChartButtons();
-    }
-    
-    // Render chart
-    function renderChart(data) {
-        const canvas = document.getElementById('activity-chart');
-        if (!canvas) return;
-        
-        const ctx = canvas.getContext('2d');
-        
-        // Month labels
+        // Prepare chart data
         const monthLabels = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
         const months = Array.from({length: 12}, (_, i) => i + 1);
         
         // Extract real and relative activity from monthly_stats
-        const realData = months.map(mm => data.monthly_stats?.[mm.toString()]?.real || 0);
-        const relativeData = months.map(mm => data.monthly_stats?.[mm.toString()]?.relative || 0);
+        const realData = months.map(mm => currentStatsData.monthly_stats?.[mm.toString()]?.real || 0);
+        const relativeData = months.map(mm => currentStatsData.monthly_stats?.[mm.toString()]?.relative || 0);
+        
+        // Create chart
+        const canvas = document.getElementById('activity-chart-line');
+        const ctx = canvas.getContext('2d');
         
         // Destroy existing chart if it exists
         if (window.annualActivityChart) {
@@ -792,39 +797,255 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
             }
         });
+        
+        // Show chart modal
+        const chartModalElement = document.getElementById('chart-modal-line');
+        const chartModal = new bootstrap.Modal(chartModalElement);
+        
+        // Store data for print/save buttons
+        window.chartData = currentStatsData;
+        
+        // Prevent ESC key from closing parent modal
+        chartModalElement.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                e.stopPropagation();
+            }
+        });
+        
+        chartModal.show();
     }
     
-    // Setup chart buttons
-    function setupChartButtons() {
-        // Print button
-        const btnChartPrint = document.getElementById('btn-chart-print');
-        if (btnChartPrint) {
-            btnChartPrint.onclick = () => {
-                window.print();
+    function showBarChart() {
+        if (!currentStatsData) return;
+        
+        const year = currentStatsData.jj >= 50 ? `19${currentStatsData.jj.toString().padStart(2, '0')}` : 
+                     `20${currentStatsData.jj.toString().padStart(2, '0')}`;
+        
+        // Set chart title
+        const chartTitle = document.getElementById('chart-printable-title-bar');
+        if (chartTitle) {
+            chartTitle.textContent = i18n.annual_stats.chart_title.replace('{year}', year);
+            chartTitle.style.display = 'block';
+        }
+        
+        // Set chart subtitle
+        const chartSubtitle = document.getElementById('chart-subtitle-bar');
+        if (chartSubtitle) {
+            const totalEE = currentStatsData?.totals?.total_ee || 0;
+            chartSubtitle.textContent = `berechnet aus ${totalEE} Einzelbeobachtungen`;
+        }
+        
+        // Prepare chart data - months 1-12
+        const monthLabels = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+        const months = Array.from({length: 12}, (_, i) => i + 1);
+        
+        const realData = months.map(mm => currentStatsData.monthly_stats?.[mm.toString()]?.real || 0);
+        const relativeData = months.map(mm => currentStatsData.monthly_stats?.[mm.toString()]?.relative || 0);
+        
+        // Create chart
+        const canvas = document.getElementById('activity-chart-bar');
+        const ctx = canvas.getContext('2d');
+        
+        // Destroy existing chart if it exists
+        if (window.activityChart) {
+            window.activityChart.destroy();
+        }
+        
+        window.activityChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: monthLabels,
+                datasets: [
+                    {
+                        label: i18n.annual_stats?.chart_real,
+                        data: realData,
+                        backgroundColor: '#dc3545',  // Red
+                        borderColor: '#dc3545',
+                        borderWidth: 1,
+                        barPercentage: 0.8,
+                        categoryPercentage: 0.9
+                    },
+                    {
+                        label: i18n.annual_stats?.chart_relative,
+                        data: relativeData,
+                        backgroundColor: '#28a745',  // Green
+                        borderColor: '#28a745',
+                        borderWidth: 1,
+                        barPercentage: 0.8,
+                        categoryPercentage: 0.9
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            font: { size: 12 },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: i18n.annual_stats?.chart_x_axis,
+                            font: { size: 12, weight: 'bold' }
+                        },
+                        stacked: false
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: i18n.annual_stats?.chart_y_axis,
+                            font: { size: 12, weight: 'bold' }
+                        },
+                        beginAtZero: true,
+                        stacked: false
+                    }
+                }
+            }
+        });
+        
+        // Show chart modal
+        const chartModalElement = document.getElementById('chart-modal-bar');
+        const chartModal = new bootstrap.Modal(chartModalElement);
+        
+        // Store data for print/save buttons
+        window.chartData = currentStatsData;
+        
+        // Prevent ESC key from closing parent modal
+        chartModalElement.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                e.stopPropagation();
+            }
+        });
+        
+        chartModal.show();
+    }
+    
+    // Setup print/save button handlers for chart modal
+    function setupChartModal() {
+        // ===== LINE CHART BUTTONS =====
+        const btnChartPrintLine = document.getElementById('btn-chart-print-line');
+        if (btnChartPrintLine) {
+            btnChartPrintLine.onclick = async () => {
+                if (!window.chartData) return;
+                try {
+                    const response = await fetch(`/api/annual-stats?jj=${window.chartData.jj}&format=linegraph`);
+                    const blob = await response.blob();
+                    
+                    const printWindow = window.open();
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(blob);
+                    printWindow.document.write('<html><head><title>Jahresstatistik</title></head><body>');
+                    printWindow.document.write('<img src="' + img.src + '" style="max-width: 100%; margin: auto; display: block;">');
+                    printWindow.document.write('</body></html>');
+                    printWindow.document.close();
+                    
+                    setTimeout(() => {
+                        printWindow.print();
+                        printWindow.close();
+                    }, 500);
+                } catch (error) {
+                    console.error('Error printing chart:', error);
+                    showErrorDialog('Fehler beim Drucken des Diagramms');
+                }
             };
         }
         
-        // Save button
-        const btnChartSave = document.getElementById('btn-chart-save');
-        if (btnChartSave) {
-            btnChartSave.onclick = () => {
-                saveChart();
+        const btnChartSaveLine = document.getElementById('btn-chart-save-line');
+        if (btnChartSaveLine) {
+            btnChartSaveLine.onclick = async () => {
+                if (!window.chartData) return;
+                try {
+                    const year = window.chartData.jj >= 50 ? `19${window.chartData.jj.toString().padStart(2, '0')}` : 
+                                 `20${window.chartData.jj.toString().padStart(2, '0')}`;
+                    const filename = `Jahresstatistik_${year}.png`;
+                    
+                    const response = await fetch(`/api/annual-stats?jj=${window.chartData.jj}&format=linegraph`);
+                    const blob = await response.blob();
+                    
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                } catch (error) {
+                    console.error('Error saving chart:', error);
+                    showErrorDialog('Fehler beim Speichern des Diagramms');
+                }
+            };
+        }
+
+        // ===== BAR CHART BUTTONS =====
+        const btnChartPrintBar = document.getElementById('btn-chart-print-bar');
+        if (btnChartPrintBar) {
+            btnChartPrintBar.onclick = async () => {
+                if (!window.chartData) return;
+                try {
+                    const response = await fetch(`/api/annual-stats?jj=${window.chartData.jj}&format=bargraph`);
+                    const blob = await response.blob();
+                    
+                    const printWindow = window.open();
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(blob);
+                    printWindow.document.write('<html><head><title>Jahresstatistik</title></head><body>');
+                    printWindow.document.write('<img src="' + img.src + '" style="max-width: 100%; margin: auto; display: block;">');
+                    printWindow.document.write('</body></html>');
+                    printWindow.document.close();
+                    
+                    setTimeout(() => {
+                        printWindow.print();
+                        printWindow.close();
+                    }, 500);
+                } catch (error) {
+                    console.error('Error printing chart:', error);
+                    showErrorDialog('Fehler beim Drucken des Diagramms');
+                }
             };
         }
         
-        // Close button - return to results
-        const btnChartClose = document.getElementById('btn-chart-close');
-        if (btnChartClose) {
-            btnChartClose.onclick = () => {
-                const chartModal = bootstrap.Modal.getInstance(document.getElementById('chart-modal'));
-                chartModal?.hide();
-                
-                const resultsModal = new bootstrap.Modal(document.getElementById('results-modal'));
-                resultsModal.show();
+        const btnChartSaveBar = document.getElementById('btn-chart-save-bar');
+        if (btnChartSaveBar) {
+            btnChartSaveBar.onclick = async () => {
+                if (!window.chartData) return;
+                try {
+                    const year = window.chartData.jj >= 50 ? `19${window.chartData.jj.toString().padStart(2, '0')}` : 
+                                 `20${window.chartData.jj.toString().padStart(2, '0')}`;
+                    const filename = `Jahresstatistik_${year}_Balken.png`;
+                    
+                    const response = await fetch(`/api/annual-stats?jj=${window.chartData.jj}&format=bargraph`);
+                    const blob = await response.blob();
+                    
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                } catch (error) {
+                    console.error('Error saving chart:', error);
+                    showErrorDialog('Fehler beim Speichern des Diagramms');
+                }
             };
         }
     }
     
+    // Call setupChartModal when page loads
+    setupChartModal();
+
     // Print statistics
     function printStatistics() {
         window.print();
@@ -994,42 +1215,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         return csv;
     }
     
-    // Save chart as PNG
-    function saveChart() {
-        if (!currentStatsData) return;
-        
-        const year = currentStatsData.jj >= 50 ? `19${currentStatsData.jj.toString().padStart(2, '0')}` : 
-                     `20${currentStatsData.jj.toString().padStart(2, '0')}`;
-        
-        const canvas = document.getElementById('activity-chart');
-        if (!canvas) return;
-        
-        // Create a new canvas with white background
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
-        const ctx = tempCanvas.getContext('2d');
-        
-        // Fill with white background
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-        
-        // Draw the original canvas on top
-        ctx.drawImage(canvas, 0, 0);
-        
-        // Convert canvas to blob and download
-        tempCanvas.toBlob((blob) => {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${year}.png`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }, 'image/png');
-    }
-
     // Event Handlers
     if (btnCancel) {
         btnCancel.addEventListener('click', () => {
@@ -1089,7 +1274,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Build Pseudografik format annual statistics (original implementation)
     function buildPseudografikAnnualStats(data, year, i18n) {
-        let html = '<div class="statistics-report" style="font-family: monospace; white-space: pre; font-size: 11px; color: #000000; line-height: 1;">';
+        let html = '<pre style="font-family: \'Courier New\', Courier, monospace; font-size: 11px; color: #000000; line-height: 1.2; overflow-x: auto; padding: 20px; background-color: #f5f5f5; border-radius: 4px; letter-spacing: 0; word-spacing: normal;">';
         
         // Title (centered)
         const titleLine = i18n.annual_stats.title_with_year.replace('{year}', year);
@@ -1117,7 +1302,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             html += renderPhenomena(data.phenomena);
         }
         
-        html += '</div>';
+        html += '</pre>';
         return html;
     }
 

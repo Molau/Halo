@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                             <p>${message}</p>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-primary btn-sm px-4" data-bs-dismiss="modal">${i18n.common.ok}</button>
+                            <button type="button" class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">${i18n.common.ok}</button>
                         </div>
                     </div>
                 </div>
@@ -1669,11 +1669,11 @@ document.addEventListener('DOMContentLoaded', async function() {
                         <div class="modal-body" id="resultModalBody" style="overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 250px);">
                         </div>
                         <div class="modal-footer d-flex justify-content-end gap-2">
-                            <button type="button" id="btn-result-bar-chart" class="btn btn-secondary btn-sm px-4">${i18n.button.bar_chart}</button>
-                            <button type="button" id="btn-result-line-chart" class="btn btn-secondary btn-sm px-4">${i18n.button.line_chart}</button>
-                            <button type="button" id="btn-result-print" class="btn btn-secondary btn-sm px-4">${i18n.button.print}</button>
-                            <button type="button" id="btn-result-save" class="btn btn-secondary btn-sm px-4">${i18n.button.save}</button>
-                            <button type="button" id="btn-result-ok" class="btn btn-primary btn-sm px-4">${i18n.button.ok}</button>
+                            <button type="button" id="btn-result-bar-chart" class="btn btn-secondary btn-sm px-3">${i18n.button.bar_chart}</button>
+                            <button type="button" id="btn-result-line-chart" class="btn btn-secondary btn-sm px-3">${i18n.button.line_chart}</button>
+                            <button type="button" id="btn-result-print" class="btn btn-secondary btn-sm px-3">${i18n.button.print}</button>
+                            <button type="button" id="btn-result-save" class="btn btn-secondary btn-sm px-3">${i18n.button.save}</button>
+                            <button type="button" id="btn-result-ok" class="btn btn-primary btn-sm px-3">${i18n.button.ok}</button>
                         </div>
                     </div>
                 </div>
@@ -1984,9 +1984,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                         <div id="plotly3DChart" style="width: 100%; height: 100%;"></div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm px-4" onclick="window.print()">${i18n.common.print}</button>
-                        <button type="button" class="btn btn-secondary btn-sm px-4" id="btn-save-3d-chart">${i18n.common.save}</button>
-                        <button type="button" class="btn btn-primary btn-sm px-4" data-bs-dismiss="modal">${i18n.common.ok}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" onclick="window.print()">${i18n.common.print}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-save-3d-chart">${i18n.common.save}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">${i18n.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -2059,9 +2059,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                         <canvas id="analysisChart"></canvas>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm px-4" onclick="window.print()">${i18n.common.print}</button>
-                        <button type="button" class="btn btn-secondary btn-sm px-4" id="btn-save-2d-chart">${i18n.common.save}</button>
-                        <button type="button" class="btn btn-primary btn-sm px-4" data-bs-dismiss="modal">${i18n.common.ok}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" onclick="window.print()">${i18n.common.print}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-save-2d-chart">${i18n.common.save}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">${i18n.common.ok}</button>
                     </div>
                 </div>
             </div>

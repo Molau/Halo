@@ -18,7 +18,27 @@ HALOpy runs as a web application in a current desktop browser (Firefox, Chrome, 
 
 ### 2.2 Installation
 
-Install HALOpy by providing the project directory (e.g., from the Git repository or as a Zip file). The prerequisite is Python 3.x; all dependencies are installed system-wide with `pip install -r requirements.txt`. Start the server with `python run.py`; then open HALOpy in your browser at http://localhost:5000. The data and resource files are in the project (e.g., data/, resources/), no special drivers or installers are required.
+**Prerequisites: Python Installation**
+
+* **Windows**: Python is NOT included with Windows. Download Python 3.10+ from [python.org](https://www.python.org/downloads/) and install it. During installation, check "Add Python to PATH". `pip` is included automatically.
+* **Linux**: Usually pre-installed. If not: `sudo apt install python3 python3-pip` (Debian/Ubuntu) or equivalent for your distribution.
+* **macOS**: Pre-installed on macOS 10.15+, but you may want to install a newer version via [Homebrew](https://brew.sh): `brew install python3`
+
+**HALOpy Installation and Startup:**
+
+*Windows (PowerShell/CMD):*
+```powershell
+pip install -r requirements.txt
+python halo.py
+```
+
+*Linux/macOS:*
+```bash
+pip3 install -r requirements.txt
+python3 halo.py
+```
+
+Then open HALOpy in your browser at http://localhost:5000. The data and resource files are in the project (e.g., data/, resources/), no special drivers or installers are required.
 
 ## 3. Program Structure
 
@@ -38,7 +58,11 @@ Dialogs (e.g., warnings, load/save) appear as modal overlays with a darkened bac
 
 ### 3.3 Program Start
 
-Start the server with `python run.py`. After startup, open HALOpy in your browser (default: http://localhost:5000). Depending on the configuration, a defined observation file may be loaded automatically on startup; otherwise, select the file (CSV) via the web interface and work with it in server memory. Crash recovery is active: if a recovery file with the extension `$$$` was created during a session, HALOpy will offer to use it on the next startup to avoid losing changes. Unsaved changes are additionally queried when switching files or exiting.
+Start the server:
+* Windows: `python halo.py`
+* Linux/macOS: `python3 halo.py`
+
+After startup, open HALOpy in your browser (default: http://localhost:5000). Depending on the configuration, a defined observation file may be loaded automatically on startup; otherwise, select the file (CSV) via the web interface and work with it in server memory. Crash recovery is active: if a recovery file with the extension `$$$` was created during a session, HALOpy will offer to use it on the next startup to avoid losing changes. Unsaved changes are additionally queried when switching files or exiting.
 
 There is no separate exit menu in the web version. End your session by closing the browser tab or returning to the home page. If there are unsaved changes, you will be warned before loading another file.
 

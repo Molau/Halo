@@ -7,33 +7,6 @@
     "description_line2": "       und Ausgabe von Halobeobachtungen     "
   },
   "copyright_years": "1992-2026",
-  "common": {
-    "ok": "OK",
-    "cancel": "Abbrechen",
-    "close": "Schließen",
-    "save": "Speichern",
-    "print": "Drucken",
-    "chart": "Grafik",
-    "next": "Weiter",
-    "previous": "Zurück",
-    "warning": "Warnung",
-    "error": "Fehler",
-    "not_implemented": "wird noch implementiert",
-    "save_as_prompt": "Dateinamen (ohne Erweiterung):",
-    "overwrite_confirm": "Überschreiben?",
-    "back_to_main": "Zurück zum Hauptmenü",
-    "please_enter_filename": "Bitte geben Sie einen Dateinamen ein!",
-    "no_file_loaded": "Keine Datei geladen!",
-    "error_loading": "Fehler beim Laden",
-    "unknown_error": "Unbekannter Fehler"
-  },
-  "update": {
-    "title": "Neue Version verfügbar",
-    "message": "Eine neue Version ist verfügbar: {latest} vom {latestDate} (aktuell: {current} vom {currentDate}). Möchten Sie die neue Version herunterladen und installieren?",
-    "downloading": "Aktualisierung wird heruntergeladen...",
-    "success": "Aktualisierung erfolgreich. Anwendung wird neu geladen...",
-    "error": "Aktualisierung fehlgeschlagen: {error}"
-  },
   "action": {
     "select_month": "Monat auswählen",
     "select_year": "Jahr auswählen"
@@ -45,8 +18,8 @@
     "print": "Drucken",
     "save": "Speichern",
     "chart": "Grafik",
-    "bar_chart": "Balkengrafik",
-    "line_chart": "Liniengrafik"
+    "line_chart": "Liniengrafik",
+    "bar_chart": "Balkengrafik"
   },
   "welcome": {
     "title": "Willkommen beim HALO Auswerteprogramm",
@@ -186,7 +159,7 @@
       "date_none": "keine Voreinstellung",
       "date_current_month": "aktueller Monat",
       "date_previous_month": "Vormonat",
-      "date_constant_month": "konstanter Monat",
+      "date_constant_month": "fester Monat",
       "date_select_month": "Monat und Jahr wählen:",
       "date_setting_changed": "Datumsvoreinstellung wurde geändert.",
       "input_type": "Eingabeart",
@@ -413,6 +386,28 @@
     "remarks": "Bemerkungen",
     "main_location": "Hauptbeobachtungsort",
     "secondary_location": "Nebenbeobachtungsort"
+  },
+  "common": {
+    "ok": "OK",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "save": "Speichern",
+    "print": "Drucken",
+    "chart": "Grafik",
+    "line_chart": "Liniengrafik",
+    "bar_chart": "Balkengrafik",
+    "next": "Weiter",
+    "previous": "Zurück",
+    "warning": "Warnung",
+    "error": "Fehler",
+    "not_implemented": "wird noch implementiert",
+    "save_as_prompt": "Dateinamen (ohne Erweiterung):",
+    "overwrite_confirm": "Überschreiben?",
+    "back_to_main": "Zurück zum Hauptmenü",
+    "please_enter_filename": "Bitte geben Sie einen Dateinamen ein!",
+    "no_file_loaded": "Keine Datei geladen!",
+    "error_loading": "Fehler beim Laden",
+    "unknown_error": "Unbekannter Fehler"
   },
   "errors": {
     "unknown_observer": "Unbekannter Beobachtercode"

@@ -257,31 +257,51 @@ document.addEventListener('DOMContentLoaded', async function() {
         const year = data.jj >= 50 ? `19${data.jj.toString().padStart(2, '0')}` : 
                      `20${data.jj.toString().padStart(2, '0')}`;
         
-        // Set title
+        // Set title with month and year
         const resultsTitle = document.getElementById('results-modal-title');
         if (resultsTitle) {
-            resultsTitle.textContent = i18n.monthly_stats?.title;
+            resultsTitle.textContent = `${i18n.monthly_stats?.title} ${monthName} ${year}`;
         }
         
-        // Build statistics HTML based on output mode
+        // Fetch formatted statistics from server
         let html = '';
+        let formatParam;
         
         if (outputMode === 'P') {
-            // Pseudografik format (current implementation)
-            html = buildPseudografikMonthlyStats(data, monthName, year, i18n);
+            formatParam = 'text';
         } else if (outputMode === 'M') {
-            // Markdown format: render to HTML using marked library
-            const md = buildMarkdownMonthlyStats(data, monthName, year, i18n);
-            if (window.marked && typeof window.marked.parse === 'function') {
-                // Render markdown to HTML with GitHub styling
-                html = `<div class="markdown-body" style="padding:20px; background-color: white;">${window.marked.parse(md)}</div>`;
-            } else {
-                // Fallback: show raw markdown in monospace
-                html = `<div class="statistics-report" style="font-family: monospace; white-space: pre; font-size: 12px; line-height: 1.5; padding: 20px;">${escapeHtml(md)}</div>`;
-            }
+            formatParam = 'markdown';
         } else {
-            // HTML-Tabellen format (stub)
-            html = buildHTMLTableMonthlyStats(data, monthName, year, i18n);
+            formatParam = 'html';
+        }
+        
+        try {
+            const response = await fetch(`/api/monthly-stats?mm=${data.mm}&jj=${data.jj}&format=${formatParam}`);
+            let content;
+            
+            if (formatParam === 'html') {
+                // HTML format returns JSON; convert to HTML tables
+                const jsonData = await response.json();
+                html = buildHTMLTableMonthlyStats(jsonData, monthName, year, i18n);
+            } else {
+                // Text and markdown formats return text
+                content = await response.text();
+                
+                if (formatParam === 'text') {
+                    // Display as preformatted text with tight line spacing
+                    html = `<pre style="font-family: 'Courier New', monospace; white-space: pre-wrap; word-wrap: break-word; padding: 20px; background-color: white; border: 1px solid #ddd; line-height: 1;">${escapeHtml(content)}</pre>`;
+                } else if (formatParam === 'markdown') {
+                    // Render markdown to HTML
+                    if (window.marked && typeof window.marked.parse === 'function') {
+                        html = `<div class="markdown-body" style="padding:20px; background-color: white;">${window.marked.parse(content)}</div>`;
+                    } else {
+                        html = `<pre style="font-family: monospace; white-space: pre; padding: 20px;">${escapeHtml(content)}</pre>`;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching monthly statistics:', error);
+            html = `<p style="color: red; padding: 20px;">Error loading statistics: ${escapeHtml(error.message)}</p>`;
         }
         
         statsContent.innerHTML = html;
@@ -729,31 +749,40 @@ document.addEventListener('DOMContentLoaded', async function() {
             };
         }
         
-        // Chart button
-        const btnStatsChart = document.getElementById('btn-stats-chart');
-        if (btnStatsChart) {
-            btnStatsChart.onclick = () => {
+        // Chart button for line graph
+        const btnStatsChartLine = document.getElementById('btn-stats-chart-line');
+        if (btnStatsChartLine) {
+            btnStatsChartLine.onclick = () => {
                 if (!currentStatsData) return;
                 showActivityChart(currentStatsData);
             };
         }
+        
+        // Chart button for bar graph
+        const btnStatsChartBar = document.getElementById('btn-stats-chart-bar');
+        if (btnStatsChartBar) {
+            btnStatsChartBar.onclick = () => {
+                if (!currentStatsData) return;
+                showActivityBarChart(currentStatsData);
+            };
+        }
     }
     
-    // Show activity chart
+    // Show activity chart - render with Chart.js for interactive display
     function showActivityChart(data) {
         const months = i18n.months || {};
         const monthName = months[data.mm] || months[data.mm.toString()];
         const year = data.jj >= 50 ? `19${data.jj.toString().padStart(2, '0')}` : 
                      `20${data.jj.toString().padStart(2, '0')}`;
         
-        // Set printable chart title (shown in the chart)
-        const chartPrintableTitle = document.getElementById('chart-printable-title');
+        // Set chart title - LINE CHART
+        const chartPrintableTitle = document.getElementById('chart-printable-title-line');
         if (chartPrintableTitle) {
             chartPrintableTitle.textContent = `Haloaktivität im ${monthName} ${year}`;
         }
         
-        // Set chart subtitle
-        const chartSubtitle = document.getElementById('chart-subtitle');
+        // Set chart subtitle - LINE CHART
+        const chartSubtitle = document.getElementById('chart-subtitle-line');
         if (chartSubtitle) {
             const observationCount = data.activity_observation_count || 0;
             chartSubtitle.textContent = `berechnet aus ${observationCount} Einzelbeobachtungen`;
@@ -764,8 +793,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         const realData = days.map(d => data.activity_real?.[d] || 0);
         const relativeData = days.map(d => data.activity_relative?.[d] || 0);
         
-        // Create chart
-        const ctx = document.getElementById('activity-chart').getContext('2d');
+        // Create chart - LINE CHART
+        const canvas = document.getElementById('activity-chart-line');
+        const ctx = canvas.getContext('2d');
         
         // Destroy existing chart if it exists
         if (window.activityChart) {
@@ -841,76 +871,255 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         });
         
-        // Show chart modal
-        const chartModalElement = document.getElementById('chart-modal');
+        // Show chart modal - LINE CHART VERSION
+        const chartModalElement = document.getElementById('chart-modal-line');
         const chartModal = new bootstrap.Modal(chartModalElement);
         
-        // Prevent ESC key from closing the parent results modal
+        // Store data for print/save buttons
+        window.chartData = data;
+        
+        // Prevent ESC key from closing parent modal
         chartModalElement.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                e.preventDefault();
                 e.stopPropagation();
-                // Close only the chart modal, not the parent
-                const modal = bootstrap.Modal.getInstance(chartModalElement);
-                modal?.hide();
             }
-        }, true); // Use capture phase to handle before Bootstrap
-        
-        // Set focus to chart modal after it's shown to capture ESC key
-        chartModalElement.addEventListener('shown.bs.modal', () => {
-            chartModalElement.focus();
-        }, { once: true });
+        });
         
         chartModal.show();
+    }
+    
+    function showActivityBarChart(data) {
+        const months = i18n.months || {};
+        const monthName = months[data.mm] || months[data.mm.toString()];
+        const year = data.jj >= 50 ? `19${data.jj.toString().padStart(2, '0')}` : 
+                     `20${data.jj.toString().padStart(2, '0')}`;
         
-        // Wire up chart print button
-        const btnChartPrint = document.getElementById('btn-chart-print');
-        if (btnChartPrint) {
-            btnChartPrint.onclick = () => {
-                // Hide stats content and results modal for printing
-                const statsContent = document.getElementById('stats-content');
-                const resultsModal = document.getElementById('results-modal');
-                const resultsBackdrop = document.querySelector('.modal-backdrop.show');
-                
-                // Store original display states
-                const originalStatsDisplay = statsContent?.style.display;
-                const originalResultsDisplay = resultsModal?.style.display;
-                const originalBackdropDisplay = resultsBackdrop?.style.display;
-                
-                if (statsContent) statsContent.style.display = 'none';
-                if (resultsModal) resultsModal.style.display = 'none';
-                if (resultsBackdrop) resultsBackdrop.style.display = 'none';
-                
-                // Print
-                window.print();
-                
-                // Restore visibility after print dialog closes
-                setTimeout(() => {
-                    if (statsContent) statsContent.style.display = originalStatsDisplay || '';
-                    if (resultsModal) resultsModal.style.display = originalResultsDisplay || '';
-                    if (resultsBackdrop) resultsBackdrop.style.display = originalBackdropDisplay || '';
-                }, 100);
+        // Set chart title - BAR CHART
+        const chartPrintableTitle = document.getElementById('chart-printable-title-bar');
+        if (chartPrintableTitle) {
+            chartPrintableTitle.textContent = `Haloaktivität im ${monthName} ${year}`;
+        }
+        
+        // Set chart subtitle - BAR CHART
+        const chartSubtitle = document.getElementById('chart-subtitle-bar');
+        if (chartSubtitle) {
+            const observationCount = data.activity_observation_count || 0;
+            chartSubtitle.textContent = `berechnet aus ${observationCount} Einzelbeobachtungen`;
+        }
+        
+        // Prepare chart data - days 1-31
+        const days = Array.from({length: 31}, (_, i) => i + 1);
+        const realData = days.map(d => data.activity_real?.[d] || 0);
+        const relativeData = days.map(d => data.activity_relative?.[d] || 0);
+        
+        // Create chart - BAR CHART
+        const canvas = document.getElementById('activity-chart-bar');
+        const ctx = canvas.getContext('2d');
+        
+        // Destroy existing chart if it exists
+        if (window.activityChart) {
+            window.activityChart.destroy();
+        }
+        
+        window.activityChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: days,
+                datasets: [
+                    {
+                        label: i18n.monthly_stats?.activity_real,
+                        data: realData,
+                        backgroundColor: '#dc3545',  // Red
+                        borderColor: '#dc3545',
+                        borderWidth: 1,
+                        barPercentage: 0.8,
+                        categoryPercentage: 0.9
+                    },
+                    {
+                        label: i18n.monthly_stats?.activity_relative,
+                        data: relativeData,
+                        backgroundColor: '#28a745',  // Green
+                        borderColor: '#28a745',
+                        borderWidth: 1,
+                        barPercentage: 0.8,
+                        categoryPercentage: 0.9
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            font: { size: 12 },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: i18n.monthly_stats?.x_axis,
+                            font: { size: 12, weight: 'bold' }
+                        },
+                        ticks: {
+                            stepSize: 1
+                        },
+                        stacked: false
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: i18n.monthly_stats?.y_axis,
+                            font: { size: 12, weight: 'bold' }
+                        },
+                        beginAtZero: true,
+                        stacked: false
+                    }
+                }
+            }
+        });
+        
+        // Show chart modal - BAR CHART VERSION
+        const chartModalElement = document.getElementById('chart-modal-bar');
+        const chartModal = new bootstrap.Modal(chartModalElement);
+        
+        // Store data for print/save buttons
+        window.chartData = data;
+        
+        // Prevent ESC key from closing parent modal
+        chartModalElement.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                e.stopPropagation();
+            }
+        });
+        
+        chartModal.show();
+    }
+    
+    // Setup print/save button handlers for chart modal
+    function setupChartModal() {
+        // ===== LINE CHART BUTTONS =====
+        const btnChartPrintLine = document.getElementById('btn-chart-print-line');
+        if (btnChartPrintLine) {
+            btnChartPrintLine.onclick = async () => {
+                if (!window.chartData) return;
+                try {
+                    const response = await fetch(`/api/monthly-stats?mm=${window.chartData.mm}&jj=${window.chartData.jj}&format=linegraph`);
+                    const blob = await response.blob();
+                    
+                    const printWindow = window.open();
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(blob);
+                    printWindow.document.write('<html><head><title>Haloaktivität</title></head><body>');
+                    printWindow.document.write('<img src="' + img.src + '" style="max-width: 100%; margin: auto; display: block;">');
+                    printWindow.document.write('</body></html>');
+                    printWindow.document.close();
+                    
+                    setTimeout(() => {
+                        printWindow.print();
+                        printWindow.close();
+                    }, 500);
+                } catch (error) {
+                    console.error('Error printing chart:', error);
+                    showErrorDialog('Fehler beim Drucken des Diagramms');
+                }
             };
         }
         
-        // Wire up chart save button
-        const btnChartSave = document.getElementById('btn-chart-save');
-        if (btnChartSave) {
-            btnChartSave.onclick = () => {
-                saveChart();
+        const btnChartSaveLine = document.getElementById('btn-chart-save-line');
+        if (btnChartSaveLine) {
+            btnChartSaveLine.onclick = async () => {
+                if (!window.chartData) return;
+                try {
+                    const data = window.chartData;
+                    const monthShort = i18n.months_short?.[data.mm] || String(data.mm).padStart(2, '0');
+                    const jjPadded = String(data.jj).padStart(2, '0');
+                    const filename = `Haloaktivitaet_${monthShort.toLowerCase()}${jjPadded}.png`;
+                    
+                    const response = await fetch(`/api/monthly-stats?mm=${data.mm}&jj=${data.jj}&format=linegraph`);
+                    const blob = await response.blob();
+                    
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                } catch (error) {
+                    console.error('Error saving chart:', error);
+                    showErrorDialog('Fehler beim Speichern des Diagramms');
+                }
+            };
+        }
+
+        // ===== BAR CHART BUTTONS =====
+        const btnChartPrintBar = document.getElementById('btn-chart-print-bar');
+        if (btnChartPrintBar) {
+            btnChartPrintBar.onclick = async () => {
+                if (!window.chartData) return;
+                try {
+                    const response = await fetch(`/api/monthly-stats?mm=${window.chartData.mm}&jj=${window.chartData.jj}&format=bargraph`);
+                    const blob = await response.blob();
+                    
+                    const printWindow = window.open();
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(blob);
+                    printWindow.document.write('<html><head><title>Haloaktivität</title></head><body>');
+                    printWindow.document.write('<img src="' + img.src + '" style="max-width: 100%; margin: auto; display: block;">');
+                    printWindow.document.write('</body></html>');
+                    printWindow.document.close();
+                    
+                    setTimeout(() => {
+                        printWindow.print();
+                        printWindow.close();
+                    }, 500);
+                } catch (error) {
+                    console.error('Error printing chart:', error);
+                    showErrorDialog('Fehler beim Drucken des Diagramms');
+                }
             };
         }
         
-        // Wire up chart close button to return to stats
-        const btnChartClose = document.getElementById('btn-chart-close');
-        if (btnChartClose) {
-            btnChartClose.onclick = () => {
-                const chartModal = bootstrap.Modal.getInstance(document.getElementById('chart-modal'));
-                if (chartModal) chartModal.hide();
-                // Results modal will still be open behind
+        const btnChartSaveBar = document.getElementById('btn-chart-save-bar');
+        if (btnChartSaveBar) {
+            btnChartSaveBar.onclick = async () => {
+                if (!window.chartData) return;
+                try {
+                    const data = window.chartData;
+                    const monthShort = i18n.months_short?.[data.mm] || String(data.mm).padStart(2, '0');
+                    const jjPadded = String(data.jj).padStart(2, '0');
+                    const filename = `Haloaktivitaet_${monthShort.toLowerCase()}${jjPadded}_Balken.png`;
+                    
+                    const response = await fetch(`/api/monthly-stats?mm=${data.mm}&jj=${data.jj}&format=bargraph`);
+                    const blob = await response.blob();
+                    
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                } catch (error) {
+                    console.error('Error saving chart:', error);
+                    showErrorDialog('Fehler beim Speichern des Diagramms');
+                }
             };
         }
     }
+    
+    // Call setupChartModal when page loads
+    setupChartModal();
     
     // Generate plain text statistics content for save and print
     function generateStatsText() {
@@ -953,6 +1162,35 @@ document.addEventListener('DOMContentLoaded', async function() {
         return text;
     }
 
+    // Save bar chart as PNG
+    function saveBarChart() {
+        if (!currentStatsData) return;
+        
+        const data = currentStatsData;
+        const monthShort = i18n.months_short?.[data.mm] || String(data.mm).padStart(2, '0');
+        const jjPadded = String(data.jj).padStart(2, '0');
+        const filename = `Haloaktivitaet_Balken_${monthShort.toLowerCase()}${jjPadded}.png`;
+        
+        // Fetch server-generated bar graph
+        fetch(`/api/monthly-stats?mm=${data.mm}&jj=${data.jj}&format=bargraph`)
+            .then(response => response.blob())
+            .then(blob => {
+                // Download the PNG file
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            })
+            .catch(error => {
+                console.error('Error saving bar chart:', error);
+                showErrorDialog('Fehler beim Speichern des Diagramms');
+            });
+    }
+
     // Save chart as PNG
     function saveChart() {
         if (!currentStatsData) return;
@@ -960,35 +1198,26 @@ document.addEventListener('DOMContentLoaded', async function() {
         const data = currentStatsData;
         const monthShort = i18n.months_short?.[data.mm] || String(data.mm).padStart(2, '0');
         const jjPadded = String(data.jj).padStart(2, '0');
-        const filename = `${monthShort.toLowerCase()}19${jjPadded}.png`;
+        const filename = `Haloaktivitaet_${monthShort.toLowerCase()}${jjPadded}.png`;
         
-        const canvas = document.getElementById('activity-chart');
-        if (!canvas) return;
-        
-        // Create a new canvas with white background
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
-        const ctx = tempCanvas.getContext('2d');
-        
-        // Fill with white background
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-        
-        // Draw the original canvas on top
-        ctx.drawImage(canvas, 0, 0);
-        
-        // Convert canvas to blob and download
-        tempCanvas.toBlob((blob) => {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }, 'image/png');
+        // Fetch server-generated line graph
+        fetch(`/api/monthly-stats?mm=${data.mm}&jj=${data.jj}&format=linegraph`)
+            .then(response => response.blob())
+            .then(blob => {
+                // Download the PNG file
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            })
+            .catch(error => {
+                console.error('Error saving chart:', error);
+                showErrorDialog('Fehler beim Speichern des Diagramms');
+            });
     }
 
     // Generate CSV from statistics data

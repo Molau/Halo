@@ -645,6 +645,174 @@ These are NOT decisions - they are fixed requirements from the HALO key observat
 
 ---
 
+## UI/Dialog Button Standards - Decision #018
+
+- **Date**: 2026-01-10
+- **Status**: ✓ Approved
+- **Scope**: All modal dialogs, forms, and interactive elements
+
+### Button Sizing & Layout
+
+**Consistent Sizing for All Buttons**:
+- All buttons must use: `btn-sm px-3`
+- This applies to ALL dialogs without exception
+- Settings dialogs previously had inconsistent sizing - now standardized
+
+**Button Order (Left to Right)**:
+1. Cancel/No button (if present)
+2. OK/Yes button (rightmost, primary action)
+3. Additional secondary buttons (Print, Save, etc.) go between Cancel and OK
+
+**Example HTML**:
+```html
+<div class="modal-footer">
+    <button class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">Abbrechen</button>
+    <button class="btn btn-primary btn-sm px-3" id="btn-ok">OK</button>
+</div>
+```
+
+### Button Text Standards
+
+**Unified Terminology** (no distinction between "OK" and "Anwenden"):
+- All action buttons use `common.ok` = "OK" (German) / "OK" (English)
+- All cancel buttons use `common.cancel` = "Abbrechen" (German) / "Cancel" (English)
+
+**Button Text Rules**:
+1. ✓ Information dialogs (warnings, errors): **OK** button only
+2. ✓ Confirmation dialogs: **Cancel** + **OK** buttons
+3. ✓ Destructive action dialogs: **No** + **Yes** buttons (for delete/modify)
+4. ✓ Filter/form dialogs: **Cancel** + **OK** buttons
+5. ✗ NEVER use "Anwenden", "Apply", "Bestätigen", etc. - always use "OK"
+
+**i18n Keys**:
+- Use `i18nStrings.common.ok` / `i18n.common.ok`
+- Use `i18nStrings.common.cancel` / `i18n.common.cancel`
+- Use `i18nStrings.common.yes` / `i18n.common.yes` (only for Yes/No dialogs)
+- Use `i18nStrings.common.no` / `i18n.common.no` (only for Yes/No dialogs)
+
+### Button Colors
+
+| Button Type | CSS Class | Usage | Default (Enter key) |
+|------------|-----------|-------|-------------------|
+| Cancel | `btn btn-secondary btn-sm px-3` | Close dialog without action | No |
+| OK | `btn btn-primary btn-sm px-3` | Confirm/apply action | **Yes** |
+| Yes (destructive) | `btn btn-danger btn-sm px-3` | Confirm delete/destructive action | **Yes** |
+| No (destructive) | `btn btn-secondary btn-sm px-3` | Reject destructive action | No |
+| Secondary action | `btn btn-secondary btn-sm px-3` | Print, Save, etc. (secondary to main action) | No |
+
+### Implementation Rules
+
+**For New Dialogs**:
+1. ✓ Use template literal with `${this.i18n?.common?.ok || 'OK'}` for class-based components
+2. ✓ Use `${i18nStrings.common.ok}` for function-based dialogs in main.js
+3. ✓ Always include `btn-sm px-3` on EVERY button
+4. ✓ Order buttons: Cancel (left) → OK (right)
+5. ✓ Use `data-bs-dismiss="modal"` for Cancel button (closes without callback)
+
+**For Existing Dialogs**:
+- Filter dialog: Uses `this.i18n` with fallback to German
+- Settings dialogs (Fixed Observer, Datum, Eingabeart, Ausgabeart): Now standardized
+- Observation dialogs: All standardized
+- Observer dialogs: All standardized
+- Analysis/Output dialogs: All standardized
+- Observer sites dialogs: All standardized
+
+**Class-Based Component Pattern** (FilterDialog):
+```javascript
+createModalHTML() {
+    // Inside template literal:
+    <button class="btn btn-secondary btn-sm px-3">${this.i18n?.common?.cancel || 'Abbrechen'}</button>
+    <button class="btn btn-primary btn-sm px-3">${this.i18n?.common?.ok || 'OK'}</button>
+}
+```
+
+**Function-Based Pattern** (main.js dialogs):
+```javascript
+const modalHtml = `
+    <button class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+    <button class="btn btn-primary btn-sm px-3" id="btn-action">${i18nStrings.common.ok}</button>
+`;
+```
+
+### Related Files
+- All JavaScript dialogs: `static/js/*.js`
+- i18n strings: `resources/strings_*.json`
+- Key functions: `showConfirmDialog()`, `showErrorDialog()`, `showWarningModal()`, `showSuccessModal()`
+
+---
+
+## Notification & Message Display Standards - Decision #019
+
+- **Date**: 2026-01-10
+- **Status**: ✓ Approved
+- **Scope**: All temporary notifications (success, info, warning messages)
+
+### Standard Notification Layout
+
+**Location & Appearance**:
+- Position: Fixed at top-center of screen (`position-fixed top-0 start-50 translate-middle-x`)
+- Margin: 3px from top (`mt-3`)
+- Z-index: 9999 (always above all other content)
+- Minimum width: 300px
+- Auto-dismiss: 3 seconds (configurable)
+- Manual close: X button included
+
+**Color Classes**:
+| Type | Bootstrap Class | Usage |
+|------|-----------------|-------|
+| Success | `alert-success` (green) | Operation completed successfully |
+| Info | `alert-info` (blue) | Informational messages |
+| Warning | `alert-warning` (yellow) | Non-critical warnings |
+| Danger | `alert-danger` (red) | Errors or critical warnings |
+
+### Implementation
+
+**Standard Function**:
+```javascript
+function showNotification(message, type = 'success', duration = 3000) {
+    // Creates and displays a notification bar that auto-dismisses after duration
+    // @param {string} message - HTML message to display (can include bold/icons)
+    // @param {string} type - 'success', 'info', 'warning', or 'danger'
+    // @param {number} duration - Auto-dismiss after ms (use 0 to disable)
+}
+```
+
+**Usage Examples**:
+```javascript
+// Success message (3 second auto-dismiss)
+showNotification('✓ 5 Beobachtungen geladen', 'success');
+
+// Info message (5 second auto-dismiss)
+showNotification('Datei wird verarbeitet...', 'info', 5000);
+
+// Manual dismiss only (no auto-dismiss)
+showNotification('⚠ Wichtiger Hinweis', 'warning', 0);
+```
+
+### Rules for New Notifications
+
+**DO**:
+1. ✓ Use `showNotification()` for all temporary messages
+2. ✓ Include success symbol (✓) for success messages
+3. ✓ Include warning symbol (⚠) for warnings
+4. ✓ Use concise, user-friendly language
+5. ✓ Specify duration if different from 3 seconds
+6. ✓ Use i18n strings for multi-language support
+
+**DON'T**:
+1. ✗ Create custom alert/toast elements
+2. ✗ Use modal dialogs for temporary messages
+3. ✗ Use inline alerts in the page content
+4. ✗ Hardcode CSS styling
+5. ✗ Use different positioning or colors
+
+### Current Usage
+- File operations (save, load): Success notifications
+- Data modifications (add, delete observations): Success notifications
+- Errors: Danger notifications via `showErrorDialog()` (modal, not toast)
+
+---
+
 ## Deferred Features
 
 ### Features NOT Yet Approved for Modification
@@ -690,7 +858,7 @@ HALOpy/
 ├── static/             # CSS, JavaScript, images
 ├── temp/               # Test scripts (gitignored)
 ├── requirements.txt    # Python dependencies
-├── run.py              # Application entry point
+├── halo.py             # Application entry point
 └── README.md           # Documentation
 ```
 
@@ -797,7 +965,7 @@ src/halo/
 ```bash
 cd c:\ASTRO\HALOpy
 pip install -r requirements.txt
-python run.py
+python halo.py
 # Open http://localhost:5000
 ```
 

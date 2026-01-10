@@ -1,13 +1,19 @@
-"""REST API routes for HALO web application.
+﻿"""REST API routes for HALO web application.
 
 Copyright (c) 1992-2026 Sirko Molau
 Licensed under MIT License - see LICENSE file for details.
 """
 
-from flask import Blueprint, jsonify, request, current_app
+from flask import Blueprint, jsonify, request, current_app, Response
 from pathlib import Path
 from typing import Dict, Any
 import math
+import io
+import numpy as np
+from scipy.interpolate import make_interp_spline
+import matplotlib
+matplotlib.use('Agg')  # Non-interactive backend
+import matplotlib.pyplot as plt
 from halo.io.csv_handler import ObservationCSV
 
 api_blueprint = Blueprint('api', __name__, url_prefix='/api')
@@ -834,9 +840,12 @@ def merge_file() -> Dict[str, Any]:
         return jsonify({'error': str(e)}), 500
 
 
-@api_blueprint.route('/file/load/<filename>', methods=['POST'])
+@api_blueprint.route('/file/load/<filename>', methods=['GET', 'POST'])
 def load_file(filename: str) -> Dict[str, Any]:
-    """Load observation file - implements 'Datei -> Laden' from HALO.PAS laden()"""
+    """Load observation file - implements 'Datei -> Laden' from HALO.PAS laden()
+    
+    Supports both GET and POST methods for convenience.
+    """
     from flask import current_app
     from pathlib import Path
     import os
@@ -1295,6 +1304,297 @@ def startup_file_setting() -> Dict[str, Any]:
         })
 
 
+
+
+def _kurzausgabe(obs) -> str:
+    """Format observation as HALO key string (short format).
+    
+    Ported from monthly_report.js kurzausgabe() function.
+    """
+    first = ''
+    
+    # KK - observer code
+    if obs.KK < 100:
+        first += str(obs.KK // 10) + str(obs.KK % 10)
+    else:
+        first += chr((obs.KK // 10) + 55) + str(obs.KK % 10)
+    
+    # O, JJ, MM, TT, g
+    first += str(obs.O)
+    first += str(obs.JJ // 10) + str(obs.JJ % 10)
+    first += str(obs.MM // 10) + str(obs.MM % 10)
+    first += str(obs.TT // 10) + str(obs.TT % 10)
+    first += str(obs.g)
+    
+    # ZS, ZM
+    zs = obs.ZS if obs.ZS != -1 else None
+    zm = obs.ZM if obs.ZM != -1 else None
+    first += '//' if zs is None else str(zs // 10) + str(zs % 10)
+    first += '//' if zm is None else str(zm // 10) + str(zm % 10)
+    
+    # d, DD
+    d_val = obs.d if obs.d != -1 else None
+    dd_val = obs.DD if obs.DD != -1 else None
+    first += '/' if d_val is None else str(d_val)
+    first += '//' if dd_val is None else str(dd_val // 10) + str(dd_val % 10)
+    
+    # N, C, c
+    n_val = obs.N if obs.N != -1 else None
+    c_val = obs.C if obs.C != -1 else None
+    c_lower = obs.c if obs.c != -1 else None
+    first += '/' if n_val is None else str(n_val)
+    first += '/' if c_val is None else str(c_val)
+    first += '/' if c_lower is None else str(c_lower)
+    
+    # EE
+    first += str(obs.EE // 10) + str(obs.EE % 10)
+    
+    # H, F, V
+    h_val = obs.H if obs.H != -1 else None
+    f_val = obs.F if obs.F != -1 else None
+    v_val = obs.V if obs.V != -1 else None
+    first += '/' if h_val is None else str(h_val)
+    first += '/' if f_val is None else str(f_val)
+    first += '/' if v_val is None else str(v_val)
+    
+    # f, zz, GG
+    f_lower = obs.f if obs.f != -1 else None
+    zz_val = obs.zz if obs.zz not in (-1, 99) else (None if obs.zz == -1 else 99)
+    first += ' ' if f_lower is None else str(f_lower)
+    if zz_val is None:
+        first += '  '
+    elif zz_val == 99:
+        first += '//'
+    else:
+        first += str(zz_val // 10) + str(zz_val % 10)
+    gg = obs.GG if obs.GG != -1 else 0
+    first += str(gg // 10) + str(gg % 10)
+    
+    # Add spaces after every 5 characters
+    erg = ''
+    for i in range(0, len(first), 5):
+        chunk = first[i:i+5]
+        if chunk:
+            erg += chunk
+            if len(chunk) == 5:
+                erg += ' '
+    
+    # 8HHHH - light pillar
+    ho_val = obs.HO if obs.HO != -1 else None
+    hu_val = obs.HU if obs.HU != -1 else None
+    
+    if obs.EE == 8:
+        erg += '8////' if ho_val is None else '8' + str(ho_val // 10) + str(ho_val % 10) + '//'
+    elif obs.EE == 9:
+        erg += '8////' if hu_val is None else '8//' + str(hu_val // 10) + str(hu_val % 10)
+    elif obs.EE == 10:
+        erg += '8'
+        erg += '//' if ho_val is None else str(ho_val // 10) + str(ho_val % 10)
+        erg += '//' if hu_val is None else str(hu_val // 10) + str(hu_val % 10)
+    else:
+        erg += '/////'
+    
+    # Add sectors and remarks - total line must be exactly 69 chars + sectors + remarks
+    erg += ' '
+    sectors = getattr(obs, 'sectors', '')
+    sectors = sectors.replace('\r', ' ').replace('\n', ' ')[:15].ljust(15)
+    erg += sectors + ' '
+    remarks = getattr(obs, 'remarks', '')
+    remarks = remarks.replace('\r', ' ').replace('\n', ' ').ljust(60)
+    erg += remarks
+    
+    return erg
+
+
+def _format_monthly_report_text(data: Dict[str, Any], i18n) -> str:
+    """Format monthly report as pseudographic text with box-drawing characters.
+    
+    Ported from monthly_report.js buildPseudografikReport() function.
+    """
+    # Use i18n month names
+    month_name = i18n.get(f'months.{data["mm"]}', str(data['mm']))
+    
+    # Format title
+    year = 1900 + data['jj'] if data['jj'] >= 50 else 2000 + data['jj']
+    title = i18n.get('monthly_report.report_title_template')
+    title = title.replace('{observer}', data['observer_name'])
+    title = title.replace('{month}', month_name)
+    title = title.replace('{year}', str(year))
+    
+    lines = []
+    
+    # Header box
+    title_pad_left = (122 - len(title)) // 2
+    lines.append(' ' * title_pad_left + title)
+    lines.append(' ' * title_pad_left + '═' * len(title))
+    lines.append('')
+    lines.append('╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗')
+    
+    sectors = i18n.get('monthly_report.sectors')
+    remarks = i18n.get('monthly_report.remarks')
+    header_line = f"KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH {sectors.ljust(15)[:15]} {remarks.ljust(47)[:47]}"
+    lines.append('║ ' + header_line[:118].ljust(118) + ' ║')
+    lines.append('╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣')
+    
+    # Observations
+    last_day = -1
+    observations = data.get('observations', [])
+    
+    # Convert dict observations to objects if needed
+    from halo.models.types import Observation
+    obs_objects = []
+    for obs_data in observations:
+        if isinstance(obs_data, dict):
+            # Create Observation object from dict
+            obs = Observation(
+                KK=obs_data['KK'],
+                O=obs_data['O'],
+                JJ=obs_data['JJ'],
+                MM=obs_data['MM'],
+                TT=obs_data['TT'],
+                g=obs_data['g'],
+                ZS=obs_data['ZS'] if obs_data['ZS'] is not None else -1,
+                ZM=obs_data['ZM'] if obs_data['ZM'] is not None else -1,
+                d=obs_data['d'] if obs_data['d'] is not None else -1,
+                DD=obs_data['DD'] if obs_data['DD'] is not None else -1,
+                N=obs_data['N'] if obs_data['N'] is not None else -1,
+                C=obs_data['C'] if obs_data['C'] is not None else -1,
+                c=obs_data['c'] if obs_data['c'] is not None else -1,
+                EE=obs_data['EE'],
+                H=obs_data['H'] if obs_data['H'] is not None else -1,
+                F=obs_data['F'] if obs_data['F'] is not None else -1,
+                V=obs_data['V'] if obs_data['V'] is not None else -1,
+                f=obs_data['f'] if obs_data['f'] is not None else -1,
+                zz=obs_data['zz'] if obs_data['zz'] is not None else -1,
+                GG=obs_data['GG'],
+                HO=obs_data.get('HO', -1) if obs_data.get('HO') is not None else -1,
+                HU=obs_data.get('HU', -1) if obs_data.get('HU') is not None else -1,
+                sectors=obs_data.get('sectors', ''),
+                remarks=obs_data.get('remarks', '')
+            )
+            obs_objects.append(obs)
+        else:
+            obs_objects.append(obs_data)
+    
+    for obs in obs_objects:
+        # Add separator line between different days
+        if last_day != -1 and obs.TT != last_day:
+            lines.append('╟────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╢')
+        
+        try:
+            obs_line = _kurzausgabe(obs)
+            lines.append('║ ' + obs_line + ' ║')
+        except Exception as e:
+            lines.append('║ ERROR formatting observation                                                                                           ║')
+        
+        last_day = obs.TT
+    
+    # No observations message
+    if len(obs_objects) == 0:
+        no_obs_msg = i18n.get('ui.messages.no_observations')
+        padding = (118 - len(no_obs_msg)) // 2
+        lines.append('║' + ' ' * 120 + '║')
+        lines.append('║' + ' ' * padding + no_obs_msg + ' ' * (120 - padding - len(no_obs_msg)) + '║')
+        lines.append('║' + ' ' * 120 + '║')
+    
+    # Footer
+    lines.append('╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣')
+    
+    hb_line = i18n.get('monthly_report.main_location', 'Hauptbeobachtungsort') + ': ' + data['observer_hbort']
+    nb_line = i18n.get('monthly_report.secondary_location', 'Nebenbeobachtungsort') + ': ' + data['observer_nbort']
+    hb_pad_left = (122 - len(hb_line)) // 2
+    nb_pad_left = (122 - len(nb_line)) // 2
+    hb_line = ' ' * hb_pad_left + hb_line
+    nb_line = ' ' * nb_pad_left + nb_line
+    
+    lines.append('║' + hb_line[:118].ljust(120) + '║')
+    lines.append('║' + nb_line[:118].ljust(120) + '║')
+    lines.append('╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝')
+    
+    return '\n'.join(lines)
+
+
+def _format_monthly_report_markdown(data: Dict[str, Any], i18n) -> str:
+    """Format monthly report as markdown.
+    
+    Ported from monthly_report.js buildMarkdownSource() function.
+    """
+    # Use i18n month names
+    month_name = i18n.get(f'months.{data["mm"]}', str(data['mm']))
+    
+    # Format title
+    year = 1900 + data['jj'] if data['jj'] >= 50 else 2000 + data['jj']
+    title = i18n.get('monthly_report.report_title_template')
+    title = title.replace('{observer}', data['observer_name'])
+    title = title.replace('{month}', month_name)
+    title = title.replace('{year}', str(year))
+    
+    md = f"# {title}\n\n"
+    
+    # Header line (HALO key format) with fixed padding to align columns
+    md += '```\n'
+    sectors_label = i18n.get('monthly_report.sectors')
+    remarks_label = i18n.get('monthly_report.remarks')
+    header_line = f"KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH {sectors_label.ljust(15)[:15]} {remarks_label.ljust(47)[:47]}"
+    md += header_line + '\n'
+    md += '```\n\n'
+    
+    # Observations using kurzausgabe format
+    observations = data.get('observations', [])
+    
+    if len(observations) == 0:
+        no_obs_msg = i18n.get('ui.messages.no_observations')
+        md += f"**{no_obs_msg}**\n\n"
+    else:
+        md += '```\n'
+        
+        # Convert dict observations to objects if needed
+        from halo.models.types import Observation
+        for obs_data in observations:
+            if isinstance(obs_data, dict):
+                obs = Observation(
+                    KK=obs_data['KK'],
+                    O=obs_data['O'],
+                    JJ=obs_data['JJ'],
+                    MM=obs_data['MM'],
+                    TT=obs_data['TT'],
+                    g=obs_data['g'],
+                    ZS=obs_data['ZS'] if obs_data['ZS'] is not None else -1,
+                    ZM=obs_data['ZM'] if obs_data['ZM'] is not None else -1,
+                    d=obs_data['d'] if obs_data['d'] is not None else -1,
+                    DD=obs_data['DD'] if obs_data['DD'] is not None else -1,
+                    N=obs_data['N'] if obs_data['N'] is not None else -1,
+                    C=obs_data['C'] if obs_data['C'] is not None else -1,
+                    c=obs_data['c'] if obs_data['c'] is not None else -1,
+                    EE=obs_data['EE'],
+                    H=obs_data['H'] if obs_data['H'] is not None else -1,
+                    F=obs_data['F'] if obs_data['F'] is not None else -1,
+                    V=obs_data['V'] if obs_data['V'] is not None else -1,
+                    f=obs_data['f'] if obs_data['f'] is not None else -1,
+                    zz=obs_data['zz'] if obs_data['zz'] is not None else -1,
+                    GG=obs_data['GG'],
+                    HO=obs_data.get('HO', -1) if obs_data.get('HO') is not None else -1,
+                    HU=obs_data.get('HU', -1) if obs_data.get('HU') is not None else -1,
+                    sectors=obs_data.get('sectors', ''),
+                    remarks=obs_data.get('remarks', '')
+                )
+            else:
+                obs = obs_data
+            
+            line = _kurzausgabe(obs)
+            md += line + '\n'
+        
+        md += '```\n\n'
+    
+    # Footer with observer locations
+    md += f"## {i18n.get('monthly_report.main_location', 'Hauptbeobachtungsort')}\n"
+    md += f"{data['observer_hbort']}\n\n"
+    md += f"## {i18n.get('monthly_report.secondary_location', 'Nebenbeobachtungsort')}\n"
+    md += f"{data['observer_nbort']}\n"
+    
+    return md
+
+
 @api_blueprint.route('/monthly-report', methods=['GET'])
 def get_monthly_report() -> Dict[str, Any]:
     """Generate monthly report (Monatsmeldung) for a specific observer and month.
@@ -1394,7 +1694,8 @@ def get_monthly_report() -> Dict[str, Any]:
     observer_hbort = f"{observer_hbort} ({observer_gh})" if observer_gh else observer_hbort
     observer_nbort = f"{observer_nbort} ({observer_gn})" if observer_gn else observer_nbort
     
-    return jsonify({
+    # Build data structure
+    data = {
         'kk': kk_int,
         'mm': mm_int,
         'jj': jj_int,
@@ -1433,7 +1734,433 @@ def get_monthly_report() -> Dict[str, Any]:
             for obs in filtered_obs
         ],
         'count': len(filtered_obs)
-    })
+    }
+    
+    # Check requested format
+    output_format = request.args.get('format', 'json').lower()
+    
+    if output_format in ['json', 'html']:
+        # JSON format and HTML format both return data; HTML is formatted client-side
+        return jsonify(data)
+    elif output_format in ['text', 'markdown']:
+        # Get i18n for formatting
+        from halo.resources.i18n import get_i18n
+        i18n = get_i18n()
+        
+        if output_format == 'text':
+            content = _format_monthly_report_text(data, i18n)
+            return Response(content, mimetype='text/plain; charset=utf-8')
+        elif output_format == 'markdown':
+            content = _format_monthly_report_markdown(data, i18n)
+            return Response(content, mimetype='text/markdown; charset=utf-8')
+    else:
+        return jsonify({'error': f'Invalid format: {output_format}. Use json, text, html, or markdown.'}), 400
+
+
+
+def _format_monthly_stats_text(data: Dict[str, Any], month_name: str, year: str, i18n) -> str:
+    """Format monthly statistics as plain text with pseudographic tables."""
+    lines = []
+    
+    
+    # Table 1: Observer Overview
+    if data.get('observer_overview'):
+        lines.append('╔' + '═' * 86 + '╗')
+        header = f"{i18n.get('monthly_stats.observer_overview')} {month_name} {year}"
+        padding = max(0, (86 - len(header)) // 2)
+        lines.append('║' + ' ' * padding + header + ' ' * (86 - padding - len(header)) + '║')
+        lines.append('╠════╦══════════╦══════════╦══════════╦══════════╦══════════╦════════════╦═════════════╣')
+        lines.append('║KKGG║ 1   3   5║   7   9  ║11  13  15║  17  19  ║21  23  25║  27  29  31║ 1) 2) 3) 4) ║')
+        lines.append('║    ║   2   4  ║ 6   8  10║  12  14  ║16  18  20║  22  24  ║26  28  30  ║             ║')
+        lines.append('╠════╬══════════╬══════════╬══════════╬══════════╬══════════╬════════════╬═════════════╣')
+        
+        row_count = 0
+        for obs in data['observer_overview']:
+            kk = str(obs['kk']).zfill(2)
+            gg = '//' if obs['region'] == 39 else str(obs['region']).zfill(2)
+            line = f'║{kk}{gg}║'
+            
+            # Days 1-31 in groups of 5
+            for day in range(1, 32):
+                day_data = obs['days'].get(str(day), {})
+                solar = day_data.get('solar', 0)
+                lunar = day_data.get('lunar', False)
+                
+                if solar > 0 and lunar:
+                    cell = '_' + str(solar)
+                elif solar > 0:
+                    cell = f'{solar:2d}'
+                elif lunar:
+                    cell = ' X'
+                else:
+                    cell = '  '
+                
+                line += cell
+                if day % 5 == 0 and day != 30:
+                    line += '║'
+            
+            line += '║'
+            line += f"{obs['total_solar']:3d} "
+            line += f"{obs['days_solar']:2d} "
+            line += f"{obs['days_lunar']:2d} "
+            line += f"{obs['total_days']:2d} "
+            line += '║'
+            lines.append(line)
+            
+            row_count += 1
+            if row_count % 5 == 0 and row_count < len(data['observer_overview']):
+                lines.append('╠════╬══════════╬══════════╬══════════╬══════════╬══════════╬════════════╬═════════════╣')
+        
+        footnote = i18n.get('ui.statistics.footnote_ee_days').replace('&nbsp;', ' ')
+        footnote = footnote.replace('<br>', '\n║  ')
+        lines.append('╠════╩══════════╩══════════╩══════════╩══════════╩══════════╩════════════╩═════════════╣')
+        # Calculate correct padding: total width = 88, borders = 2, content = 86, indent = 2
+        footnote_with_indent = '  ' + footnote
+        padding = ' ' * (86 - len(footnote_with_indent))
+        lines.append('║' + footnote_with_indent + padding + '║')
+        lines.append('╚' + '═' * 86 + '╝')
+        lines.append('')
+    
+    # Table 2: EE Overview
+    if data.get('ee_overview'):
+        lines.append('    ╔' + '═' * 76 + '╗')
+        header = f"{i18n.get('monthly_stats.ee_overview')} {month_name} {year}"
+        padding = max(0, (76 - len(header)) // 2)
+        lines.append('    ║' + ' ' * padding + header + ' ' * (76 - padding - len(header)) + '║')
+        lines.append('    ╠══╦══════════╦══════════╦══════════╦══════════╦══════════╦════════════╦═════╣')
+        lines.append('    ║EE║ 1   3   5║   7   9  ║11  13  15║  17  19  ║21  23  25║  27  29  31║ ges ║')
+        lines.append('    ║  ║   2   4  ║ 6   8  10║  12  14  ║16  18  20║  22  24  ║26  28  30  ║     ║')
+        lines.append('    ╠══╬══════════╬══════════╬══════════╬══════════╬══════════╬════════════╬═════╣')
+        
+        row_count = 0
+        for ee_row in data['ee_overview']:
+            ee = f"{ee_row['ee']:02d}"
+            line = f'    ║{ee}║'
+            
+            for day in range(1, 32):
+                count = ee_row['days'].get(str(day), 0)
+                cell = f'{count:2d}' if count > 0 else '  '
+                line += cell
+                if day % 5 == 0 and day != 30:
+                    line += '║'
+            
+            line += '║'
+            line += f"{ee_row['total']:4d} ║"
+            lines.append(line)
+            
+            row_count += 1
+            current_ee = ee_row['ee']
+            is_last = row_count >= len(data['ee_overview'])
+            is_before_group567 = current_ee == 5 or current_ee == 6
+            
+            if not is_last and not is_before_group567:
+                lines.append('    ╠══╬══════════╬══════════╬══════════╬══════════╬══════════╬════════════╬═════╣')
+        
+        # Daily totals row
+        lines.append('    ╠══╬══════════╬══════════╬══════════╬══════════╬══════════╬════════════╬═════╣')
+        line = '    ║Σ ║'
+        for day in range(1, 32):
+            count = data['daily_totals'].get(str(day), 0)
+            cell = f'{count:2d}' if count > 0 else '  '
+            line += cell
+            if day % 5 == 0 and day != 30:
+                line += '║'
+        line += '║'
+        line += f"{data['grand_total']:4d} ║"
+        lines.append(line)
+        lines.append('    ╚══╩══════════╩══════════╩══════════╩══════════╩══════════╩════════════╩═════╝')
+        lines.append('')
+    
+    # Table 3: Rare Halos
+    lines.append('    ╔' + '═' * 77 + '╗')
+    header = i18n.get('monthly_stats.rare_halos')
+    padding = max(0, (77 - len(header)) // 2)
+    lines.append('    ║' + ' ' * padding + header + ' ' * (77 - padding - len(header)) + '║')
+    
+    if not data.get('rare_halos'):
+        lines.append('    ╠' + '═' * 77 + '╣')
+        msg = i18n.get('monthly_stats.rare_halos_none').replace('{month}', month_name)
+        padding = max(0, (77 - len(msg)) // 2)
+        lines.append('    ║' + ' ' * padding + msg + ' ' * (77 - padding - len(msg)) + '║')
+        lines.append('    ╚' + '═' * 77 + '╝')
+    else:
+        lines.append('    ╠════════════╦════════════╦════════════╦════════════╦════════════╦════════════╣')
+        lines.append('    ║ TT EE KKGG ║ TT EE KKGG ║ TT EE KKGG ║ TT EE KKGG ║ TT EE KKGG ║ TT EE KKGG ║')
+        lines.append('    ╠════════════╬════════════╬════════════╬════════════╬════════════╬════════════╣')
+        
+        # Insert empty slots when day changes
+        displayed_items = []
+        last_day = None
+        for halo in data['rare_halos']:
+            if last_day is not None and halo['tt'] != last_day:
+                displayed_items.append(None)
+            displayed_items.append(halo)
+            last_day = halo['tt']
+        
+        items_per_column = (len(displayed_items) + 5) // 6
+        for row in range(items_per_column):
+            line = '    ║'
+            for col in range(6):
+                idx = col * items_per_column + row
+                if idx < len(displayed_items) and displayed_items[idx] is not None:
+                    h = displayed_items[idx]
+                    tt_str = f"{h['tt']:2d}"
+                    ee_str = f"{h['ee']:02d}"
+                    line += f" {tt_str} {ee_str} {h['kk']}{h['gg']} ║"
+                else:
+                    line += '            ║'
+            lines.append(line)
+        
+        lines.append('    ╚════════════╩════════════╩════════════╩════════════╩════════════╩════════════╝')
+    
+    lines.append('')
+    
+    # Table 4: Activity
+    if data.get('activity_real') and data.get('activity_relative'):
+        lines.append('╔' + '═' * 86 + '╗')
+        header = f"{i18n.get('monthly_stats.activity_title')} {month_name} {year}"
+        padding = max(0, (86 - len(header)) // 2)
+        lines.append('║' + ' ' * padding + header + ' ' * (86 - padding - len(header)) + '║')
+        lines.append('╠═════╦════════════════════════╦════════════════════════╦════════════════════════╦═════╣')
+        
+        # First table: Days 1-16
+        day_label = i18n.get('ui.statistics.table_day')
+        lines.append(f'║ {day_label:3s} ║  1.   2.   3.   4.   5.║  6.   7.   8.   9.  10.║ 11.  12.  13.  14.  15.║ 16. ║')
+        lines.append('╠═════╬════════════════════════╬════════════════════════╬════════════════════════╬═════╣')
+        
+        # Real activity (days 1-16)
+        line = '║ real║'
+        for d in range(1, 17):
+            val = data['activity_real'].get(str(d), 0.0)
+            line += f'{val:4.1f}'
+            if d % 5 == 0:
+                line += '║'
+            elif d == 16:
+                line += ' ║'
+            else:
+                line += ' '
+        lines.append(line)
+        
+        lines.append('╠═════╬════════════════════════╬════════════════════════╬════════════════════════╬═════╣')
+        
+        # Relative activity (days 1-16)
+        line = '║ rel.║'
+        for d in range(1, 17):
+            val = data['activity_relative'].get(str(d), 0.0)
+            line += f'{val:4.1f}'
+            if d % 5 == 0:
+                line += '║'
+            elif d == 16:
+                line += ' ║'
+            else:
+                line += ' '
+        lines.append(line)
+        lines.append('╚═════╩════════════════════════╩════════════════════════╩════════════════════════╩═════╝')
+        
+        # Second table: Days 17-31
+        lines.append('╔═════╦═══════════════════╦════════════════════════╦════════════════════════╦════╦═════╗')
+        lines.append(f'║ {day_label:3s} ║ 17.  18.  19.  20.║ 21.  22.  23.  24.  25.║ 26.  27.  28.  29.  30.║ 31.║ ges ║')
+        lines.append('╠═════╬═══════════════════╬════════════════════════╬════════════════════════╬════╬═════╣')
+        
+        # Real activity (days 17-31)
+        line = '║ real║'
+        for d in range(17, 32):
+            val = data['activity_real'].get(str(d), 0.0)
+            line += f'{val:4.1f}'
+            if d % 5 == 0:
+                line += '║'
+            elif d == 31:
+                line += '║'
+            else:
+                line += ' '
+        total_real = data['activity_totals']['real']
+        line += f'{total_real:5.1f}║'
+        lines.append(line)
+        
+        lines.append('╠═════╬═══════════════════╬════════════════════════╬════════════════════════╬════╬═════╣')
+        
+        # Relative activity (days 17-31)
+        line = '║ rel.║'
+        for d in range(17, 32):
+            val = data['activity_relative'].get(str(d), 0.0)
+            line += f'{val:4.1f}'
+            if d % 5 == 0:
+                line += '║'
+            elif d == 31:
+                line += '║'
+            else:
+                line += ' '
+        total_rel = data['activity_totals']['relative']
+        line += f'{total_rel:5.1f}║'
+        lines.append(line)
+        lines.append('╚═════╩═══════════════════╩════════════════════════╩════════════════════════╩════╩═════╝')
+    
+    return '\n'.join(lines)
+
+
+def _format_monthly_stats_html(data: Dict[str, Any], month_name: str, year: str, i18n) -> str:
+    """Format monthly statistics as HTML - returns JSON for client-side HTML formatting."""
+    # Return JSON data; client-side formatter will generate HTML tables
+    import json
+    return json.dumps(data)
+
+
+def _format_monthly_stats_markdown(data: Dict[str, Any], month_name: str, year: str, i18n) -> str:
+    """Format monthly statistics as Markdown with pipe tables."""
+    lines = []
+    
+    # Table 1: Observer Overview
+    if data.get('observer_overview'):
+        lines.append(f"## {i18n.get('monthly_stats.observer_overview')} {month_name} {year}")
+        lines.append('')
+        
+        # Header row
+        header = '| KKGG |'
+        for d in range(1, 32):
+            header += f' {d} |'
+        header += ' 1) | 2) | 3) | 4) |'
+        lines.append(header)
+        
+        # Separator row
+        separator = '|:---:|'
+        for d in range(1, 32):
+            separator += ':---:|'
+        separator += ':---:|---:|---:|---:|'
+        lines.append(separator)
+        
+        # Data rows
+        for obs in data['observer_overview']:
+            kk = str(obs['kk']).zfill(2)
+            gg = '//' if obs['region'] == 39 else str(obs['region']).zfill(2)
+            row = f'| {kk}{gg} |'
+            
+            for day in range(1, 32):
+                day_data = obs['days'].get(str(day), {})
+                solar = day_data.get('solar', 0)
+                lunar = day_data.get('lunar', False)
+                
+                if solar > 0 and lunar:
+                    cell = f'_{solar}'
+                elif solar > 0:
+                    cell = str(solar)
+                elif lunar:
+                    cell = 'X'
+                else:
+                    cell = ''
+                
+                row += f' {cell} |'
+            
+            row += f" {obs['total_solar']} |"
+            row += f" {obs['days_solar']} |"
+            row += f" {obs['days_lunar']} |"
+            row += f" {obs['total_days']} |"
+            lines.append(row)
+        
+        footnote = i18n.get('ui.statistics.footnote_ee_days', '1) = EE (Sonne)  2) = Tage (Sonne)  3) = Tage (Mond)  4) = Tage (gesamt)').replace('<br>', ' ')
+        footnote = footnote.replace('&nbsp;', ' ')
+        lines.append('')
+        lines.append(f'_{footnote}_')
+        lines.append('')
+    
+    # Table 2: EE Overview
+    if data.get('ee_overview'):
+        lines.append(f"## {i18n.get('monthly_stats.ee_overview')} {month_name} {year}")
+        lines.append('')
+        
+        # Header row
+        header = '| EE |'
+        for d in range(1, 32):
+            header += f' {d} |'
+        header += ' ges |'
+        lines.append(header)
+        
+        # Separator row
+        separator = '|:---:|'
+        for d in range(1, 32):
+            separator += ':---:|'
+        separator += '---:|'
+        lines.append(separator)
+        
+        # Data rows
+        for ee_row in data['ee_overview']:
+            ee = f"{ee_row['ee']:02d}"
+            row = f'| {ee} |'
+            
+            for day in range(1, 32):
+                count = ee_row['days'].get(str(day), 0)
+                cell = str(count) if count > 0 else ''
+                row += f' {cell} |'
+            
+            row += f" {ee_row['total']} |"
+            lines.append(row)
+        
+        # Totals row
+        row = '| **Σ** |'
+        for day in range(1, 32):
+            count = data['daily_totals'].get(str(day), 0)
+            cell = str(count) if count > 0 else ''
+            row += f' {cell} |'
+        row += f" **{data['grand_total']}** |"
+        lines.append(row)
+        lines.append('')
+    
+    # Table 3: Rare Halos
+    lines.append(f"## {i18n.get('monthly_stats.rare_halos')}")
+    lines.append('')
+    
+    if not data.get('rare_halos'):
+        msg = i18n.get('monthly_stats.rare_halos_none').replace('{month}', month_name)
+        lines.append(f'*{msg}*')
+    else:
+        lines.append('| TT | EE | KKGG |')
+        lines.append('|---:|:---|:-----|')
+        
+        for halo in data['rare_halos']:
+            lines.append(f"| {halo['tt']} | {halo['ee']:02d} | {halo['kk']}{halo['gg']} |")
+    
+    lines.append('')
+    
+    # Table 4: Activity
+    if data.get('activity_real') and data.get('activity_relative'):
+        lines.append(f"## {i18n.get('monthly_stats.activity_title')} {month_name} {year}")
+        lines.append('')
+        
+        day_label = i18n.get('ui.statistics.table_day')
+        
+        # Header row
+        header = f'| {day_label} |'
+        for d in range(1, 32):
+            header += f' {d} |'
+        header += ' ges |'
+        lines.append(header)
+        
+        # Separator row
+        separator = '|:---:|'
+        for d in range(1, 32):
+            separator += '---:|'
+        separator += '---:|'
+        lines.append(separator)
+        
+        # Real activity row
+        row = '| real |'
+        for d in range(1, 32):
+            val = data['activity_real'].get(str(d), 0.0)
+            row += f' {val:.1f} |'
+        total_real = data['activity_totals']['real']
+        row += f' {total_real:.1f} |'
+        lines.append(row)
+        
+        # Relative activity row
+        row = '| rel. |'
+        for d in range(1, 32):
+            val = data['activity_relative'].get(str(d), 0.0)
+            row += f' {val:.1f} |'
+        total_rel = data['activity_totals']['relative']
+        row += f' {total_rel:.1f} |'
+        lines.append(row)
+        lines.append('')
+    
+    return '\n'.join(lines)
 
 
 @api_blueprint.route('/monthly-stats', methods=['GET'])
@@ -1443,6 +2170,7 @@ def get_monthly_stats() -> Dict[str, Any]:
     Query parameters:
         mm: Month 1-12 (required)
         jj: Year 0-99 (required)
+        format: Output format - 'json' (default), 'html', 'text', or 'markdown'
     
     Returns observer overview table with:
     - Days 1-31 as columns
@@ -1453,7 +2181,7 @@ def get_monthly_stats() -> Dict[str, Any]:
     Note: Combined halo types (e.g., EE 04 = both 22° parhelia) are resolved to
     their individual components (EE 02 + EE 03) for statistical counting.
     """
-    from flask import current_app
+    from flask import current_app, Response
     from halo.models.constants import resolve_halo_type
     
     # Check if observations are loaded
@@ -1628,7 +2356,7 @@ def get_monthly_stats() -> Dict[str, Any]:
         # Convert solar_ee sets to counts for JSON serialization
         days_dict = {}
         for tt, day_data in data['days'].items():
-            days_dict[tt] = {
+            days_dict[str(tt)] = {  # Convert day number to string for JSON compatibility
                 'solar': len(day_data['solar_ee']),  # Count unique EE values
                 'lunar': day_data['lunar']
             }
@@ -1691,10 +2419,10 @@ def get_monthly_stats() -> Dict[str, Any]:
         for tt in range(1, 32):  # Days 1-31
             if tt in ee_overview[ee]:
                 count = len(ee_overview[ee][tt])
-                days_dict[tt] = count
+                days_dict[str(tt)] = count
                 total_count += count
             else:
-                days_dict[tt] = 0
+                days_dict[str(tt)] = 0
         
         ee_list.append({
             'ee': ee,
@@ -1762,12 +2490,14 @@ def get_monthly_stats() -> Dict[str, Any]:
     normalization_factor = 30.0 / days_in_month
     
     # Apply normalization to daily and total activity values
-    normalized_real = {day: value * normalization_factor for day, value in activity_data['real'].items()}
-    normalized_relative = {day: value * normalization_factor for day, value in activity_data['relative'].items()}
+    # Convert keys to strings for consistency with formatting functions
+    normalized_real = {str(day): value * normalization_factor for day, value in activity_data['real'].items()}
+    normalized_relative = {str(day): value * normalization_factor for day, value in activity_data['relative'].items()}
     normalized_total_real = activity_data['total_real'] * normalization_factor
     normalized_total_relative = activity_data['total_relative'] * normalization_factor
     
-    return jsonify({
+    # Build data structure
+    data = {
         'mm': mm_int,
         'jj': jj_int,
         'observer_overview': observer_list,
@@ -1784,7 +2514,875 @@ def get_monthly_stats() -> Dict[str, Any]:
         'activity_count': activity_data['active_count'],
         'activity_observation_count': activity_data['observation_count'],
         'count': len(filtered_obs)
-    })
+    }
+    
+    # Check requested format
+    output_format = request.args.get('format', 'json').lower()
+    
+    if output_format in ['json', 'html']:
+        # JSON format and HTML format both return data; HTML is formatted client-side
+        return jsonify(data)
+    elif output_format in ['text', 'markdown']:
+        # Get month name and formatted year for display
+        from halo.resources.i18n import get_i18n
+        i18n = get_i18n()
+        month_name = i18n.get(f'months.{mm_int}')
+        year = f"19{str(jj_int).zfill(2)}" if jj_int >= 50 else f"20{str(jj_int).zfill(2)}"
+        
+        if output_format == 'text':
+            content = _format_monthly_stats_text(data, month_name, year, i18n)
+            return Response(content, mimetype='text/plain; charset=utf-8')
+        elif output_format == 'markdown':
+            content = _format_monthly_stats_markdown(data, month_name, year, i18n)
+            return Response(content, mimetype='text/markdown; charset=utf-8')
+    elif output_format == 'linegraph':
+        # Generate PNG line chart
+        from halo.resources.i18n import get_i18n
+        i18n = get_i18n()
+        img_data = _generate_monthly_stats_chart(data, mm_int, jj_int, i18n)
+        return Response(img_data, mimetype='image/png')
+    elif output_format == 'bargraph':
+        # Generate PNG bar chart
+        from halo.resources.i18n import get_i18n
+        i18n = get_i18n()
+        img_data = _generate_monthly_stats_bar_chart(data, mm_int, jj_int, i18n)
+        return Response(img_data, mimetype='image/png')
+    else:
+        return jsonify({'error': f'Invalid format: {output_format}. Use json, text, html, markdown, linegraph, or bargraph.'}), 400
+
+
+def _generate_monthly_stats_chart(data: Dict[str, Any], mm: int, jj: int, i18n) -> bytes:
+    """Generate activity chart as PNG image using matplotlib.
+    
+    Creates a line chart with:
+    - Red line: Real activity (normalized)
+    - Green line: Relative activity (normalized)
+    - Days 1-31 on x-axis
+    - Title and subtitle with month/year and observation count
+    
+    Returns:
+        bytes: PNG image data
+    """
+    # Prepare data - days 1-31
+    days = list(range(1, 32))
+    real_data = [data.get('activity_real', {}).get(str(d), 0) for d in days]
+    relative_data = [data.get('activity_relative', {}).get(str(d), 0) for d in days]
+    
+    # Get month name and year for title
+    month_name = i18n.get(f'months.{mm}')
+    year = f"19{str(jj).zfill(2)}" if jj >= 50 else f"20{str(jj).zfill(2)}"
+    observation_count = data.get('activity_observation_count', 0)
+    
+    # Get labels from i18n
+    label_real = i18n.get('monthly_stats.activity_real')
+    label_relative = i18n.get('monthly_stats.activity_relative')
+    x_axis_label = i18n.get('monthly_stats.x_axis')
+    y_axis_label = i18n.get('monthly_stats.y_axis')
+    
+    # Create figure and axis
+    fig, ax = plt.subplots(figsize=(12, 6))
+    
+    # Create smooth spline interpolation (like Chart.js tension: 0.4)
+    days_smooth = np.linspace(1, 31, 300)  # 300 points for smooth curve
+    
+    # Spline for real data
+    if max(real_data) > 0:  # Only if there's data
+        # Use natural boundary conditions to reduce overshoot
+        spline_real = make_interp_spline(days, real_data, k=3, bc_type='natural')
+        real_smooth = np.maximum(spline_real(days_smooth), 0)  # Clip to [0, inf)
+        ax.plot(days_smooth, real_smooth, color='#dc3545', linewidth=2, label=label_real)
+    else:
+        ax.plot(days, real_data, color='#dc3545', linewidth=2, label=label_real)
+    
+    # Spline for relative data
+    if max(relative_data) > 0:  # Only if there's data
+        # Use natural boundary conditions to reduce overshoot
+        spline_relative = make_interp_spline(days, relative_data, k=3, bc_type='natural')
+        relative_smooth = np.maximum(spline_relative(days_smooth), 0)  # Clip to [0, inf)
+        ax.plot(days_smooth, relative_smooth, color='#28a745', linewidth=2, label=label_relative)
+    else:
+        ax.plot(days, relative_data, color='#28a745', linewidth=2, label=label_relative)
+    
+    # Add data points as markers
+    ax.plot(days, real_data, 'o', color='#dc3545', markersize=4, markerfacecolor='#dc3545')
+    ax.plot(days, relative_data, 'o', color='#28a745', markersize=4, markerfacecolor='#28a745')
+    
+    # Configure axes
+    ax.set_xlabel(x_axis_label, fontsize=12, fontweight='bold')
+    ax.set_ylabel(y_axis_label, fontsize=12, fontweight='bold')
+    ax.set_xlim(0.5, 31.5)
+    ax.set_ylim(bottom=0)
+    ax.set_xticks(range(1, 32))
+    ax.grid(True, alpha=0.3, linestyle='--')
+    
+    # Add legend
+    ax.legend(loc='upper left', fontsize=10, framealpha=0.9)
+    
+    # Add title and subtitle
+    title = f'Haloaktivität im {month_name} {year}'
+    subtitle = f'berechnet aus {observation_count} Einzelbeobachtungen'
+    fig.suptitle(title, fontsize=14, fontweight='bold', y=0.98)
+    ax.text(0.5, 1.02, subtitle, transform=ax.transAxes, 
+            ha='center', va='bottom', fontsize=10, style='italic')
+    
+    # Adjust layout to prevent label cutoff
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    
+    # Save to bytes buffer
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+    plt.close(fig)
+    buf.seek(0)
+    
+    return buf.read()
+
+
+def _generate_monthly_stats_bar_chart(data: Dict[str, Any], mm: int, jj: int, i18n) -> bytes:
+    """Generate activity bar chart as PNG image using matplotlib.
+    
+    Creates a bar chart with:
+    - Two side-by-side bars for each day: red (real) and green (relative)
+    - Days 1-31 on x-axis
+    - Title and subtitle with month/year and observation count
+    
+    Returns:
+        bytes: PNG image data
+    """
+    # Prepare data - days 1-31
+    days = list(range(1, 32))
+    real_data = [data.get('activity_real', {}).get(str(d), 0) for d in days]
+    relative_data = [data.get('activity_relative', {}).get(str(d), 0) for d in days]
+    
+    # Get month name and year for title
+    month_name = i18n.get(f'months.{mm}')
+    year = f"19{str(jj).zfill(2)}" if jj >= 50 else f"20{str(jj).zfill(2)}"
+    observation_count = data.get('activity_observation_count', 0)
+    
+    # Get labels from i18n
+    label_real = i18n.get('monthly_stats.activity_real')
+    label_relative = i18n.get('monthly_stats.activity_relative')
+    x_axis_label = i18n.get('monthly_stats.x_axis')
+    y_axis_label = i18n.get('monthly_stats.y_axis')
+    
+    # Create figure and axis
+    fig, ax = plt.subplots(figsize=(14, 6))
+    
+    # Set up bar positions
+    bar_width = 0.35
+    x_pos = np.arange(len(days))
+    
+    # Create bars
+    bars1 = ax.bar(x_pos - bar_width/2, real_data, bar_width, 
+                   label=label_real, color='#dc3545', alpha=0.8)
+    bars2 = ax.bar(x_pos + bar_width/2, relative_data, bar_width,
+                   label=label_relative, color='#28a745', alpha=0.8)
+    
+    # Configure axes
+    ax.set_xlabel(x_axis_label, fontsize=12, fontweight='bold')
+    ax.set_ylabel(y_axis_label, fontsize=12, fontweight='bold')
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(days)
+    ax.set_ylim(bottom=0)
+    ax.grid(True, alpha=0.3, linestyle='--', axis='y')
+    
+    # Add legend
+    ax.legend(loc='upper left', fontsize=10, framealpha=0.9)
+    
+    # Add title and subtitle
+    title = f'Haloaktivität im {month_name} {year}'
+    subtitle = f'berechnet aus {observation_count} Einzelbeobachtungen'
+    fig.suptitle(title, fontsize=14, fontweight='bold', y=0.98)
+    ax.text(0.5, 1.02, subtitle, transform=ax.transAxes, 
+            ha='center', va='bottom', fontsize=10, style='italic')
+    
+    # Adjust layout to prevent label cutoff
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    
+    # Save to bytes buffer
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+    plt.close(fig)
+    buf.seek(0)
+    
+    return buf.read()
+
+
+def _generate_annual_stats_chart(data: Dict[str, Any], jj: int, i18n) -> bytes:
+    """Generate annual activity chart as PNG image using matplotlib.
+    
+    Creates a line chart with:
+    - Red line: Real activity (normalized)
+    - Green line: Relative activity (normalized)
+    - Months 1-12 on x-axis
+    - Title with year
+    
+    Returns:
+        bytes: PNG image data
+    """
+    # Prepare data - months 1-12
+    months = list(range(1, 13))
+    real_data = [data.get('monthly_stats', {}).get(str(m), {}).get('real', 0) for m in months]
+    relative_data = [data.get('monthly_stats', {}).get(str(m), {}).get('relative', 0) for m in months]
+    
+    # Get month names and year for labels
+    month_labels = [i18n.get(f'months.{m}')[:3] for m in months]  # Use first 3 chars (Jan, Feb, etc.)
+    year = f"19{str(jj).zfill(2)}" if jj >= 50 else f"20{str(jj).zfill(2)}"
+    
+    # Get labels from i18n
+    label_real = i18n.get('annual_stats.chart_real')
+    label_relative = i18n.get('annual_stats.chart_relative')
+    x_axis_label = i18n.get('annual_stats.chart_x_axis')
+    y_axis_label = i18n.get('annual_stats.chart_y_axis')
+    
+    # Create figure and axis
+    fig, ax = plt.subplots(figsize=(12, 6))
+    
+    # Create smooth spline interpolation (like Chart.js tension: 0.4)
+    months_smooth = np.linspace(1, 12, 120)  # 120 points for smooth curve
+    
+    # Spline for real data
+    if max(real_data) > 0:  # Only if there's data
+        # Use natural boundary conditions to reduce overshoot
+        spline_real = make_interp_spline(months, real_data, k=3, bc_type='natural')
+        real_smooth = np.maximum(spline_real(months_smooth), 0)  # Clip to [0, inf)
+        ax.plot(months_smooth, real_smooth, color='#dc3545', linewidth=2, label=label_real)
+    else:
+        ax.plot(months, real_data, color='#dc3545', linewidth=2, label=label_real)
+    
+    # Spline for relative data
+    if max(relative_data) > 0:  # Only if there's data
+        # Use natural boundary conditions to reduce overshoot
+        spline_relative = make_interp_spline(months, relative_data, k=3, bc_type='natural')
+        relative_smooth = np.maximum(spline_relative(months_smooth), 0)  # Clip to [0, inf)
+        ax.plot(months_smooth, relative_smooth, color='#28a745', linewidth=2, label=label_relative)
+    else:
+        ax.plot(months, relative_data, color='#28a745', linewidth=2, label=label_relative)
+    
+    # Add data points as markers
+    ax.plot(months, real_data, 'o', color='#dc3545', markersize=4, markerfacecolor='#dc3545')
+    ax.plot(months, relative_data, 'o', color='#28a745', markersize=4, markerfacecolor='#28a745')
+    
+    # Configure axes
+    ax.set_xlabel(x_axis_label, fontsize=12, fontweight='bold')
+    ax.set_ylabel(y_axis_label, fontsize=12, fontweight='bold')
+    ax.set_xlim(0.5, 12.5)
+    ax.set_ylim(bottom=0)
+    ax.set_xticks(months)
+    ax.set_xticklabels(month_labels)
+    ax.grid(True, alpha=0.3, linestyle='--')
+    
+    # Add legend
+    ax.legend(loc='upper left', fontsize=10, framealpha=0.9)
+    
+    # Add title
+    title_template = i18n.get('annual_stats.chart_title')
+    title = title_template.replace('{year}', year)
+    fig.suptitle(title, fontsize=14, fontweight='bold', y=0.98)
+    
+    # Add subtitle with observation count
+    total_ee = data.get('totals', {}).get('total_ee', 0)
+    subtitle = f'berechnet aus {total_ee} Einzelbeobachtungen'
+    fig.text(0.5, 0.91, subtitle, ha='center', fontsize=10, color='#666')
+    
+    # Adjust layout to prevent label cutoff
+    plt.tight_layout(rect=[0, 0, 1, 0.89])
+    
+    # Save to bytes buffer
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+    plt.close(fig)
+    buf.seek(0)
+    
+    return buf.read()
+
+
+def _generate_annual_stats_bar_chart(data: Dict[str, Any], jj: int, i18n) -> bytes:
+    """Generate annual activity bar chart as PNG image using matplotlib.
+    
+    Creates a bar chart with:
+    - Two side-by-side bars for each month: red (real) and green (relative)
+    - Months 1-12 on x-axis
+    - Title with year
+    
+    Returns:
+        bytes: PNG image data
+    """
+    # Prepare data - months 1-12
+    months = list(range(1, 13))
+    real_data = [data.get('monthly_stats', {}).get(str(m), {}).get('real', 0) for m in months]
+    relative_data = [data.get('monthly_stats', {}).get(str(m), {}).get('relative', 0) for m in months]
+    
+    # Get month names and year for labels
+    month_labels = [i18n.get(f'months.{m}')[:3] for m in months]  # Use first 3 chars (Jan, Feb, etc.)
+    year = f"19{str(jj).zfill(2)}" if jj >= 50 else f"20{str(jj).zfill(2)}"
+    
+    # Get labels from i18n
+    label_real = i18n.get('annual_stats.chart_real')
+    label_relative = i18n.get('annual_stats.chart_relative')
+    x_axis_label = i18n.get('annual_stats.chart_x_axis')
+    y_axis_label = i18n.get('annual_stats.chart_y_axis')
+    
+    # Create figure and axis
+    fig, ax = plt.subplots(figsize=(12, 6))
+    
+    # Set up bar positions
+    bar_width = 0.35
+    x_pos = np.arange(len(months))
+    
+    # Create bars
+    bars1 = ax.bar(x_pos - bar_width/2, real_data, bar_width,
+                   label=label_real, color='#dc3545', alpha=0.8)
+    bars2 = ax.bar(x_pos + bar_width/2, relative_data, bar_width,
+                   label=label_relative, color='#28a745', alpha=0.8)
+    
+    # Configure axes
+    ax.set_xlabel(x_axis_label, fontsize=12, fontweight='bold')
+    ax.set_ylabel(y_axis_label, fontsize=12, fontweight='bold')
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(month_labels)
+    ax.set_ylim(bottom=0)
+    ax.grid(True, alpha=0.3, linestyle='--', axis='y')
+    
+    # Add legend
+    ax.legend(loc='upper left', fontsize=10, framealpha=0.9)
+    
+    # Add title and subtitle
+    title_template = i18n.get('annual_stats.chart_title')
+    title = title_template.replace('{year}', year)
+    fig.suptitle(title, fontsize=14, fontweight='bold', y=0.98)
+    
+    # Add subtitle with observation count
+    total_ee = data.get('totals', {}).get('total_ee', 0)
+    subtitle = f'berechnet aus {total_ee} Einzelbeobachtungen'
+    ax.text(0.5, 1.02, subtitle, transform=ax.transAxes, 
+            ha='center', va='bottom', fontsize=10, style='italic')
+    
+    # Adjust layout to prevent label cutoff
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    
+    # Save to bytes buffer
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+    plt.close(fig)
+    buf.seek(0)
+    
+    return buf.read()
+
+
+def _format_annual_stats_text(data: Dict[str, Any], year: str, i18n) -> str:
+    """Format annual statistics as pseudographic text with box-drawing characters.
+    
+    Ported from client-side JavaScript rendering functions in annual_stats.js:
+    - renderObserverDistribution()
+    - renderEEObservations()
+    - renderEETable()
+    - renderPhenomena()
+    - renderMonthlyActivity()
+    """
+    lines = []
+    
+    # ============================================================================
+    # Main Title
+    # ============================================================================
+    title = i18n.get('annual_stats.title', 'Jahresübersicht') + ' ' + year
+    title_padding = max(0, (73 - len(title)) // 2)
+    lines.append(' ' * title_padding + title)
+    lines.append(' ' * title_padding + '═' * len(title))
+    lines.append('')
+    
+    # ============================================================================
+    # Section 1: Monthly Activity Table (FIRST!)
+    # ============================================================================
+    monthly_stats = data.get('monthly_stats', {})
+    totals = data.get('totals', {})
+    
+    if monthly_stats:
+        lines.append('╔═══════════╦══════════════╦══════════════╦══════════════╦══════════════╗')
+        lines.append('║           ║     ' + i18n.get('annual_stats.table_sun', 'Sonne').ljust(9)[:9] + '║     ' + i18n.get('annual_stats.table_moon', 'Mond').ljust(9)[:9] + '║    ' + i18n.get('annual_stats.table_total', 'Gesamt').ljust(10)[:10] + '║  ' + i18n.get('annual_stats.table_activity', 'Aktivität').ljust(11)[:11] +  ' ║')
+        lines.append('║   ' + i18n.get('annual_stats.table_month', 'Monat').ljust(8)[:8] + '║   ' + i18n.get('annual_stats.table_ee', 'EE') + '   ' + i18n.get('annual_stats.table_days', 'Tg') + '  ║   ' + i18n.get('annual_stats.table_ee', 'EE') + '   ' + i18n.get('annual_stats.table_days', 'Tg') + '  ║   ' + i18n.get('annual_stats.table_ee', 'EE') + '   ' + i18n.get('annual_stats.table_days', 'Tg') + '  ║  ' + i18n.get('annual_stats.table_real', 'real').ljust(6)[:6] + i18n.get('annual_stats.table_relative', 'rel').ljust(5)[:5] + ' ║')
+        lines.append('╠═══════════╬══════════════╬══════════════╬══════════════╬══════════════╣')
+        
+        # 12 month rows
+        for m in range(1, 13):
+            month_key = str(m)
+            month_data = monthly_stats.get(month_key, {})
+            month_name = i18n.get(f'months.{m}', f'M{m}')
+            
+            sun_ee = month_data.get('sun_ee', 0)
+            sun_days = month_data.get('sun_days', 0)
+            moon_ee = month_data.get('moon_ee', 0)
+            moon_days = month_data.get('moon_days', 0)
+            total_ee = month_data.get('total_ee', 0)
+            total_days = month_data.get('total_days', 0)
+            real_activity = month_data.get('real', 0.0)
+            relative_activity = month_data.get('relative', 0.0)
+            
+            row = f"║ {month_name.ljust(9)[:9]} ║  {sun_ee:4d}  {sun_days:3d}   ║  {moon_ee:4d}  {moon_days:3d}   ║  {total_ee:4d}  {total_days:3d}   ║ {real_activity:6.1f} {relative_activity:5.1f} ║"
+            lines.append(row)
+        
+        # Totals row with separator
+        lines.append('╠═══════════╬══════════════╬══════════════╬══════════════╬══════════════╣')
+        
+        total_sun_ee = totals.get('sun_ee', 0)
+        total_sun_days = totals.get('sun_days', 0)
+        total_moon_ee = totals.get('moon_ee', 0)
+        total_moon_days = totals.get('moon_days', 0)
+        total_total_ee = totals.get('total_ee', 0)
+        total_total_days = totals.get('total_days', 0)
+        total_real = totals.get('real', 0.0)
+        total_relative = totals.get('relative', 0.0)
+        
+        totals_label = i18n.get('annual_stats.table_totals', 'Gesamt')
+        totals_row = f"║ {totals_label.ljust(9)[:9]} ║  {total_sun_ee:4d}  {total_sun_days:3d}   ║  {total_moon_ee:4d}  {total_moon_days:3d}   ║  {total_total_ee:4d}  {total_total_days:3d}   ║ {total_real:6.1f} {total_relative:5.1f} ║"
+        lines.append(totals_row)
+        
+        # Bottom border
+        lines.append('╚═══════════╩══════════════╩══════════════╩══════════════╩══════════════╝')
+        lines.append('')
+    
+    # ============================================================================
+    # Section 2: Observer Distribution
+    # ============================================================================
+    observer_data = data.get('observer_distribution', [])
+    if observer_data:
+        title_line = i18n.get('annual_stats.observer_dist_title', 'Beobachter EE-Verteilung')
+        title_padding = max(0, (73 - len(title_line)) // 2)
+        lines.append(' ' * title_padding + title_line)
+        lines.append(' ' * title_padding + '═' * len(title_line))
+        lines.append('')
+        
+        # Table header - top border
+        lines.append('╔══╦═════╦══════╦═════╦══════╦═════╦══════╦═════╦══════╦═════╦═════╦══════╗')
+        
+        # Header row
+        header = '║' + i18n.get('annual_stats.observer_dist_kk', ' KK').ljust(2)[:2] + '║'
+        header += i18n.get('annual_stats.observer_dist_ee01', 'EE01').ljust(5)[:5] + '║'
+        header += '   ' + i18n.get('annual_stats.observer_dist_percent', '%').ljust(3)[:3] + '║'
+        header += i18n.get('annual_stats.observer_dist_ee02', 'EE02').ljust(5)[:5] + '║'
+        header += '   ' + i18n.get('annual_stats.observer_dist_percent', '%').ljust(3)[:3] + '║'
+        header += i18n.get('annual_stats.observer_dist_ee03', 'EE03').ljust(5)[:5] + '║'
+        header += '   ' + i18n.get('annual_stats.observer_dist_percent', '%').ljust(3)[:3] + '║'
+        header += i18n.get('annual_stats.observer_dist_ee567', 'EE567').ljust(5)[:5] + '║'
+        header += '   ' + i18n.get('annual_stats.observer_dist_percent', '%').ljust(3)[:3] + '║'
+        header += i18n.get('annual_stats.observer_dist_ee17', 'EE1-7').ljust(5)[:5] + '║'
+        header += i18n.get('annual_stats.observer_dist_ee_so', 'EE(So)').ljust(5)[:5] + '║'
+        header += i18n.get('annual_stats.observer_dist_ht_ges', 'HT(G)').ljust(6)[:6] + '║'
+        lines.append(header)
+        
+        # Header separator
+        lines.append('╠══╬═════╬══════╬═════╬══════╬═════╬══════╬═════╬══════╬═════╬═════╬══════╣')
+        
+        # Data rows with separators every 5 rows
+        for i, obs in enumerate(observer_data):
+            row = '║' + str(obs['kk']).zfill(2) + '║'
+            row += str(obs['ee01']).rjust(4) + ' ║'
+            row += str(round(obs['pct01'], 1)).rjust(5) + ' ║'
+            row += str(obs['ee02']).rjust(4) + ' ║'
+            row += str(round(obs['pct02'], 1)).rjust(5) + ' ║'
+            row += str(obs['ee03']).rjust(4) + ' ║'
+            row += str(round(obs['pct03'], 1)).rjust(5) + ' ║'
+            row += str(obs['ee567']).rjust(4) + ' ║'
+            row += str(round(obs['pct567'], 1)).rjust(5) + ' ║'
+            row += str(obs['ee17']).rjust(4) + ' ║'
+            row += str(obs['total_sun_ee']).rjust(4) + ' ║'
+            row += str(obs['total_days']).rjust(5) + ' ║'
+            lines.append(row)
+            
+            # Add separator line every 5 rows (except last row)
+            if (i + 1) % 5 == 0 and i < len(observer_data) - 1:
+                lines.append('╠══╬═════╬══════╬═════╬══════╬═════╬══════╬═════╬══════╬═════╬═════╬══════╣')
+        
+        # Bottom border
+        lines.append('╚══╩═════╩══════╩═════╩══════╩═════╩══════╩═════╩══════╩═════╩═════╩══════╝')
+        lines.append('')
+    
+    # ============================================================================
+    # Section 3: EE Observations (Sun and Moon)
+    # ============================================================================
+    sun_ee_counts = data.get('sun_ee_counts', {})
+    moon_ee_counts = data.get('moon_ee_counts', {})
+    
+    if sun_ee_counts or moon_ee_counts:
+        title_line = i18n.get('annual_stats.ee_observed_title', 'EE-Beobachtungen')
+        title_padding = max(0, (73 - len(title_line)) // 2)
+        lines.append(' ' * title_padding + title_line)
+        lines.append(' ' * title_padding + '═' * len(title_line))
+        lines.append('')
+        
+        # Sun halos table
+        if sun_ee_counts:
+            lines.append(_format_ee_table(i18n.get('annual_stats.ee_sun_label', 'Sonne'), sun_ee_counts, i18n))
+            lines.append('')
+        
+        # Moon halos table
+        if moon_ee_counts:
+            lines.append(_format_ee_table(i18n.get('annual_stats.ee_moon_label', 'Mond'), moon_ee_counts, i18n))
+            lines.append('')
+    
+    # ============================================================================
+    # Section 4: Phenomena (observations with 5+ EE types marked with '*')
+    # ============================================================================
+    phenomena_list = data.get('phenomena', [])
+    lines.append('')
+    title_line = i18n.get('annual_stats.phenomena_title', 'Seltene Beobachtungen')
+    title_padding = max(0, (74 - len(title_line)) // 2)
+    lines.append(' ' * title_padding + title_line)
+    lines.append(' ' * title_padding + '═' * len(title_line))
+    
+    if not phenomena_list:
+        lines.append('')
+        phenomena_none_text = i18n.get('annual_stats.phenomena_none', 'Keine besonderen Beobachtungen')
+        # Center relative to title, not fixed width
+        phenomena_padding = max(0, (len(title_line) - len(phenomena_none_text)) // 2 + title_padding)
+        lines.append(' ' * phenomena_padding + phenomena_none_text)
+    else:
+        lines.append('╔═══════╦═══════╦═════════╦═══╦══════════════════════════════════════════╗')
+        
+        # Header row - calculate column widths dynamically from border structure
+        # Column widths: Date=7, Observer=7, Time=9, O=3, EE=46
+        date_text = i18n.get('annual_stats.phenomena_date')
+        time_text = i18n.get('annual_stats.phenomena_time')
+        other_ee_text = i18n.get('annual_stats.phenomena_other_ee')
+        
+        header = '║ ' + date_text.ljust(5) + ' ║ KK GG ║ '
+        header += time_text.ljust(7) + ' ║ O ║ '
+        header += '01 02 03 05 06 07 08 09 11 12 ' + other_ee_text
+        while len(header) < 73:
+            header += ' '
+        header += '║'
+        lines.append(header)
+        
+        # Separator after header
+        lines.append('╠═══════╬═══════╬═════════╬═══╬══════════════════════════════════════════╣')
+        
+        last_month = None
+        
+        for phenom in phenomena_list:
+            # Add month separator if month changed
+            if last_month is not None and phenom['mm'] != last_month:
+                lines.append('╠═══════╬═══════╬═════════╬═══╬══════════════════════════════════════════╣')
+            last_month = phenom['mm']
+            
+            # Format date: DD.MM
+            date_str = f"{phenom['tt']:02d}.{phenom['mm']:02d}"
+            
+            # Format observer: KK GG
+            kkgg = f"{phenom['kk']:02d} {phenom['gg']:02d}"
+            
+            # Format time: HHh MMm
+            time_str = f"{phenom['zs']:2d}h {phenom['zm']:02d}m"
+            
+            # Object (1 or 2)
+            o_str = str(phenom['o'])
+            
+            # Build data row
+            row = f"║ {date_str} ║ {kkgg} ║ {time_str} ║ {o_str} ║"
+            
+            # EE types 01-12 (show X where present)
+            ee12 = [1, 2, 3, 5, 6, 7, 8, 9, 11, 12]
+            for ee in ee12:
+                if ee in phenom.get('ee_types', []):
+                    row += ' X '
+                else:
+                    row += '   '
+            
+            # Further EE (beyond 12) - split into groups of 4
+            further_ee = sorted([ee for ee in phenom.get('ee_types', []) if ee > 12])
+            further_ee_str = [f"{ee:02d}" for ee in further_ee]
+            
+            if len(further_ee_str) <= 4:
+                # All fit on one line
+                row += ' '.join(further_ee_str)
+                while len(row) < 73:
+                    row += ' '
+                row += '║'
+                lines.append(row)
+            else:
+                # Split into multiple lines (4 EE per line)
+                first_group = further_ee_str[:4]
+                row += ' '.join(first_group)
+                while len(row) < 73:
+                    row += ' '
+                row += '║'
+                lines.append(row)
+                
+                # Add continuation rows for remaining EE
+                idx = 4
+                while idx < len(further_ee_str):
+                    group = further_ee_str[idx:idx+4]
+                    cont_row = '║       ║       ║         ║   ║                              ' + ' '.join(group)
+                    while len(cont_row) < 73:
+                        cont_row += ' '
+                    cont_row += '║'
+                    lines.append(cont_row)
+                    idx += 4
+        
+        # Bottom border
+        lines.append('╚═══════╩═══════╩═════════╩═══╩══════════════════════════════════════════╝')
+    
+    lines.append('')
+    
+    return '\n'.join(lines)
+
+
+
+def _format_ee_table(label: str, ee_counts: Dict[int, int], i18n) -> str:
+    """Format single EE table (sun or moon) with proper box-drawing characters."""
+    lines = []
+    
+    # Sort EE numbers
+    ee_numbers = sorted([int(ee) for ee in ee_counts.keys()])
+    
+    # Split into rows of 9 EE types (10 columns including header)
+    row_size = 9
+    start_idx = 0
+    
+    while start_idx < len(ee_numbers):
+        row_ees = ee_numbers[start_idx:start_idx + row_size]
+        
+        # Top border
+        lines.append('   ╔═════════════' + '╦═════' * len(row_ees) + '╗')
+        
+        # First row: add label
+        if start_idx == 0:
+            line = '   ║ ' + label.ljust(8)[:8] + 'EE  ║'
+        else:
+            line = '   ║        EE   ║'
+        
+        # EE numbers
+        for ee in row_ees:
+            line += '  ' + str(ee).rjust(2) + ' ║'
+        
+        lines.append(line)
+        
+        # Separator line
+        lines.append('   ╠═════════════╬' + '═════╬' * (len(row_ees) - 1) + '═════╣')
+        
+        # Counts
+        line = '   ║      ' + i18n.get('annual_stats.ee_count_label', 'Anz.').ljust(7)[:7] + '║'
+        for ee in row_ees:
+            count = ee_counts.get(ee, 0)
+            line += str(count).rjust(4) + ' ║'
+        
+        lines.append(line)
+        
+        # Bottom border
+        lines.append('   ╚═════════════' + '╩═════' * len(row_ees) + '╝')
+        
+        start_idx += row_size
+        
+        # Add spacing between rows (except last)
+        if start_idx < len(ee_numbers):
+            lines.append('')
+    
+    return '\n'.join(lines)
+
+
+
+def _format_annual_stats_markdown(data: Dict[str, Any], year: str, i18n) -> str:
+    """Format annual statistics as markdown tables.
+    
+    Ported from client-side JavaScript: buildMarkdownAnnualStats()
+    """
+    lines = []
+    
+    title = i18n.get('annual_stats.title_with_year', 'Jahresstatistik {year}').replace('{year}', year)
+    lines.append(f'# {title}')
+    lines.append('')
+    
+    # ============================================================================
+    # Table 1: Monthly Activity
+    # ============================================================================
+    monthly_stats = data.get('monthly_stats', {})
+    totals = data.get('totals', {})
+    
+    if monthly_stats and totals:
+        table_month = i18n.get('annual_stats.table_month', 'Monat')
+        table_sun = i18n.get('annual_stats.table_sun', 'Sonne')
+        table_moon = i18n.get('annual_stats.table_moon', 'Mond')
+        table_total = i18n.get('annual_stats.table_total', 'Gesamt')
+        table_days = i18n.get('annual_stats.table_days', 'Tage')
+        table_real = i18n.get('annual_stats.table_real', 'real')
+        table_relative = i18n.get('annual_stats.table_relative', 'rel.')
+        
+        lines.append(f'| {table_month} | {table_sun} EE | {table_sun} {table_days} | {table_moon} EE | {table_moon} {table_days} | {table_total} EE | {table_total} {table_days} | {table_real} | {table_relative} |')
+        lines.append('|---|---:|---:|---:|---:|---:|---:|---:|---:|')
+        
+        for mm in range(1, 13):
+            mm_str = str(mm)
+            month_data = monthly_stats.get(mm_str, {})
+            month_name = i18n.get(f'months.{mm}', f'M{mm}')
+            
+            line = f'| {month_name} | '
+            line += f"{month_data.get('sun_ee', 0)} | {month_data.get('sun_days', 0)} | "
+            line += f"{month_data.get('moon_ee', 0)} | {month_data.get('moon_days', 0)} | "
+            line += f"{month_data.get('total_ee', 0)} | {month_data.get('total_days', 0)} | "
+            line += f"{round(month_data.get('real', 0), 1)} | {round(month_data.get('relative', 0), 1)} |"
+            lines.append(line)
+        
+        # Totals row
+        line = f'| **{table_total}** | '
+        line += f"**{totals.get('sun_ee', 0)}** | **{totals.get('sun_days', 0)}** | "
+        line += f"**{totals.get('moon_ee', 0)}** | **{totals.get('moon_days', 0)}** | "
+        line += f"**{totals.get('total_ee', 0)}** | **{totals.get('total_days', 0)}** | "
+        line += f"**{round(totals.get('real', 0), 1)}** | **{round(totals.get('relative', 0), 1)}** |"
+        lines.append(line)
+        lines.append('')
+    
+    # ============================================================================
+    # Table 2: EE Observations (Sun and Moon)
+    # ============================================================================
+    sun_ee_counts = data.get('sun_ee_counts', {})
+    moon_ee_counts = data.get('moon_ee_counts', {})
+    
+    if sun_ee_counts or moon_ee_counts:
+        ee_observed_title = i18n.get('annual_stats.ee_observed_title', 'EE-Beobachtungen')
+        lines.append(f'## {ee_observed_title}')
+        lines.append('')
+        
+        # Sun halos
+        if sun_ee_counts:
+            ee_sun_label = i18n.get('annual_stats.ee_sun_label', 'Sonne')
+            lines.append(f'### {ee_sun_label}')
+            lines.append('')
+            
+            sun_ees = sorted([int(ee) for ee in sun_ee_counts.keys()])
+            header = '| EE |'
+            for ee in sun_ees:
+                header += f' {ee:02d} |'
+            lines.append(header)
+            
+            separator = '|---|'
+            for _ in sun_ees:
+                separator += '---:|'
+            lines.append(separator)
+            
+            ee_count_label = i18n.get('annual_stats.ee_count_label', 'Anzahl')
+            row = f'| {ee_count_label} |'
+            for ee in sun_ees:
+                row += f' {sun_ee_counts.get(ee, 0)} |'
+            lines.append(row)
+            lines.append('')
+        
+        # Moon halos
+        if moon_ee_counts:
+            ee_moon_label = i18n.get('annual_stats.ee_moon_label', 'Mond')
+            lines.append(f'### {ee_moon_label}')
+            lines.append('')
+            
+            moon_ees = sorted([int(ee) for ee in moon_ee_counts.keys()])
+            header = '| EE |'
+            for ee in moon_ees:
+                header += f' {ee:02d} |'
+            lines.append(header)
+            
+            separator = '|---|'
+            for _ in moon_ees:
+                separator += '---:|'
+            lines.append(separator)
+            
+            ee_count_label = i18n.get('annual_stats.ee_count_label', 'Anzahl')
+            row = f'| {ee_count_label} |'
+            for ee in moon_ees:
+                row += f' {moon_ee_counts.get(ee, 0)} |'
+            lines.append(row)
+            lines.append('')
+    
+    # ============================================================================
+    # Table 3: Observer Distribution
+    # ============================================================================
+    observer_distribution = data.get('observer_distribution', [])
+    
+    if observer_distribution:
+        observer_dist_title = i18n.get('annual_stats.observer_dist_title', 'Beobachter EE-Verteilung')
+        lines.append(f'## {observer_dist_title}')
+        lines.append('')
+        
+        observer_dist_kk = i18n.get('annual_stats.observer_dist_kk', 'KK')
+        observer_dist_ee01 = i18n.get('annual_stats.observer_dist_ee01', 'EE01')
+        observer_dist_ee02 = i18n.get('annual_stats.observer_dist_ee02', 'EE02')
+        observer_dist_ee03 = i18n.get('annual_stats.observer_dist_ee03', 'EE03')
+        observer_dist_ee567 = i18n.get('annual_stats.observer_dist_ee567', 'EE567')
+        observer_dist_ee17 = i18n.get('annual_stats.observer_dist_ee17', 'EE1-7')
+        observer_dist_ee_so = i18n.get('annual_stats.observer_dist_ee_so', 'EE(So)')
+        observer_dist_ht_ges = i18n.get('annual_stats.observer_dist_ht_ges', 'HT(ges)')
+        observer_dist_percent = i18n.get('annual_stats.observer_dist_percent', '%')
+        
+        header = f'| {observer_dist_kk} | {observer_dist_ee01} | {observer_dist_percent} | '
+        header += f'{observer_dist_ee02} | {observer_dist_percent} | {observer_dist_ee03} | '
+        header += f'{observer_dist_percent} | {observer_dist_ee567} | {observer_dist_percent} | '
+        header += f'{observer_dist_ee17} | {observer_dist_ee_so} | {observer_dist_ht_ges} |'
+        lines.append(header)
+        lines.append('|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|')
+        
+        for obs in observer_distribution:
+            row = f"| {obs['kk']:02d} | {obs['ee01']} | {round(obs['pct01'], 1)} | "
+            row += f"{obs['ee02']} | {round(obs['pct02'], 1)} | {obs['ee03']} | "
+            row += f"{round(obs['pct03'], 1)} | {obs['ee567']} | {round(obs['pct567'], 1)} | "
+            row += f"{obs['ee17']} | {obs['total_sun_ee']} | {obs['total_days']} |"
+            lines.append(row)
+        lines.append('')
+    
+    # ============================================================================
+    # Table 4: Phenomena
+    # ============================================================================
+    phenomena_list = data.get('phenomena', [])
+    phenomena_title = i18n.get('annual_stats.phenomena_title', 'Halophänomene')
+    
+    if phenomena_list:
+        lines.append(f'## {phenomena_title}')
+        lines.append('')
+        
+        phenomena_date = i18n.get('annual_stats.phenomena_date', 'Datum')
+        phenomena_time = i18n.get('annual_stats.phenomena_time', 'Zeit')
+        phenomena_other_ee = i18n.get('annual_stats.phenomena_other_ee', 'usw.')
+        
+        header = f'| {phenomena_date} | KK | GG | {phenomena_time} | O |'
+        ee_columns = [1, 2, 3, 5, 6, 7, 8, 9, 11, 12]
+        for ee in ee_columns:
+            header += f' EE{ee:02d} |'
+        header += f' {phenomena_other_ee} |'
+        lines.append(header)
+        
+        separator = '|---|---:|---:|---|---:|'
+        for _ in ee_columns:
+            separator += '---:|'
+        separator += '---|'
+        lines.append(separator)
+        
+        for phenom in phenomena_list:
+            row = f"| {phenom['tt']:02d}.{phenom['mm']:02d} | {phenom['kk']:02d} | {phenom['gg']:02d} | "
+            row += f"{phenom['zs']:2d}h {phenom['zm']:02d}m | {phenom['o']} |"
+            
+            # EE types 01-12
+            for ee in ee_columns:
+                if ee in phenom.get('ee_types', []):
+                    row += ' X |'
+                else:
+                    row += ' |'
+            
+            # Further EE (beyond 12)
+            further_ee = sorted([ee for ee in phenom.get('ee_types', []) if ee > 12])
+            further_ee_str = ' '.join([f'{ee:02d}' for ee in further_ee])
+            row += f' {further_ee_str} |'
+            lines.append(row)
+        lines.append('')
+    else:
+        lines.append(f'## {phenomena_title}')
+        lines.append('')
+        phenomena_none = i18n.get('annual_stats.phenomena_none', 'Keine besonderen Beobachtungen')
+        lines.append(phenomena_none)
+        lines.append('')
+    
+    return '\n'.join(lines)
+
+
+
+def _format_annual_stats_html(data: Dict[str, Any], year: str, i18n) -> str:
+    """Return HTML formatted annual statistics (or just return JSON for client-side rendering)."""
+    # For now, return JSON as HTML format indicates client-side rendering
+    # This maintains consistency with monthly-stats pattern
+    return jsonify(data)
 
 
 @api_blueprint.route('/annual-stats', methods=['GET'])
@@ -1793,15 +3391,12 @@ def get_annual_stats() -> Dict[str, Any]:
     
     Query parameters:
         jj: Year (2-digit, 50-99 for 1950-2099)
+        format: Output format - 'json' (default), 'html', 'text', or 'markdown'
     
     Returns:
-        Dictionary with:
-        - jj: Year
-        - observer_overview: Observer statistics for the year
-        - activity_real: Real activity per month (1-12)
-        - activity_relative: Relative activity per month (1-12)
-        - activity_totals: Total real and relative activity
-        - activity_count: Number of active observers
+        - format=json/html: Dictionary with monthly_stats, totals, observer_distribution, phenomena
+        - format=text: Pseudographic output with box-drawing characters
+        - format=markdown: Markdown tables for all statistics
     """
     from flask import current_app
     from halo.models.constants import calculate_halo_activity
@@ -1957,8 +3552,8 @@ def get_annual_stats() -> Dict[str, Any]:
         # This ensures activity values are comparable across months of different lengths
         days_in_month = get_days_in_month(mm, jj_int)
         normalization_factor = 30.0 / days_in_month
-        normalized_real = activity_data['total_real'] * normalization_factor
-        normalized_relative = activity_data['total_relative'] * normalization_factor
+        normalized_real = round(activity_data['total_real'] * normalization_factor, 1)
+        normalized_relative = round(activity_data['total_relative'] * normalization_factor, 1)
         
         # Use string keys for JSON serialization
         monthly_stats[str(mm)] = {
@@ -1972,7 +3567,7 @@ def get_annual_stats() -> Dict[str, Any]:
             'relative': normalized_relative
         }
     
-    # Calculate totals (using string keys)
+    # Calculate totals (using string keys) with rounded values
     totals = {
         'sun_ee': sum(monthly_stats[str(mm)]['sun_ee'] for mm in range(1, 13)),
         'sun_days': sum(monthly_stats[str(mm)]['sun_days'] for mm in range(1, 13)),
@@ -1980,8 +3575,8 @@ def get_annual_stats() -> Dict[str, Any]:
         'moon_days': sum(monthly_stats[str(mm)]['moon_days'] for mm in range(1, 13)),
         'total_ee': sum(monthly_stats[str(mm)]['total_ee'] for mm in range(1, 13)),
         'total_days': sum(monthly_stats[str(mm)]['total_days'] for mm in range(1, 13)),
-        'real': sum(monthly_stats[str(mm)]['real'] for mm in range(1, 13)),
-        'relative': sum(monthly_stats[str(mm)]['relative'] for mm in range(1, 13))
+        'real': round(sum(monthly_stats[str(mm)]['real'] for mm in range(1, 13)), 1),
+        'relative': round(sum(monthly_stats[str(mm)]['relative'] for mm in range(1, 13)), 1)
     }
     
     # Calculate per-observer EE distribution (EE 01, 02, 03, 05-07)
@@ -2076,15 +3671,11 @@ def get_annual_stats() -> Dict[str, Any]:
             'total_days': len(stats['total_days'])
         })
     
-    # Calculate phenomena (observations with '*' in remarks, 5+ EE types visible simultaneously)
+    # Calculate phenomena (observations with 5+ EE types visible simultaneously)
     # Group by unique (MM, TT, KK, O) combination
     phenomena_dict = {}  # Key: (MM, TT, KK, O), Value: phenomenon data
     
     for obs in filtered_obs:
-        # Check for '*' in remarks
-        if not obs.remarks or '*' not in obs.remarks:
-            continue
-        
         # Group by (MM, TT, KK, O)
         key = (obs.MM, obs.TT, obs.KK, obs.O)
         if key not in phenomena_dict:
@@ -2116,17 +3707,19 @@ def get_annual_stats() -> Dict[str, Any]:
             phenomena_dict[key]['zs'] = obs.ZS
             phenomena_dict[key]['zm'] = obs.ZM
     
-    # Convert to sorted list (sort by month, day, kk, then by time within same kk)
+    # Filter for only phenomena with 5+ EE types and convert to sorted list
     phenomena_list = []
     for key in sorted(phenomena_dict.keys()):
         phenom = phenomena_dict[key]
-        phenom['ee_types'] = sorted(list(phenom['ee_types']))
-        phenomena_list.append(phenom)
+        if phenom['ee_count'] >= 5:  # Only include if 5 or more EE types
+            phenom['ee_types'] = sorted(list(phenom['ee_types']))
+            phenomena_list.append(phenom)
     
     # Sort by (MM, TT, KK, time)
     phenomena_list.sort(key=lambda p: (p['mm'], p['tt'], p['kk'], p['zs'], p['zm']))
     
-    return jsonify({
+    # Build data structure for formatting
+    data = {
         'jj': jj_int,
         'monthly_stats': monthly_stats,
         'totals': totals,
@@ -2135,7 +3728,42 @@ def get_annual_stats() -> Dict[str, Any]:
         'moon_ee_counts': moon_ee_counts,
         'observer_distribution': observer_distribution,
         'phenomena': phenomena_list
-    })
+    }
+    
+    # Check requested format
+    output_format = request.args.get('format', 'json').lower()
+    
+    if output_format in ['json', 'html']:
+        # JSON format and HTML format both return data; HTML is formatted client-side
+        return jsonify(data)
+    elif output_format in ['text', 'markdown']:
+        # Get formatted year for display
+        year = f"19{str(jj_int).zfill(2)}" if jj_int >= 50 else f"20{str(jj_int).zfill(2)}"
+        
+        from halo.resources.i18n import get_i18n
+        i18n = get_i18n()
+        
+        if output_format == 'text':
+            content = _format_annual_stats_text(data, year, i18n)
+            return Response(content, mimetype='text/plain; charset=utf-8')
+        elif output_format == 'markdown':
+            content = _format_annual_stats_markdown(data, year, i18n)
+            return Response(content, mimetype='text/markdown; charset=utf-8')
+    elif output_format == 'linegraph':
+        # Generate PNG line chart
+        from halo.resources.i18n import get_i18n
+        i18n = get_i18n()
+        img_data = _generate_annual_stats_chart(data, jj_int, i18n)
+        return Response(img_data, mimetype='image/png')
+    elif output_format == 'bargraph':
+        # Generate PNG bar chart
+        from halo.resources.i18n import get_i18n
+        i18n = get_i18n()
+        img_data = _generate_annual_stats_bar_chart(data, jj_int, i18n)
+        return Response(img_data, mimetype='image/png')
+    else:
+        return jsonify({'error': f'Invalid format: {output_format}. Use json, text, html, markdown, linegraph, or bargraph.'}), 400
+
 
 
 @api_blueprint.route('/observers', methods=['GET'])
