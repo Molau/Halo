@@ -1,5 +1,7 @@
-"""
-Flask application factory for HALO web application.
+"""Flask application factory for HALO web application.
+
+Copyright (c) 1992-2026 Sirko Molau
+Licensed under MIT License - see LICENSE file for details.
 """
 
 from flask import Flask, render_template, session, request, g

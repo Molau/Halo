@@ -59,7 +59,11 @@ Deploy to:
 
 ## License
 
-TBD
+MIT License - See [LICENSE](LICENSE) file for details.
+
+Copyright (c) 1992-2026 Sirko Molau
+
+Free to use, modify, and distribute. Attribution appreciated.
 
 ## Original Software
 

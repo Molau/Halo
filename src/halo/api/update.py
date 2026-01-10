@@ -1,3 +1,9 @@
+"""REST API endpoints for software updates.
+
+Copyright (c) 1992-2026 Sirko Molau
+Licensed under MIT License - see LICENSE file for details.
+"""
+
 from flask import Blueprint, jsonify, request, current_app
 from pathlib import Path
 from halo.services.updater import update_from_github, restart_server

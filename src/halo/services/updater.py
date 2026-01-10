@@ -1,3 +1,9 @@
+"""Auto-update service for downloading and installing releases from GitHub.
+
+Copyright (c) 1992-2026 Sirko Molau
+Licensed under MIT License - see LICENSE file for details.
+"""
+
 import os
 import sys
 import shutil

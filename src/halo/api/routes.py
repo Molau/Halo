@@ -1,5 +1,7 @@
-"""
-REST API routes for HALO web application.
+"""REST API routes for HALO web application.
+
+Copyright (c) 1992-2026 Sirko Molau
+Licensed under MIT License - see LICENSE file for details.
 """
 
 from flask import Blueprint, jsonify, request, current_app
