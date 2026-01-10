@@ -17,6 +17,13 @@ Python web application for maintenance of halo observations, modernized from the
 - Multi-language support (German/English)
 - Works on desktop, tablet, and mobile
 
+### MCP Integration
+HALOpy provides **MCP-ready API endpoints** for generating statistics charts programmatically:
+- Monthly statistics: `/api/monthly-stats?mm={month}&jj={year}&format={linegraph|bargraph}`
+- Annual statistics: `/api/annual-stats?jj={year}&format={linegraph|bargraph}`
+
+Returns PNG images ready for AI assistants, reporting tools, and automation. See [MCP_INTEGRATION.md](docs/MCP_INTEGRATION.md) for details.
+
 ### Data
 - `data/` - Observation CSV files (.CSV format)
 - `resources/` - Observer metadata (halobeo.csv)
