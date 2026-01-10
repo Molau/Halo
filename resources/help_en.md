@@ -1,16 +1,146 @@
-# HALO Documentation (Version 2.4)
+# HALO Documentation (Version 3.0)
 
-**Note**: This English version needs to be translated from the German original. Please refer to the German version (help_de.md) for the complete documentation.
+## 1. About the Program
 
-## About the Program
+HALOpy is a web application for recording, displaying, and analyzing halo observations in the standardized HALO key format. Operation is comfortable in the browser, while the proven functions of the original DOS program are retained. Observations can be recorded, saved, and presented as monthly reports and in a variety of statistical analyses. With loaded data, you can create complete monthly and annual statistics as well as investigations covering larger data sets.
 
-HALO is a software program for recording and analyzing halo observations. It was programmed with menus and windows and is therefore easy to use.
+Due to its various configuration options, the program can easily be adapted to the specific requirements of the individual user and is also suitable as a central recording program for reporting stations. It strictly adheres to the encryption specifications used in the Halo Observation Section since January 1978 in their current form.
 
-For the complete documentation, please see the German version or contact:
+The program HALOpy is public domain software that is regularly updated and improved. It may be freely copied and is available to you at no cost from the author at any time. The copyrights mentioned under section 6 must be observed.
 
-Sirko Molau  
-Abenstalstr. 13b  
-D-84072 Seysdorf  
-Germany
+At this point, we thank those who developed the halo key and thus created the prerequisites for digital recording and the analyses that are now possible.
 
-E-Mail: sirko@molau.de
+## 2. Installation of the Program
+
+### 2.1 Hardware Requirements
+
+HALOpy runs as a web application in a current desktop browser (Firefox, Chrome, Edge, Safari) with active JavaScript. The server component requires Python 3.x with the dependencies listed in requirements.txt. Display is via the browser and output is generated with the browser's print function.
+
+### 2.2 Installation
+
+Install HALOpy by providing the project directory (e.g., from the Git repository or as a Zip file). The prerequisite is Python 3.x; all dependencies are installed system-wide with `pip install -r requirements.txt`. Start the server with `python run.py`; then open HALOpy in your browser at http://localhost:5000. The data and resource files are in the project (e.g., data/, resources/), no special drivers or installers are required.
+
+## 3. Program Structure
+
+### 3.1 File Names
+
+Program files and resources are in the project directory (e.g., templates/, static/, resources/). Observation files are managed as CSV in the data/ directory and can be freely named (standard: .csv extension). Legacy .HAL files must be exported to CSV in advance using the DOS version of the program. Storage in the standardized HALO key format remains unchanged. Exports for further processing (e.g., spreadsheets) are created as CSV.
+
+### 3.2 Using the Menus
+
+Operation is via the browser through the navigation bar and buttons. Colors and layout follow the web UI design (Bootstrap-like); there are no color-coded DOS windows anymore.
+Standard operations:
+
+  * Navigation via mouse/touch on buttons and links; keyboard operation via Tab/Enter is possible.
+  * ESC closes dialogs or returns to the main page (as intended in the original).
+
+Dialogs (e.g., warnings, load/save) appear as modal overlays with a darkened background. In input masks, keyboard focus is set automatically; required fields are marked.
+
+### 3.3 Program Start
+
+Start the server with `python run.py`. After startup, open HALOpy in your browser (default: http://localhost:5000). Depending on the configuration, a defined observation file may be loaded automatically on startup; otherwise, select the file (CSV) via the web interface and work with it in server memory. Crash recovery is active: if a recovery file with the extension `$$$` was created during a session, HALOpy will offer to use it on the next startup to avoid losing changes. Unsaved changes are additionally queried when switching files or exiting.
+
+There is no separate exit menu in the web version. End your session by closing the browser tab or returning to the home page. If there are unsaved changes, you will be warned before loading another file.
+
+## 4. The Functions of Individual Program Items
+
+### 4.1 The Version Menu '≡'
+
+The version menu in the header shows build information and the change summary of the current HALOpy version.
+
+  * 'Version': Shows program and build information of the running instance.
+  * 'What's New': Opens the stored change summary (whats_new_de/whats_new_en) for the current version.
+
+### 4.2 The File Menu
+
+The File menu controls loading, saving, and exporting of observation files (CSV) in the browser. All operations work on server storage; changes are written back to the file when saved.
+
+  * 'New File': Creates an empty observation file in HALO key format (CSV) and loads it immediately for editing.
+  * 'Open': Selects and loads an existing CSV file; after loading, the file name and number of observations are displayed.
+  * 'Select': Filters the loaded file according to criteria (e.g., date, month, observer, halo type) and creates a new file from the matches or from the remaining records.
+  * 'Concatenate': Merges the currently loaded file with another observation file and removes duplicate entries; the data remains sorted.
+  * 'Save': Writes the currently loaded file from server storage back. If there are unsaved changes, you will be warned before loading other files or exiting.
+  * 'Save As': Saves the loaded file under a new name and continues working with the new file (copy).
+
+Legacy .HAL files must be exported to CSV in the original DOS version; then they can be loaded, selected, or merged. Direct HAL conversion in the browser is not provided.
+
+Directory switching is not needed in the browser; file selection is done via the operating system's file dialog.
+
+### 4.3 The Observations Menu
+
+This menu bundles the display, entry, modification, and deletion of observations from the loaded file.
+
+  * 'Display': Shows observations filtered by criteria (e.g., year/month/day, time, observer, region, ...). Output occurs in the browser; if no matches are found, a warning appears.
+  * 'Add': Opens the input mask according to the HALO key. Entries are immediately checked against the validation rules; invalid combinations are rejected. Fixed values (e.g., fixed observer/date) are adopted, required fields are marked.
+  * 'Change': Searches for observations according to criteria and allows modification of individual fields. Changes are validated immediately; sorting is retained after saving.
+  * 'Delete': Searches for observations according to criteria and removes selected entries from the loaded file.
+
+Input modes:
+
+  * Menu entries: Guided forms with selection fields; suitable when the observation is not yet coded.
+  * Numeric entries: Key entry as a numeric column according to the HALO key; faster for already coded observations.
+
+All changes affect server storage and make the file "unsaved". You will be warned before switching files or exiting. ESC closes dialogs without applying changes.
+
+### 4.4 The Observer Menu
+
+Here you manage observer data (ID number, name, observation sites with validity, active status). Changes are saved immediately.
+
+  * 'Display': Opens the observer list (current records). Filtering by ID/name, site, or area is possible.
+  * 'Add': Creates a new observer with ID, name, primary/secondary observation site (including coordinates/area) and start of validity; active status is set.
+  * 'Change': Modifies master fields (ID, name) or location-related entries with validity/coordinates/activity; existing location entries can be supplemented or deleted (at least one remains).
+  * 'Delete': Removes an observer including all location entries after a safety query, permanently.
+
+### 4.5 The Analysis Menu
+
+In the web interface, you access analyses via the "Analysis" page. Numerical and graphical outputs are available; results can be saved as CSV/TXT or (depending on the view) as PNG.
+
+Parameter selection and options (corresponding to original behavior):
+
+  * Free parameters: 1D or 2D over key groups (e.g., month, halo type, cirrus genus) or sun altitude (min/average/max; Germany data only).
+  * Time reference: Time can be adjusted to local time.
+  * Duration: Option whether entries without start/end (kA/kE) are included.
+  * Halo type subdivision: Option to split complete forms into individual components (e.g., left/right parhelion).
+  * Cloud genera: Option for subdivision analogous to original software.
+  * Value calculation: Absolute values, percentage values; for 2D additionally normalization per X or per Y.
+
+Output:
+
+  * Numerical: Table view in browser, optionally as HTML table, as pseudographics (as in the DOS original), or in Markdown format; for large tables, navigation via scrolling.
+  * Graphical: Line or bar chart, optional PNG export.
+  * Save: Results can be saved depending on the view as CSV (HTML table), TXT (pseudographics), or MD (Markdown); graphics as PNG.
+
+### 4.6 The Output Menu
+
+The menu leads to three output pages: Monthly report, monthly statistics, and annual statistics. A loaded observation file is required; otherwise, a warning message appears. The result display is in the browser.
+
+Text output formats: HTML table (web layout), pseudographics (DOS layout), or Markdown. The selected format applies to all three outputs. Saving is format-dependent: CSV for HTML tables, TXT for pseudographics, MD for Markdown. Printing is via the browser's print function; pseudographics and Markdown views are rendered accordingly for printing.
+
+  * 'Monthly Report': Filter dialog for observer (fixed observer is preselected, otherwise selectable) and month/year (default according to date setting). Output in selected text format; save and print directly from the view.
+  * 'Monthly Statistics': Select month/year, output in selected text format with activity table; additionally, an activity diagram can be displayed (view in browser, printable). Saving creates CSV/TXT/MD according to format.
+  * 'Annual Statistics': Select year, output in selected text format (overviews and activity). An activity diagram can be displayed; saving creates CSV/TXT/MD according to format.
+
+### 4.7 The Settings Menu
+
+This menu provides the current settings. All changes are saved immediately and take effect in the browser (no printer or color options needed anymore).
+
+  * 'Fixed Observer': Default observer setting for input and output masks (e.g., monthly report).
+  * 'Active Observers': Lists and analyses optionally limited to active observers or showing all.
+  * 'File': Optionally load a specific CSV file automatically at program startup.
+  * 'Date': Choose default for date prompts: none, current month, previous month, or constant month (with month/year selection).
+  * 'Input Mode': Preset menu entries (guided forms) or numeric entries (key line) for observation dialogs.
+  * 'Output Mode': Choose text format for monthly report/statistics, annual statistics, and analysis: HTML tables, pseudographics, or Markdown (CSV/TXT/MD accordingly).
+
+### 4.8 The Help Menu
+
+The Help menu displays this help text directly in the browser; navigation is via scrolling or internal links. The language follows the current session setting.
+
+## 5. Notes
+
+HALOpy is comprehensive; please report any found bugs with a brief description (when, where, what action) and, if possible, with the file used. Feedback and improvement suggestions are welcome; feasible ideas are incorporated into new versions after review.
+
+Contact: Sirko Molau, Abenstalstr. 13b, D-84072 Seysdorf, E-Mail: sirko@molau.de
+
+## 6. Copyrights
+
+HALOpy uses Python, HTML/JS/CSS and runs in the browser; see LICENSE for current license terms.

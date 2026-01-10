@@ -1,208 +1,143 @@
-# Dokumentation zum Haloerfassungsprogramm 'Halo' (Version 2.4)
+# Dokumentation zum Haloerfassungsprogramm 'Halo' (Version 3.0)
 
 ## 1. Über das Programm selbst
 
-Das Programm 'Halo' dient der Eingabe und Auswertung von Halobeobachtungen. Es wurde menü- und fensterorientiert programmiert und zeichnet sich daher durch eine leichte Benutzung aus. Der Anwender erhält die Möglichkeit, seine eigenen Beobachtungen zu erfassen und zu speichern, in Form von Monatsmeldungen auszudrucken und verschiedenste statistische Untersuchungen an ihnen durchzuführen. Darüber hinaus können von jedem, der die Datenfiles von der Meldestelle erhält, komplette Monats- und Jahresstatistiken sowie Untersuchungen an größeren Datenmengen durchge-
-führt werden.
+HALOpy ist eine Web‑Anwendung zur Eingabe, Anzeige und Auswertung von Halobeobachtungen im standardisierten HALO‑Schlüsselformat. Die Bedienung erfolgt komfortabel im Browser, die bewährten Funktionen des Originalprogramms unter DOS bleiben erhalten. Beobachtungen können erfasst, gespeichert und als Monatsmeldungen sowie in vielfältigen statistischen Auswertungen dargestellt werden. Darüber hinaus lassen sich mit geladenen Daten komplette Monats‑ und Jahresstatistiken sowie Untersuchungen über größere Datenmengen erstellen.
 Durch seine unterschiedliche Konfigurierbarkeit läßt sich das Programm problemlos an die speziellen Erfordernisse des jeweiligen Nutzers anpassen und ist auch als zentrales Erfassungsprogramm in der Meldestellegut geeignet. Es hält sich streng an die seit Januar 1978 in der Sektion Halobeobachtung verwendeten Verschlüsselungsvorschrift in der jeweils aktuellen Form.
 Das Programm 'Halo' ist Public-Domain-Software, daß regelmäßig aktualisiert und verbessert wird. Es darf frei kopiert werden und ist vom Autor jederzeit kostenlos erhältlich. Die unter 6. genannten Copyrights sind zu beachten.
 An dieser Stelle sei denjenigen gedankt, die sich den Haloschlüssel sehr zeitig ausdachten und somit die Voraussetzungen für die digitale Erfassung und die damit möglichen Auswertungen schufen.
 
-## 2. Installierung des Programms
+## 2. Installation des Programms
 
 ### 2.1 Hardwarevoraussetzungen
 
-Zur Ausführung des Programms genügt bereits ein IBM-kompatibler PC/XT mit 512 kByte Arbeitsspeicher und einer Hercules-Grafikkarte. Um eine vernünftige Arbeitsgeschwindigkeit zu erreichen, sind jedoch schnellere 386er, 486er und Pentium-PC's mit einer VGA-Grafikkarte zu empfehlen. Vor allem bei sehr rechenintensiven Auswertungen (Sonnenhöhe als ein Parameter) macht sich außerdem ein mathematischer Coprozessor positivbemerkbar. Optional können Drucker und Maus angeschlossen werden. Es hat sich als günstig erwiesen, vor Start des Programmes ein Festplattencacheprogramm (z.B. smartdrv, pckwik) mit ausreichender Speicherkapazität zu installieren, was vor allem Zugriffe auf längere Beobachtungsdateien beschleunigt.
+HALOpy läuft als Web-Anwendung im aktuellen Desktop-Browser (Firefox, Chrome, Edge, Safari) mit aktivem JavaScript. Der Serverteil benötigt Python 3.x mit den in requirements.txt genannten Abhängigkeiten. Die Darstellung erfolgt über den Browser und Ausgaben werden mit der Druckfunktion des Browsers erzeugt. 
 
 ### 2.2 Installation
 
-Zur Installierung wird das Programm 'Install.EXE' gestartet. Nach seiner Nutzung befinden sich folgende Dateien in Ihrem Verzeichnis:
-
-  * 'Halo.EXE' - Hauptprogramm
-  * 'Halo.BEO' - Datei der Beobachter
-  * 'Halo.CFG' - Konfigurationsdatei
-  * 'Halo.BGI' - Grafiktreiber für VGA-Grafikkarten (*)
-  * 'Halo.ICO' - Halo-Icon für MS-Windows
-  * 'Halo.OS2' - Halo-Icon für IBM OS/2
-  * 'Halo.DRV' - Druckertreiber   (**)
-  * 'Halo.PRO' - Drucker-Profile  (***)
-  * 'Halo.NEU' - Änderungen in der neuen Programmversion
-  * 'Halo.HLP' - diese Dokumentation
-
-Da das Hauptprogramm während seiner Arbeit zu unterschiedlichen Zeitpunkten auf diese Dateien zugreifen muß, ist es erforderlich, daß Sie das Programm Halo von dem Verzeichnis aus starten, in dem sich alle diese Dateien befinden. Weitere Dateien (z.B. Datenfiles, Auswertungsfiles) können dagegen auch in beliebigen anderen Verzeichnissen abgelegt werden.
-Das Programm unterstützt die Arbeit mit einer Maus und steuert zum Ausdruck von Monatsmeldungen und Auswertungsresultaten einen angeschlossenen Drucker an. Da dabei im allgemeinen keine hardwarespezifischen Kommandos verwendet wurden, sollte es problemlos mit jedem angeschlossenen Maus- und Druckertyp zusammenarbeiten. Bei Tintenstrahldruckern, die nicht den EPSON-Standard emulieren, ist der entsprechende Druckertyp im Menü 'Einstellungen' -> 'Drucker' anzugeben.
+Installieren Sie HALOpy, indem Sie das Projektverzeichnis bereitstellen (z.B. aus dem Git-Repository oder als Zip). Voraussetzung ist Python 3.x; alle Abhängigkeiten werden systemweit mit `pip install -r requirements.txt` eingerichtet. Starten Sie den Server mit `python run.py`; anschließend öffnen Sie HALOpy im Browser über http://localhost:5000. Die Daten- und Ressourcendateien liegen im Projekt (z.B. data/, resources/), spezielle Treiber oder Installer sind nicht erforderlich.
 
 ## 3. Aufbau des Programms
 
 ### 3.1 Dateinamen
 
-Wie bereits erwähnt beginnen alle direkt zum Programm gehörigen Dateien mit dem Namen 'Halo' und haben dann verschiedene Endungen. Datenfiles, das heißt Dateien von Halobeobachtungen, können dagegen beliebige Namen erhalten und werden dann vom Programm mit der Endung 'HAL' versehen.
-Will man Halodateien über elektronische Post verschicken, müssen diese vorher in Textdateien umgewandelt werden (siehe Menü 'Datei' -> 'Übertragen'), die die Endung 'ASC' erhalten. Beim Export von Halodateien (siehe Menü 'Datei' -> 'Export') entstehen Files mit der Endung 'TXT'.
-Bei der Ausgabe von Monatsmeldungen und Statistiken in Dateien erzeugt das Programm Files mit folgenden Endungen: 'MMG' für Monatsmeldungen, 'MST' für Monatsstatistiken und 'JST' für Jahresstatistiken. Der Name der Dateien wird vom Programm automatisch generiert. Speichert man dagegen selbst erzeugte Haloauswertungen, so kann man den Dateinamen wieder frei wählen, wobei die Dateien jeweils die feste Endung 'HAW' erhalten.
-Eventuell kann es vorkommen, daß Sie nach einem Programmabbruch (zum Beispiel durch einen Programmfehler oder Stromausfall) Dateien mit der Endung '$$$' in Ihrem Verzeichnis finden. Es handelt sich dabei um temporäre Dateien, die normalerweise am Ende einer Arbeitssitzung automatisch gelöscht werden. In diesem Fall empfielt es sich, das Programm gleich noch einmal zu starten und damit eventuellem Datenverlust vorzubeugen (siehe 3.3 Programmstart).
+Programmdateien und Ressourcen liegen im Projektverzeichnis (z.B. templates/, static/, resources/). Beobachtungsdateien werden als CSV im Verzeichnis data/ verwaltet und können frei benannt werden (Standard: Endung .csv). Alte .HAL-Dateien müssen vorab in der DOS-Version des Programms nach CSV exportiert werden. Die Speicherung im standardisierten HALO-Schlüsselformat bleibt unverändert. Exporte für Weiterverarbeitung (z.B. Tabellenkalkulation) werden als CSV erzeugt.
 
 ### 3.2 Benutzung der Menüs
 
-Um eine möglichst einfache Bedienung des Programms zu garantieren, wurde es ausschließlich menügesteuert programmiert. Alle Menüs und Fenster besitzen dabei (zumindest an einem Farbmonitor) eine charakteristische Farbe, die bereits Auskunft über die anstehenden Aktionen gibt:
+Die Bedienung erfolgt im Browser über die Navigationsleiste und Schaltflächen. Farben und Layout folgen dem Web-UI-Design (Bootstrap-ähnlich); es gibt keine farbcodierten DOS-Fenster mehr. 
+Standardaktionen:
 
-  * orangene Fenster stellen Informationen für den Nutzer dar
-  * violette Fenster fordern den Nutzer zu Eingabe auf
-  * blaue Fenster beinhalten Resultate von Operationen
-  * rote Fenster weisen auf Fehler oder kritische Operationen hin
+  * Navigation per Maus/Touch auf Schaltflächen und Links; Tastaturbedienung per Tab/Enter ist möglich.
+  * ESC schließt Dialoge oder kehrt zur Hauptseite zurück (wie im Original vorgesehen).
 
-Der Aufbau der Menüs wird zentral verwaltet, so daß auch die Grundfunktionen ihrer Benutzung immer gleich sind:
-
-  * zur Auswahl eines Menüpunktes werden die entsprechenden Cursortasten verwendet (links und rechts oder auf und ab, dann Enter)
-  * durch Betätigung der Tasten Pos1 oder Ende bzw. Bild auf oder ab gelangt man sofort auf den jeweils ersten oder letzten Menüpunkt
-  * ist im Menüpunkt ein Buchstabe gesondert hervorgehoben, so kann der Punkt auch durch Drücken der entsprechenden Taste aktiviert werden
-  * soll ein Menü ohne Auswahl verlassen werden, so ist das in den meisten Fällen durch Drücken der ESC-Taste möglich
-
-Für eine angeschlossene Maus gilt weiterhin:
-
-  * die Auswahl eines Menüpunktes kann durch die Bewegung der Maus in die entsprechende Richtung erfolgen
-  * die linke Maustaste entspricht der Enter-Taste und damit der Auswahl eines Menüpunktes
-  * die rechte Maustaste entspricht der ESC-Taste und damit dem Abbruch eines Menüs
-
-Sollten direkte Eingaben von der Tastatur gefordert sein, wird das dem Nutzer deutlich mitgeteilt.
+Dialoge (z.B. Warnungen, Laden/Speichern) erscheinen als modale Overlays mit abgedunkeltem Hintergrund. Bei Eingabemasken wird Tastaturfokus automatisch gesetzt; Pflichtfelder sind gekennzeichnet.
 
 ### 3.3 Programmstart
 
-Der Programmstart erfolgt durch Aufruf von 'Halo'. Nach der automatischen Installation des Druckertreibers und der Ausgabe eines Informationsbildschirmes erfolgt vom Programm ein Test, ob im aktuellen Verzeichnis eine temporäre Datei vorhanden ist. Wenn ja, werden Sie gefragt, ob Sie diese Datei wiederverwenden möchten. Sollten Sie gerade eine Beobachtungsdatei verändert haben und auf Grund eines Rechnerabsturzes noch nicht zum Speichern der Daten gekommen sein, so müssen Sie an dieser Stelle mit Ja antworten. Die von Ihnen gemachten Änderungen gehen dann nicht verloren. Im anderen Fall wird die temporäre Datei gelöscht, je nach Ihren persönlichen Einstellungen wird das Verzeichnis gewechselt, eine Datei geladen (siehe Menü 'Einstellungen' -> 'Datenverzeichnis', 'Datei') und das Programm meldet sich mit der gewohnten Arbeitsoberfläche.
+Starten Sie den Server mit `python run.py`. Nach dem Start öffnen Sie HALOpy im Browser (Standard: http://localhost:5000). Je nach Konfiguration kann beim Einstieg automatisch eine definierte Beobachtungsdatei geladen werden; andernfalls wählen Sie die Datei (CSV) über die Web-Oberfläche und arbeiten damit im Serverspeicher. Crash-Recovery ist aktiv: Falls während einer Sitzung eine Wiederherstellungsdatei mit der Endung `$$$` angelegt wurde, bietet HALOpy beim nächsten Start an, diese zu übernehmen, um Änderungen nicht zu verlieren. Nicht gespeicherte Änderungen werden zusätzlich beim Dateiwechsel oder Beenden abgefragt.
+
+Ein eigenes Endemenü existiert in der Web-Version nicht. Beenden Sie die Sitzung, indem Sie den Browser-Tab schließen oder zur Startseite zurückkehren. Bei offenen, nicht gespeicherten Änderungen werden Sie vor dem Laden einer anderen Datei gewarnt.
 
 ## 4. Die Funktionen der einzelnen Programmpunkte
 
-### 4.1 Das Versionsmenü '­'
+### 4.1 Das Versionsmenü '≡'
 
-Im Versionsmenü werdem dem Nutzer wichtige Informationen zur aktuellen Programmversion mitgeteilt.
+Das Versionsmenü im Kopfbereich zeigt Build-Informationen und die Änderungsübersicht der aktuellen HALOpy-Version.
 
-  * 'Version' : Hier erscheinen allgemeine Programminformationen und die aktuelle Programmversionsnummer auf dem Bildschirm.
-  * 'Was ist neu'   : Nach Anwahl dieses Menüpunktes erscheint ein Text mit den wichtigsten Veränderungen und Ergänzungen der letzten Programmversionen.
+  * 'Version': Zeigt Programm- und Build-Informationen der laufenden Instanz.
+  * 'Was ist neu': Öffnet die hinterlegte Änderungsübersicht (whats_new_de/whats_new_en) für die aktuelle Version.
 
 ### 4.2 Das Menü 'Datei'
 
-Im Menü 'Datei' sind alle Routinen zusammengefaßt, die mit der Erstellung, dem Laden und Speichern von Dateien und dem Wechsel von Verzeichnissen zu tun haben.
+Das Dateimenü steuert Laden, Speichern und Export der Beobachtungsdateien (CSV) im Browser. Alle Operationen arbeiten auf dem Serverspeicher; Änderungen werden beim Speichern zurück auf die Datei geschrieben.
 
-  * 'neue Datei' : Unter diesem Menüpunkt wird eine leere neue Datei von Halobeobachtungen erstellt. Nach der Eingabe eines gültigen Dateinamens sind Sie somit in der Lage, neue Halobeobachtungen zu erfassen.
-  * 'Anpassen'  : Das Anpassen von Dateien ist das Konvertieren von älteren Halodateien in das aktuell gültige Format. Bei Anwahl des Punktes müssen sie entscheiden, ob sie alle im aktuellen Verzeichnis stehenden Dateien oder nur ein ganz bestimmtes, das sie danach aus einer Liste auswählen, anpassen möchten. Sollten die Dateien bereits das richtige Format besitzen, bleiben sie unverändert, anderenfalls werden sie nachfolgend aktualisiert.
-  * 'Laden'  : Hier können Sie bereits erstellte Dateien von Halobeobachtungen laden. Es erscheint eine Liste der im aktuellen Verzeichnis vorhandenen Haloda teien, aus der Sie die gewünschte auswählen können. Nach erfolgreichem Laden werden Sie über die Anzahl der geladenen Beobachtungen informiert und können dann mit Ihrer Programmsitzung fortfahren.
-  * 'Selektieren'   : Dieser Menüpunkt versetzt Sie in die Lage, aus einer großen Beobachtungsdatei bestimmte Beobachtungen herauszusuchen und getrennt abzuspeichern bzw. zu löschen. Zuerst erscheint dabei eine Liste von Auswahlkriterien. Sie geben ein Kriterium an und spezifizieren danach seinen Wert bzw. Wertebereich. Schließlich müssen Sie noch entscheiden, ob die selektierten Beobachtungen erhalten bleiben und der Rest gelöscht werden soll, oder ob sie damit die zu löschenden Beobachtungen spezifiziert haben. Zuletzt müssen Sie einen Namen für die neu zu erstellende Datei eingeben. Ist bereits eine Datei mit diesem Namen vorhanden, so werden sie gewarnt, bevor die alte Datei überschrieben wird. Am Ende des Selektionsprozesses wird Ihnen mit geteilt, wie viele Beobachtungen Ihrem gewählten Kriterium entsprachen, und Sie arbeiten fortan mit der neu erzeugten Datei weiter.
-  * 'Verbinden' : Dieser Punkt dient dazu, zwei Halodateien zu einer einzigen zusammenzufügen. Wählen Sie ihn an, erscheint die Liste der in Ihrem aktuellen Verzeichnis vorhandenen Beobachtungsdateien. Die von Ihnen dort ausgewählte Datei wird nachfolgend mit der bereits geladenen zu einer verknüpft, wobei alle doppelt vorkommenden Beobachtungen automatisch gelöscht werden. Sollte eine der Dateien nicht korrekt sortiert sein, werden Sie gewarnt und die Files neu sortiert.
-  * 'Speichern' : Sollten Sie Veränderungen an Ihrer Beobachtungsdatei vorgenommen haben, können Sie diese mit dem Programmpunkt 'Speichern' auf die Festplatte sichern. Sollten Sie das nicht wünschen, müssen Sie dafür sorgen, daß ihre Datei beim Laden einer neuen Datei oder beim Programmende nicht gespeichert wird.
-  * 'als .. Speichern': Dieser Menüpunkt sichert Ihre aktuell geladene Datei unter einem neuen Namen auf die Festplatte. Wählen Sie ihn an, wird eine neuer Dateiname abgefragt. Nach Eingabe eines gültigen Namens werden Ihre Daten gesichert und Sie arbeiten fortan mit der neuen Datei weiter. Mit diesem Menüpunkt ist es also auch möglich, Ihre Beobachtungsdateien physisch zu kopieren.
-  * 'Übertragen' : Wollen Sie Ihre Beobachtungsdateien über E-Mail verschicken, müssen diese vorher in Textdateien umgewandelt werden. Wählen Sie also unter diesem Menüpunkt das Senden der Datei, wird die aktuell geladene Datei in eine Textdatei konvertiert und unter gleichem Namen mit der Endung 'ASC' abgelegt. Beim Empfang wählen sie dagegen erst aus einer Liste die gewünschte Datei mit der Endung 'ASC' aus und geben dann den Namen für die neu zu erstellende Beobachtungsdatei ein. Die Textdatei kann dabei nur dann korrekt zurückkonvertiert werden, wenn sie zuvor mit 'Halo' erzeugt wurde. Ergänzter Text am Dateianfang oder -ende wird jedoch ignoriert.
-  * 'Exportieren'   : Um Ihre Beobachtungen mit anderen Programmen (z.B. EXCEL) bearbeiten zu können, können Sie mit diesem Menüpunkt die Beobachtungen in eine Textdatei schreiben. Zunächst müssen Sie den gewünschten Dateinamen eingeben. Danach werden Sie nach dem Separatorzeichen gefragt, das zwischen die einzelnen Schlüsselelemente gesetzt wird. Schließlich müssen Sie noch entscheiden, ob das Zeichen nach jedem Element oder nach einer Schlüsselgruppe ausgegeben werden soll.
-  * 'Pfad ändern'   : Mit diesem Menüpunkt können Sie in ein anderes Verzeichnis wechseln. Dazu wird Ihnen zuerst Ihr aktueller Verzeichnispfad ausgegeben, bevor Sie zur Eingabe eines neuen aufgefordert werden. Bei Ihrer Pfadangabe sind dabei auch Ausdrücke gültig, die .. (vorheriges Verzeichnis) oder . (aktuelles Verzeichnis) enthalten. Nach ihrer Eingabe befinden Sie sich mit Ihrer geladenen Datei im neuen Verzeichnis.
+  * 'Neue Datei': Legt eine leere Beobachtungsdatei im HALO-Schlüsselformat (CSV) an und lädt sie sofort zum Bearbeiten.
+  * 'Laden': Wählt und lädt eine vorhandene CSV-Datei; nach dem Laden werden Dateiname und Anzahl der Beobachtungen angezeigt.
+  * 'Selektieren': Filtert die geladene Datei nach Kriterien (z.B. Datum, Monat, Beobachter, Haloart) und erstellt eine neue Datei aus den Treffern oder aus den verbleibenden Datensätzen.
+  * 'Verbinden': Führt die aktuell geladene Datei mit einer weiteren Beobachtungsdatei zusammen und entfernt doppelte Einträge; die Daten bleiben sortiert.
+  * 'Speichern': Schreibt die aktuell geladene Datei aus dem Serverspeicher zurück. Bei ungesicherten Änderungen wird vor dem Laden anderer Dateien oder dem Beenden gewarnt.
+  * 'Speichern unter': Sichert die geladene Datei unter neuem Namen und setzt die Arbeit mit der neuen Datei fort (Kopie).
+
+Legacy .HAL-Dateien müssen in der DOS-Originalversion nach CSV exportiert werden; danach können sie geladen, selektiert oder verbunden werden. Eine direkte HAL-Konvertierung im Browser ist nicht vorgesehen.
+
+Ein Verzeichniswechsel entfällt im Browser; die Dateiauswahl erfolgt über den Dateidialog des Betriebssystems.
 
 ### 4.3 Das Menü 'Beobachtungen'
 
-In diesem Menü sind alle Funktionen zur Erfassung, Veränderung und zum
-Löschen von Halobeobachtungen zusammengefasst.
+Dieses Menü bündelt Anzeige, Eingabe, Änderung und Löschung von Beobachtungen aus der geladenen Datei.
 
-  * 'Anzeigen' : Hier können sie sich alle bzw. Teile der in Ihrer aktuellen Datei vorhandenen Beobachtungen ansehen und ausdrucken, und zwar je nach Ihrer Einstellung im Konfigurationsmenü (siehe Menü 'Einstellungen' -> 'Eingabeart') als Zahlenkolonne oder als Text. Zur Auswahl der Beobachtung(en) steht Ihnen zwei Kriterien aus einer vorgebenen Liste zur Verfügung. 
-  Als erstes Kriterium können Sie festlegen:
-    * 'kein Kriterium': Hierbei werden alle vorhandenen Beobachtungen berücksichtigt.
-    * 'Kennzahl des Beobachters': Wollen Sie nur die Beobachtungen eines bestimmten Beobachters angezeigt bekommen, so wählen Sie diesen Unterpunkt und geben Sie danach die gewünschte Kennzahl ein.
-    * 'Beobachter': Auch hier können Sie die auszugebenden Beobachtungen auf einen Beobachter beschränken, wobei Sie nun jedoch seinen Namen aus einer Liste aller Beobachter (bzw. aller aktiven Beobachter, siehe Menü 'Einstellungen' -> 'aktive Beobachter') auswählen können.
-    * 'Beobachtungsgebiet': Hier erhalten Sie die Möglichkeit, ein bestimmtes Beobachtungsgebiet festzulegen, von dem Sie Beobachtungen interessieren. Die Auswahl erfolgt dabei nach Anwahl des Gebietes aus einer Liste aller Beobachtungsgebiete.
+  * 'Anzeigen': Zeigt Beobachtungen gefiltert nach Kriterien (z.B. Jahr/Monat/Tag, Uhrzeit, Beobachter, Region, ...). Ausgabe erfolgt im Browser; wenn keine Treffer vorhanden sind, erscheint eine Warnung.
+  * 'Hinzufügen': Öffnet die Eingabemaske nach HALO-Schlüssel. Eingaben werden sofort gegen die Validierungsregeln geprüft; unzulässige Kombinationen werden abgelehnt. Fest eingestellte Werte (z.B. fester Beobachter/Datum) werden übernommen, Pflichtfelder sind markiert.
+  * 'Verändern': Sucht Beobachtungen nach Kriterien und erlaubt die Änderung einzelner Felder. Änderungen werden unmittelbar validiert; nach Speicherung bleibt die Sortierung erhalten.
+  * 'Löschen': Sucht Beobachtungen nach Kriterien und entfernt ausgewählte Einträge aus der geladenen Datei.
 
-  Als zweites Einschränkung können Sie entweder wieder 'kein Kriterium' wählen, wobei alle Beobachtungen angezeigt werden, die das erste Kriterium erfüllen, oder Sie wählen ein Kriterium aus der folgenden Liste:
-    * 'Datum': Sind Sie an Beobachtungen zu einem ganz bestimmten Datum interessiert, so können Sie den Unterpunkt 'Datum' anwählen und dieses dann eingeben.
-    * 'Monat': Wollen Sie die Beobachtungen nur auf einen bestimmten Monat einschränken, so wählen Sie diesen Unterpunkt und geben den entsprechenden Monat ein.
-    * 'Haloart': Nach Anwahl dieses Unterpunktes müssen Sie die Haloart eingeben, von der Ihnen nachfolgend alle gespeicherten Beobachtungen ausgegeben werden.
+Eingabearten:
 
-  Nach Festlegung der Kriteriumen werden Ihnen nun einzeln bzw. in Blöcken alle Beobachtungen in zeitlicher Reihenfolge geordnet angezeigt. Sollte überhaupt keine Beobachtung zu dem von Ihnen festgelegten Kriterium passen, erhalten Sie eine entsprechende Bildschirmausschrift. Durch Betätigung der Taste D bzw. Anwahl des Punktes 'Drucken' werden die gefundenen Beobachtungen auf dem Drucker ausgegeben.
+  * Menüeingaben: Geführte Formulare mit Auswahlfeldern; geeignet, wenn die Beobachtung noch nicht kodiert vorliegt.
+  * Zahleneingaben: Schlüsseleingabe als Zahlenkolonne gemäß HALO-Schlüssel; schneller für bereits kodierte Beobachtungen.
 
-  * 'Hinzufügen': Nach Anwahl dieses Punktes erscheint je nach Einstellung der Eingabeart (siehe Menü 'Einstellungen' -> 'Eingabeart') entweder eine Eingabemaske entsprechend dem Haloschlüssel, so daß Sie Ihre bereits kodierten Beobachtungen schnell in Form von Zahlenkolonnen eingeben können, oder es werden von Ihnen nacheinander alle Punkte des Haloschlüssels in Form von Menüeingaben abgefragt. In beiden Fällen wird Ihre Eingabe sofort auf Gültigkeit geprüft. Bei eventuellen Fehlern (z.B. kein Cirrus vorhanden, jedoch Eingabe einer Cirrusdichte) werden die bereits eingegebenen Zahlen im Zahlenmodus mit einem Piepton gelöscht, bzw. wird Ihre Eingabe im Menümodus nicht akzeptiert. Das Programm fragt Sie dabei selbsttätig nur die Menüpunkte ab, die auch wirklich für das entsprechende Halo in Frage kommen (z.B. Sektoren nur bei kreisförmigen Halos). Sollten Sie bei Ihrer Konfiguration einen Beobachter oder ein Datum festgelegt haben (siehe Menü 'Einstellungen' -> 'fester Beobachter', 'Datum'), so entfallen auch diese Eingaben. Am Ende einer Haloeingabe können Sie dann wählen, ob Sie weitere Beobachtungen eingeben möchten, oder ob Sie das Untermenü 'Hinzufügen' verlassen wollen. Sie können die Eingabe von Beobachtungen jedoch auch schon zwischendurch durch Betätigung der ESC-Taste abbrechen.
-  * 'Verändern'  : Dieser Menüpunkt versetzt Sie in die Lage, bereits gespeicherte Beobachtungen zu korrigieren. Zuerst müssen Sie dazu entscheiden, ob Sie nur eine einzelne Beobachtung oder eine ganze Gruppe von Beobachtungen verändern möchten. Zur Auswahl der Beobachtung(en) können Sie dann zwei Suchkriterien festlegen. Als erstes Suchkriterium wird Ihnen der Beobachter bzw. seine Kennummer, der Beobachtungsort, das Beobachtungsgebiet bzw. keine Einschränkung angeboten. Je nach Wahl des Kriterium wird der gewünschte Wert abgefragt und Sie können ein zweites Kriterium angeben. Dabei können Sie Beobachtungen nach dem Jahr, Monat, Datum oder der Haloart spezifizieren oder auch wieder alle Beobachtungen zulassen. Nachdem auch der Wert des zweiten Parameters von Ihnen abgefragt wurde, unterscheidet sich der Programmablauf für Einzelbeobachtungen bzw. Gruppen von Beobachtungen. Bei Einzelbeobachtungen werden Ihnen nachfolgend zeitlich geordnet alle passenden Beobachtungen angezeigt. Sie müssen dabei jeweils entscheiden, ob es sich um die gesuchte Beobachtung handelt oder nicht. Haben Sie die richtige Beobachtung gefunden, erscheint ein Menü mit allen Komponenten der Halobeobachtung. Sie wählen also die zu verändernde Komponente aus und geben diese nachfolgend neu ein. Nach jeder gemachten Veränderung wird Ihnen die Beobachtung noch einmal vollständig angezeigt, damit Sie sie auf weitere nötige Veränderungen hin überprüfen können. Sollte alles richtig sein, können sie den Unterpunkt 'Verändern' durch Auswahl von 'Nichts' verlassen.
-
-  Bei Änderungen von Beobachtungsgruppen wird dagegen erst gefragt, welche Parameter aller Beobachtungen geändert werden sollen. Nachdem Sie diese Parameter wie schon bei Einzelbeobachtungen angegeben und spezifiziert haben, fragt das Programm noch nach der automatischen Änderung aller gefundenen Beobachtungen. Antworten Sie hierbei mit Ja, werden die gewünschten Veränderungen autoatisch an allen zu Ihren Suchkriterien passenden Beobachtungen vorgenommen. Anderenfalls wird jede gefundenen Beobachtung angezeigt und Sie können selbst entscheiden, ob Sie geändert werden soll oder nicht.
-
-  Das Verändern von Gruppen von Beobachtungen sollte mit äußerster Vorsicht betrieben werden, da bei falscher Wahl der Parameter (z.B. bei der automatischen Änderung der Haloart oder des Datums einer großen Zahl von Beobachtungen) irreparable Datenverluste auftreten können.
-
-  * 'Löschen'   : Dieser Menüpunkt ermöglicht es Ihnen, Beobachtungen aus Ihrer aktuellen Datei zu löschen. Sie haben dabei zur Auswahl der Beobachtung ähnlich wie beim Verändern von Beobachtungen zwei unabhängige Kriterien zur Verfügung. Als erstes Kriterium können Sie durch Eingabe der Kennummer bzw. durch Auswahl des Namens den Beobachter festlegen, und als zweites Kriterium läßt sich das Beobachtungsdatum oder die Haloart fixieren (siehe Menü 'Beobachtungen' -> 'Verändern'). Nachfolgend werden Ihnen nacheinander alle zu den Kriterien passenden Beobachtungen angezeigt, wobei Sie entscheiden müssen, ob Sie die Beobachtung löschen wollen oder nicht. Sobald Sie eine Beobachtung gelöscht haben, wird der Unterpunkt 'Löschen' verlassen. Sie können das Löschen jedoch auch schon vorzeitig durch Betätigung der ESC-Taste abbrechen.
-
-  Sollten Sie eine Beobachtung versehentlich gelöscht haben, so laden Sie Ihre Datei noch einmal, ohne die gerade gemachten Veränderungen abzuspeichern. Aber Vorsicht! Alle seit Ihrer letzten Speicherung gemachten Veränderungen gehen dabei natürlich auch verloren!
+Alle Änderungen wirken auf den Serverspeicher und machen die Datei „unsaved“. Vor Dateiwechsel oder Beenden wird gewarnt. ESC schließt Dialoge ohne Übernahme von Änderungen.
 
 ### 4.4 Das Menü 'Beobachter'
 
-Das Menü 'Beobachter' bietet Ihnen alle nötigen Routinen zur Verwaltung der Beobachterdatei. Jegliche Änderungen an dieser Datei werden dabei sofort automatisch gespeichert. Der Aufbau des Menü ähnelt in einigen Punkten dem des Menüs 'Beobachtungen', vor allem der Unterpunkt 'Verändern' besitzt jedoch eine größere Funktionalität.
+Hier verwalten Sie Beobachterdaten (Kennzahl, Name, Beobachtungsorte mit Gültigkeit, Aktiv-Status). Änderungen werden sofort gespeichert.
 
-  * 'Anzeigen' : Dieser Menüpunkt erlaubt es Ihnen, sich die in der Datei 'Halo.BEO' gespeicherten Beobachter anzusehen. Dabei stehen Ihnen drei Auswahlkriterien zur Verfügung: Unter 'Kennzahl/Name' können Sie den Beobachter aus einer Liste der Beobachter auswählen, bei 'Beobachtungsort' können Sie einen Ort eingeben, den der gesuchte Beobachter entweder als Haupt- oder als Nebenbeobachtungsort angegeben hat und bei 'Beobachtungsgebiet' geben Sie das Gebiet an, in dem sich entweder der Haupt- oder der Nebenbeobachtungsort des Beobachters befinden soll. Wählen Sie 'kein Kriterium', so werden Ihnen nacheinander die jeweils aktuellen Daten aller Beobachter ausgegeben. Aktuell bezieht sich dabei auf die veränderlichen Daten eines Beobachters: Beobachtungsort und Aktivität.
-  Durch Betätigen von Enter wird Ihnen dabei so lange der nächste zu Ihren Kriterien passende Beobachter angezeigt, bis es keinen mehr gibt oder bis Sie die Funktion durch ESC abbrechen.
-  * 'Hinzufügen': Hier können Sie einen völlig neuen Beobachter in die Datei aufnehmen. Dabei werden von Ihnen nacheinander die Kennummer, der Name des Beobachters sowie sein Haupt- und Nebenbeobachtungsort mit den dazugehörigen Beobachtungsgebieten und geografischen Koordinaten abgefragt. Es folgt die Eingabe des Zeitpunktes, ab dem diese Beobachtungsorte gültig sind (entspricht dem ersten Beobachtungsmonat). Die Aktivität des neuen Beobachter wird automatisch auf Ja gesetzt. Je nach Ihrer persönlichen Konfiguration (siehe Menü 'Einstellungen' -> 'aktive Beobachter') erscheint er später bei Listen von Beobachtern bzw. in Auswertungen nur dann, wenn er als aktiv markiert ist.
-  * 'Verändern' : Unter diesem Menüpunkt können Sie die zu den Beobachtern gespeicherten Daten verändern. Sie wählen dazu zuerst den gewünschten Beobachter aus der gezeigten Liste aus. Dann entscheiden Sie, ob Sie seine konstanten Daten (Kennzahl, Name) oder die veränderlichen Daten (Beobachtungsorte, Aktivität) manipulieren möchten.
-  Im ersten Fall wählen Sie den Menüpunkt 'Grundangaben ändern', und es werden Ihnen die zum Beobachter gespeicherten Daten angezeigt. Es folgt ein Menü mit den einzelnen Punkten, die geändert werden können. Nach der Anwahl eines solchen Punktes und der Eingabe des neuen Wertes erscheint der so aktualisierte Datensatz zur Kontrolle noch einmal vollständig auf dem Bildschirm. Sollten keine Veränderungen mehr nötig sein, können Sie den Unterpunkt 'Verändern' durch Anwahl von 'Nichts' verlassen. Möchten Sie die veränderlichen Daten manipulieren, haben Sie 3 weitere Menüpunkt zur Verfügung: Unter 'Ortseinträge anzeigen' bekommen Sie eine Liste aller bereits zum Beobachter gespeicherten Wertepaare (Haupt-/Nebenbeobachtungsort, Koordinaten, Aktivität, gültig seit) ausgegeben. Unter 'Ortseintrag hinzufügen' werden von Ihnen nacheinander die entsprechenden Werte abgefragt und der Datensatz automatisch zum Beobachter ergänzt. Schließlich können Sie alle Datensätze (bis auf einen, der nur mit dem Beobachter selbst gelöscht werden kann) mit 'Ortseintrag löschen' vernichten. Dabei werden nacheinander alle in Frage kommenden Einträge angezeigt, und Sie müssen direkt entscheiden, ob der Datensatz zu löschen ist oder nicht.
-  * 'Löschen'  : Wie der Name bereits sagt, können Sie hier einzelne Beobachter vollständig aus der Datei herauslöschen. Nachdem der Auswahl des Beobachters aus einer Liste erscheint zunächst noch einmal der komplette aktuelle Datensatz auf dem Bildschirm. Erst nach einer Sicherheitsabfrage wird der Beobachter samt aller zusätzlich gespeicherten Ortseinträge aus der Datei gelöscht, was sich dann später auch nicht mehr rückgängig machen läßt.
+  * 'Anzeigen': Öffnet die Beobachterliste (aktuelle Datensätze). Filter nach Kennzahl/Name, Ort oder Gebiet sind möglich.
+  * 'Hinzufügen': Legt einen neuen Beobachter mit Kennzahl, Name, Haupt-/Nebenbeobachtungsort (inkl. Koordinaten/Gebiet) und Gültigkeitsbeginn an; Aktiv-Status wird gesetzt.
+  * 'Verändern': Ändert Stammfelder (Kennzahl, Name) oder ortsbezogene Einträge mit Gültigkeit/Koordinaten/Aktivität; bestehende Ortseinträge können ergänzt oder gelöscht (mindestens einer bleibt) werden.
+  * 'Löschen': Entfernt einen Beobachter einschließlich seiner Ortseinträge nach Sicherheitsabfrage endgültig.
 
 ### 4.5 Das Menü 'Auswertung'
 
-Dieses Menü umfaßt den wesentlichen Teil der statistischen Auswertefunktionen des Programms 'Halo'. Es untergliedert sich dabei in zwei Teile: Wählt man die Funktion 'Laden', so kann man im aktuellen Verzeichnis befindliche Haloauswertungen laden und eventuell weiterbearbeiten. Mit den beiden anderen Menüpunkten kann man dagegen neue Haloauswertungen berechnen. Man kann solche Auswertungen dabei über einen oder zwei freie Parameter durchführen und zusätzlich bis zu weitere 2 Parameter festlegen. Die Ausgabe erfolgt je nach Wahl als numerische Tabelle oder, falls Ihr Computer eine VGA-Grafikkarte besitzt, in Form einer Linien- oder Balkengrafik. Zusätzlich können die Auswertungsergebnisse auch ausgedruckt oder in Form einer BMP-Bilddatei exportiert werden. Möchte man eine neue Auswertung berechnen, so gibt man zuerst an, ob man einen oder zwei freie Parameter betrachten möchte. Ein freier Parameter kann zum Beispiel gewählt werden, wenn man die Verteilung der Halobeobachtungen über das ganze Jahr untersuchen will ('Monat'). Zwei freie Parameter sind dagegen zu wählen, will man zum Beispiel das Auftreten der verschiedenen Haloarten in Zusammenhang mit verschiedenen Cirrusformen untersuchen ('Haloart' und 'Cirrusgattung'). Nach dieser Festlegung wird gefragt, ob man die numerische oder die grafische Auswertung vorzieht. Bei der numerischen Auswertung werden die Ergebnisse in Form von ein- oder zweidimensionalen Tabellen ausgegeben, bei der grafischen Auswertung kann man dagegen zwischen der Darstellung in einer Balkengrafik oder einem Liniendiagramm wählen.
-Unabhängig von der gewählten Auswertungsart sind die folgenden Eingaben identisch. Man wählt zunächst aus einer Liste den gewünschten ersten freien Parameter aus. Zur Auswahl stehen dabei die Gruppen im Haloschlüssel, von denen eine Auswertung sinnvoll erscheint. Zusätzlich kann auch die Sonnenhöhe als Parameter dienen, wobei zu beachten ist, daß auf Grund der Berechnungsart nur in Deutschland gemachte Beobachtungen Verwendung finden. Der Benutzer wird zusätzlich gefragt, ob die minimale, mittlere oder maximale Sonnenhöhe im Beobachtungszeitintervall berechnet werden soll, was anschließend auf 2° gerundet erfolgt. Sollte die Uhrzeit als Parameter gewählt worden sein, muß der Nutzer nachfolgend noch zu entscheiden, ob die Beobachtungen an die lokale Ortszeit(zone) angepasst werden oder ob die gespeicherte Mitteleuropäische Zeit verwenden werden soll. Bei der Verwendung der Halodauer kann man entscheiden, ob Beobachtungen ohne Anfang oder Ende (also mit 'kA' oder 'kE' im Bemerkungsteil) mit in die Auswertung einfliessen sollen oder nicht. Schließlich müssen sie bei Auswahl der Haloart als Parameter festlegen, ob vollständige Haloformen auf beide Komponenten aufgeteilt werden sollen (z.B. 'beide Nebensonnen' in 'linke Nebensonne' und 'rechte Nebensonne') oder nicht. Dasselbe trifft auch für die Wolkengattungen zu.
-Wenn eine Einschränkung des ersten Parameters nützlich sein könnte (z.B. Einschränkung der Haloart), wird der Nutzer nach einer solchen Einschränkung gefragt. Antwortet er mit Ja, so muß er im folgenden Schritt jeweils Anfang und Ende der Eingrenzung des Parameters angeben. Im anderen Fall werden alle möglichen Werte des Parameters berücksichtigt. Hat der Benutzer eine Auswertung mit zwei Parametern gewählt, so folgt nun die Eingabe des zweiten Parameter nach dem gleichen Prinzip. Daran schließt sich die Frage an, ob ein weiterer Parameter festgelegt werden soll. Will man zum Beispiel Untersuchungen an einer bestimmten Haloform vornehmen, so kann man einen oder zwei Parameter frei wählen und als festen Parameter die gewünschte Haloart eingeben. Beantwortet man also die Frage nach dem weiteren Parameter positiv, erscheint eine Liste der möglichen festen Parameter. Nach der Auswahl des Parameters geben Sie gleich den Wert des Parameters ein.
-Nach der Festlegung eines Parameters erscheint als nächstes die Frage nach einem zweiten festen Parameter. Auch hier kann man sie entweder verneinen oder einen weiteren Parameter in gleicher Weise festlegen. Am Ende der Vereinbarungen wird nach der Art der Werteberechnung gefragt. Hat man eine eindimensionale Auswertung gewählt, gibt es folgende Möglichkeiten:
-  * 'Absolutwerte': Hier wird eine einfache statistische Summation der Beobachtungen zu jedem Parameterwert vorgenommen.
-  * 'Prozentwerte': Bei dieser Methode wird jeder Wert als Prozentwert zur Gesamtsumme der verwendeten Beobachtungen berechnet.
-Nimmt man eine zweidimensionale Auswertung vor, gibt es zwei weitere Möglichkeiten:
-  * 'normiert für konstante X': Der zuerst festgelegte freie Parameter wird hier als X bezeichnet. Jeder Wert wird nun als Prozentwert zur Gesamtsumme von allen Beobachtungen mit gleichem ersten Parameter X bestimmt. Das ist zum Beispiel dann von Nutzen, wenn man Haloverteilungen von verschiedenen Beobachtern berechnen will (erster Parameter 'Beobachter'), ohne sich jedoch das Ergebnis durch unterschiedliche Anzahlen von Halobeobachtungen der einzelnen Beobachter verfälschen zu lassen. Mittels dieser Auswertungsart erhält man für jeden Beobachter eine Summe von 100% und kann die Ergebnisse damit direkt miteinander vergleichen.
-  * 'normiert für konstante Y': Diese Auswertungsart funktioniert wie die eben beschriebene, nur daß dieses Mal die Summe über alle Beobachtungen mit gleichem 2.Parameter 100% ist.
-Nach Festlegung aller dieser Randbedingungen wird man nun je nach Größe der geladenen Datei, Rechnergeschwindigkeit und Komplexität der Auswertung ein wenig warten müssen, wobei ein Fenster Auskunft über den erreichten Stand der Berechnung gibt. Am Ende der Wartezeit meldet sich das Programm mit der Information, wie viele der Beobachtungen in der Auswertung verwendet werden konnten. Nach Tastendruck erscheint zuletzt je nach gewählter Auswertungsart das berechnete Ergebnis.
-  * 'numerische Auswertung': Sollte die entstandene Tabelle zu groß geworden sein, werden Ihnen jeweils nur Teile des Berechnungsergebnisses angezeigt, wobei Sie sich mittels der Cursortasten beliebige Abschnitte der gesamten Tabelle anzeigen lassen können. Mittels L (Liniengrafik) oder B (Balkengrafik) können Sie sich die berechneten Ergebnisse auch jetzt noch grafisch ausgeben lassen, und mittels G läßt sich eine Glättung der Werte erzwingen. Dabei legen Sie zuerst fest, ob Sie nur entlang einer Achse oder über beide Achsen glätten möchten. Dann müssen Sie eingeben, wie stark die Glättung erfolgen soll. Geben Sie hier zum Beispiel 30 ein, bedeutet daß, das jeder Wert als Summe aus dem ursprüngliche Wert mit einem Gewicht von 0,7 sowie den angrenzenden Werten (je nach Art der Glättung nur Werte mit gleichem X- oder Y-Wert oder alle angrenzenden Werte bei 'beide Achsen') mit einem Gesamtgewicht von 0,3 gebildet wird. Gibt man einen Wert >100 ein, so wird die Prozedur in einhunderter Schritten bis zum Erreichen des Wertes mehrmals nacheinander ausgeführt.
-  * 'grafische Auswertung' : Auch bei dieser Auswertungsform haben Sie die Möglichkeit, das berechnete Ergebnis zu Glätten oder in die jeweils andere grafische Auswertungsform zu gelangen. Bei der Glättung hat man zusätzlich noch zu entscheiden, ob der ursprüngliche Achsenmaßstab beibehalten werden soll oder ob ein neuer Maßstab zu berechnen ist. Gibt man N ein, kann man sich die berechneten Werte als Zahlen ansehen. Bei Eingabe von X oder Y wird die Richtung der entsprechenden Achse geändert und somit die gesamte Grafik gespiegelt. Das ist sinnvoll, wenn die Grafik auf Grund einer unglücklichen Positionierung nicht aussagekräftig ist. Schließlich fragt das Programm nach Eingabe von E einen Dateinamen für die zu exportierende Bilddatei ab. Sollte bereits eine BMP-Datei gleichen Namens existieren, werden Sie gewarnt, ansonsten erscheint Ihre Grafik wieder auf dem Bildschirm. Nun dauert es einige Sekunden, bis die Bilddatei im BMP-Format generiert und abgespeichert wird. Sobald jedoch der Menübalken am unteren Rand wieder sichtbar wird, ist der Bildexport abgeschlossen und Sie können weiterarbeiten.
-In beiden Auswertungsarten hat man die Möglichkeit, die erhaltene Auswertung in eine Datei zu speichern. Man drückt dazu einfach die Taste S und gibt einen beliebigen Dateinamen ein. So gesicherte Auswertungen können später in sekundenschnelle wieder zur Anzeige gebracht werden Man kann sich weiterhin jede fertige Berechnung durch Betätigung der Taste D ausdrucken lassen. Speziell bei der grafischen Auswertung werden dabei zuerst die Bildschirmfarben geändert und danach dauert es eine Weile, bis das Treiberprogramm die Grafik in entsprechende Druckerbefehle umgesetzt hat. Sollte die Grafik jedoch auch nach längerer Wartezeit (2-3 Minuten) noch nicht wieder ihre ursprüngliche Farbe angenommen haben, kann das auf Probleme mit dem angeschlossenen Druckertyp hinweisen. In diesem Fall müssen Sie das Programm abbrechen und nochmals starten.
-Das Menü 'Auswertung' kann man durch Betätigung von ESC verlassen.
+In der Web-Oberfläche rufen Sie Auswertungen über die Seite „Auswertung“ auf. Es stehen numerische und grafische Ausgaben zur Verfügung; die Ergebnisse können als CSV/TXT oder (je nach Ansicht) als PNG gespeichert werden.
+
+Parameterwahl und Optionen (entsprechend Originalverhalten):
+
+  * Freie Parameter: 1D oder 2D über Schlüsselgruppen (z.B. Monat, Haloart, Cirrusgattung) oder Sonnenhöhe (min/mittel/max; nur DE-Daten).
+  * Zeitbezug: Uhrzeit kann auf Ortszeit angepasst werden.
+  * Dauer: Option, ob Einträge ohne Anfang/Ende (kA/kE) einfließen.
+  * Haloart-Aufteilung: Option, vollständige Formen auf Einzelkomponenten aufzutrennen (z.B. linke/rechte Nebensonne).
+  * Wolkengattungen: Option für Aufteilung analog zur Originalsoftware.
+  * Werteberechnung: Absolutwerte, Prozentwerte; für 2D zusätzlich Normierung je X oder je Y.
+
+Ausgabe:
+
+  * Numerisch: Tabellenansicht im Browser, wahlweise als HTML-Tabelle, als Pseudografik (wie im DOS-Original) oder im Markdown-Format; bei großen Tabellen Navigation per Scrollen.
+  * Grafisch: Linien- oder Balkendiagramm, optionaler PNG-Export.
+  * Speichern: Ergebnisse können je nach Ansicht als CSV (HTML-Tabelle), TXT (Pseudografik) oder MD (Markdown) gespeichert werden; Grafiken als PNG.
 
 ### 4.6 Das Menü 'Ausgabe'
 
-In diesem Menü sind die Funktionen zur Ausgabe der Monatsmeldung, der Monatsstatistik und der Jahresstatistik zusammengefaßt. Nach Auswahl eines der drei Menüpunkte wird grundsätzlich gefragt, ob die Ausgabe auf dem Bildschirm, einem angeschlossenen Drucker oder einer Datei (wobei der Dateiname automatisch generiert wird) erfolgen soll. Wird die Dateiausgabe gewählt, ist weiterhin festzulegen, ob Pseudografiksymbole verwendet oder durch einen '*' ersetzt werden sollen. Das ist vor allem für Beobachter wichtig, die Ihre Beobachtungsformulare über ein Computernetz verschicken wollen. Sollten Sie diese Absicht haben, so verwenden Sie keine Pseudografiksymbole, ansonsten geben Sie Ja ein. Bei der Druckerausgabe von Monats- oder Jahresstatistiken wird hingegen zusätzlich gefragt, ob nur der Haloaktivitätsgraph oder die gesamte Auswertung mit Tabellen und Aktivitätsgraph gewünscht wird. Nach Festlegung der Ausgabeeinheit gelangen Sie dann zu den verschiedenen Funktionen.
+Das Menü führt zu drei Ausgabeseiten: Monatsmeldung, Monatsstatistik und Jahresstatistik. Voraussetzung ist eine geladene Beobachtungsdatei; andernfalls erscheint ein Warnhinweis. Die Ergebnisanzeige erfolgt im Browser.
 
-  * 'Monatsmeldung' : Je nach Ihrer persönlichen Konfiguration (siehe Menü 'Einstellungen' -> 'fester Beobachter', 'Datum') erfolgt eine sofortige Ausgabe des Ergebnisses auf dem gewünschten Gerät oder erst die Auswahl des Beobachters aus einer Liste aller Beobachter und/oder die Abfrage des gewünschten Monats. Sollte man die Ausgabe auf dem Drucker gewählt haben, wird zusätzlich gefragt, ob gleich eine Kopie der Monatsmeldung erstellt werden soll. Damit erspart man sich den zweimaligen Aufruf der Ausgabe, wenn man ein Beobachtungsformular verschicken und eins für sich behalten möchte.
-  * 'Monatsstatistik': Auch hier wird man je nach persönlicher Konfiguration eventuell zuerst nach dem Monat gefragt, für den die Statistik erstellt werden soll. Nach einer kurzen Wartezeit erscheint die monatliche Beobachter- und Ergebnisübersicht in der Form, wie sie in den Halomitteilungen regelmäßig veröffentlicht wird. Ergänzt wird die Statistik mit einer Tabelle über die Haloaktivität im entsprechenden Monat. Bei der Berechnung dieser Tabelle geht neben der Anzahl der Halosichtungen auch die Seltenheit, Helligkeit und Dauer von Haloerscheinungen ein. Sollten Sie die Bildschirmausgabe gewählt haben, so passen nicht alle Daten gleichzeitig auf den Monitor. Mittels der Cursortasten können Sie sich deshalb beliebige Teile der Tabellen auf den Bildschirm darstellen lassen.
-  Wenn sie einen grafikfähigen Rechner besitzen, wird bei Betätigung der Taste G die Haloaktivität als Diagramm dargestellt. Drücken Sie während der Darstellung die Tasten + oder -, verändert sich der Grad der Glättung der Aktivitätskurve. Haben Sie die Druckerausgabe gewählt, können Sie vor dem Ausdruck auf gleiche Art und Weise die Kurvenglättung beeinflußen. Durch Drücken von Enter verlassen Sie das Ausgabemenü.
-  * 'Jahresstatistik': Je nach Ihren persönlichen Einstellungen erscheint die gewünschte Auswertung sofort am Ausgabegerät, oder Sie müssen erst noch das gewünschte Jahr eingeben. Die Auswertung ist dabei wieder an die jährliche Auswertung in den Halomitteilungen angelehnt und besteht aus den Teilen Gesamtübersicht, beobachtete Einzelerscheinungen, Verteilung spezieller Einzelerscheinungen und aufgetretene Halophänomene. Sollten Sie die Bildschirmausgabe gewählt haben, können Sie sich mittels der Cursortasten verschiedene Teile der Auswertung auf den Bildschirm holen. Bei grafikfähigen Rechnern stellt das Programm nach Betätigung der Taste G das Diagramm der Jahreshaloaktivität dar. Die dabei durchgeführte Glättung der Aktivitätskurve ist während der Darstellung über die Tasten + und - beeinflußbar. Auch beim Druck der Jahresstatistik erhalten Sie die Möglichkeit, den Grad der Kurvenglättung auf die gleiche Art zu beeinflußen.
+Textausgabeformate: HTML-Tabelle (Web-Layout), Pseudografik (DOS-Layout) oder Markdown. Das gewählte Format gilt für alle drei Ausgaben. Speichern erfolgt formatabhängig: CSV bei HTML-Tabellen, TXT bei Pseudografik, MD bei Markdown. Drucken läuft über die Browser-Druckfunktion; Pseudografik- und Markdown-Ansichten werden dafür passend gerendert.
+
+  * 'Monatsmeldung': Filterdialog für Beobachter (fester Beobachter wird vorgewählt, sonst Auswahl) sowie Monat/Jahr (Voreinstellung gemäß Datumsvorgabe). Ausgabe im gewählten Textformat; Speichern und Drucken direkt aus der Ansicht möglich.
+  * 'Monatsstatistik': Auswahl Monat/Jahr, Ausgabe im gewählten Textformat mit Aktivitätstabelle; zusätzlich kann ein Aktivitätsdiagramm eingeblendet werden (Ansicht im Browser, druckbar). Speichern erzeugt CSV/TXT/MD gemäß Format.
+  * 'Jahresstatistik': Auswahl Jahr, Ausgabe im gewählten Textformat (Übersichten und Aktivität). Ein Aktivitätsdiagramm kann angezeigt werden; Speichern erzeugt CSV/TXT/MD gemäß Format.
 
 ### 4.7 Das Menü 'Einstellungen'
 
-In diesem Menü können Sie alle Programmvoreinstellungen nach Ihrem persönlichen Bedürfnissen verändern. Ihre Einstellungen werden dabei automatisch in der Konfigurationsdatei gespeichert.
+Dieses Menü stellt die aktuellen Voreinstellungen bereit. Alle Änderungen werden direkt gespeichert und wirken sofort im Browser (keine Drucker- oder Farboptionen mehr nötig).
 
-  * 'fester Beobachter': Da Sie sicherlich im wesentlichen eigene Beobachtungen eingeben, auswerten und ausdrucken lassen wollen, ist es sinnvoll, sich selbst als festen Beobachter einzustellen. Damit entfällt an vielen Stellen die lästige Abfrage des Beobachters.
-  * 'aktive Beobachter': Unter diesem Menüpunkt können Sie auswählen, ob Sie bei der Auswahl eines Beobachters aus einer Liste jeweils alle Beobachter oder nur die als aktiv markierten Beobachter angeboten bekommen wollen. Auch bei Auswertungen werden dann je nach Ihrer Wahl entweder alle oder nur die gerade aktiven Beobachter berücksichtigt.
-  * 'Datenverzeichnis' : Sollten Sie Ihre Daten in einem anderen Verzeichnis als dem ablegen, in dem sich die Programmdateien befinden, so können Sie dieses Verzeichnis hier als festes Anfangsverzeichnis eingeben. Beim Programmstart wird dann automatisch in dieses Verzeichnis gewechselt, wobei Sie aber natürlich später trotzdem beliebig in andere Verzeichnisse gehen können (siehe Menü 'Datei' -> 'Pfad ändern').
-  * 'Datei'  : Sollten Sie immer mit ein und derselben Datei arbeiten, so können Sie sich diese Datei automatisch zum Programmstart laden lassen. Sie müssen dazu nur die Frage nach einer Startdatei bejahen und die gewünschte Datei auswählen. Beachten Sie jedoch, daß Sie, wenn sich diese Datei nicht im Programmverzeichnis befindet, auch ein festes Anfangsdatenverzeichnis eingeben müssen, da Ihre Datei sonst nicht gefunden werden kann (siehe Menü 'Einstellungen' -> 'Datenverzeichnis').
-  * 'Datum'  : Je nach der Art Ihrer Programmnutzung kann es nützlich sein, bereits einen bestimmten Monat als Voreinstellung für das Programm zu definieren, damit später die Abfrage nach dem Datum an sinnvollen Stellen automatisch übergangen wird. Sie können dabei die Einstellung 'Vormonat' wählen, wenn Sie Ihre Beobachtungen zum Beispiel immer nach Ablauf eines Monates gesammelt erfassen, oder die Einstellung 'aktueller Monat', wenn Sie Ihre Beobachtungen gleich am Rechner eingeben. Zur Erfassung älterer Beobachtungen ist dann noch die Voreinstellung 'konstanter Monat' sinnvoll, bei der Sie einen beliebigen Monat als Voreinstellung festlegen können.
-  * 'Eingabeart' : Wie bereits beschrieben gibt es im Programm zwei grundsätzliche Arten zur Ein- und Ausgabe von Halobeobachtungen. Wenn Sie Ihre Beobachtungen noch nicht in kodierter Form vorzuliegen haben und die Ausgabe von Beobachtungen als Text wünschen, so wählen Sie hier 'Menüeingaben'. Sollten Sie dagegen Ihre Beobachtungen in kodierter Form eingeben wollen und auch sonst mehr mit den Zahlenkolonnen anfangen können, so wählen Sie die Einstellungsart'Zahleneingaben'.
-  * 'Bildschrim' : Sollten Sie keinen Farbmonitor besitzten, könnten Sie Probleme bei der Wahl verschiedener Menüpunkte bekommen, da diese meistens nur farblich zu unterscheiden sind. Daher läßt sich in diesem Menü einstellen, ob alle Farben oder nur die Farben Schwarz, Grau und Weiss verwendet werden sollen.
-  * 'Drucker' : Hier können Sie die Art Ihres Druckers einstellen. Wählen Sie 'Nadeldrucker', so werden bei Druckerausgaben die Escapesequenzen nach EPSON-Standart zur Druckersteuerung verwendet, bei 'Tintenstrahldrucker' und 'Laserdrucker' entsprechen die Escapesequenzen dagegen dem HP-Druckerbefehlssatz. Bei einigen Nadeldruckern ist es im Einzelblattbetrieb außerdem notwendig, daß neben dem normalen Seitenvorschub am Ende jeder Seite ein zusätzlicher Vorschub stattfindet. Bei anderen Nadeldruckern oder bei der Arbeit mit Endlospapier stört das jedoch sehr. Sie können deshalb nach Anwahl von 'Nadeldrucker' in einer weiteren Auswahl festlegen, ob ein solcher zusätzlicher Seitenvorschub erzeugt werden soll oder nicht.
-   Sollten Sie den Druckertyp geändert haben, so müssen sie erst das Programm 'Halo' verlassen und Ihren Rechner neustarten, bevorGrafikausdrucke möglich werden.
-  * 'Maussensibilität' : In diesem Menüpunkt können Sie festlegen, wie sensibel oder träge Ihre optional angeschlossene Maus auf Bewegungen reagieren soll. Die Zahl 1 bedeutet dabei eine äußerst träge und die Zahl 50 eine sehr sensible Reaktion. Standardeinstellung ist eine Empfindlichkeit von 35.
+  * 'fester Beobachter': Voreinstellung des Beobachters für Eingabe- und Ausgabemasken (z.B. Monatsmeldung).
+  * 'aktive Beobachter': Listen und Auswertungen wahlweise auf aktive Beobachter beschränken oder alle anzeigen.
+  * 'Datei': Optional eine bestimmte CSV-Datei beim Programmstart automatisch laden.
+  * 'Datum': Voreinstellung für Datumsprompts wählen: keine, aktueller Monat, Vormonat oder konstanter Monat (mit Monat/Jahr-Auswahl).
+  * 'Eingabeart': Menüeingaben (geführte Formulare) oder Zahleneingaben (Schlüsselzeile) für Beobachtungsdialoge voreinstellen.
+  * 'Ausgabeart': Textformat für Monatsmeldung/‑statistik/Jahresstatistik und Analyse wählen: HTML-Tabellen, Pseudografik oder Markdown (entsprechend werden CSV/TXT/MD erzeugt).
 
 ### 4.8 Das Menü 'Hilfe'
 
-Das Menü Hilfe bringt Ihnen diesen Text zur Anzeige. Sie können sich andere Teile des Hilfetextes durch Betätigung der Cursortasten ansehen und verlassen das Menü durch Betätigung der Enter-Taste.
-
-### 4.9 Das Menü 'Ende'
-
-Um ein ordnungsgemäßes Verlassen des Programms zu garantieren, sollten Sie dieses Menü zum Beenden einer Sitzung nutzen.
-
-  * 'Verlassen': Verlassen des Programms
-  * 'Rückkehr' : Sollten Sie aus Versehen das Menü Ende angesprungen haben, so können Sie mit diesem Menüpunkt ohne Probleme in Ihr Programm zurückkehren.
+Das Menü Hilfe zeigt diesen Hilfetext direkt im Browser; Navigation erfolgt per Scrollen oder über interne Links. Die Sprache folgt der aktuellen Sitzungseinstellung.
 
 ## 5. Zur Beachtung
 
-Das Programm 'Halo' entstand in einer Vielzahl von Rechnerstunden und ist derart komplex, daß sich trotz umfangreicher Tests hier und da gut versteckte Fehler platziert haben werden. Sollten Sie einen bemerken, so notieren Sie bitte möglichst detailiert wann, wo und nach welchen Aktionen er auftrat. Nur so kann ich ihn möglichst schnell beheben. Ich bin weiterhin an Meinungsäußerungen zum Programm und seiner Funktionalität interessiert. Haben Sie einen Änderungsvorschlag oder Ideen zur sinnvollen Erweiterung des Programmes, können Sie sich jeder Zeit an mich wenden. Ich werde dann versuchen, 'machbare' Ideen in der nächstfolgenden Programmversion umzusetzen.
-Danke!
+Auch HALOpy ist umfangreich; melden Sie bitte gefundene Fehler mit kurzer Beschreibung (wann, wo, welche Aktion) und, falls möglich, mit verwendeter Datei. Rückmeldungen und Verbesserungsvorschläge sind willkommen; umsetzbare Ideen fließen nach Prüfung in neue Versionen ein.
 
-Meine Adresse: Sirko Molau
-Abenstalstr. 13b
-D-84072 Seysdorf
-e-mail : sirko@molau.de
+Kontakt: Sirko Molau, Abenstalstr. 13b, D-84072 Seysdorf, E-Mail: sirko@molau.de
 
 ## 6. Copyrights
 
-(*)  'Halo.BGI' ist eine leicht modifizierte Version des Borland-
-Graphics-Interface-Treibers 'EGAVGA.BGI'
-Copyright (c) 1987, 1988 Borland International
-(**) 'Halo.DRV' ist eine leicht modifizierte Version des Dienstpro-
-grammes 'GRAPHICS.COM' von MS-DOS 5.0
-Copyright (c) 1988-1991, Microsoft
-(***) 'Halo.PRO' ist das Drucker-Profile 'GRAPHICS.PRO' vom Betriebssystem MS-DOS 5.0
-Copyright (c) 1988-1991, Microsoft
+HALOpy nutzt Python, HTML/JS/CSS und läuft im Browser; siehe LICENSE für die aktuellen Lizenzbedingungen.

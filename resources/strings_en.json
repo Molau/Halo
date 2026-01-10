@@ -1,7 +1,7 @@
 {
   "app": {
     "title": "HALO Analysis Program",
-    "version": "3.0.0",
+    "version": "3.0",
     "version_date": "2026-01-10",
     "description": "Atmospheric halo observation database"
   },
@@ -177,18 +177,18 @@
       "about": "About",
       "help_text": "HALO Help\\n\\nThis application is a web version of the HALO program for managing halo observations.",
       "version_dialog": {
-        "title": "HALO 3.0.0",
-        "date_label": "Date:",
+        "title": "HALO 3.0",
+        "date_label": "Date",
         "date": "2026-01-10",
-        "author_label": "Author:",
+        "author_label": "Author",
         "author": "Sirko Molau",
         "description": "Software package for the input, statistical analysis and output of halo observations",
         "workgroup": "Arbeitskreis Meteore (AKM)",
         "contact_name": "Sirko Molau",
-          "contact_address_line1": "Abenstastr. 13b",
-          "contact_address_line2": "D-84072 Seysdorf",
-          "contact_country": "Germany",
-          "contact_email": "sirko@molau.de"
+        "contact_address_line1": "Abenstastr. 13b",
+        "contact_address_line2": "D-84072 Seysdorf",
+        "contact_country": "Germany",
+        "contact_email": "sirko@molau.de"
       }
     },
     "exit": {

@@ -1,7 +1,7 @@
 {
   "app": {
     "title": "Haloerfassungsprogramm",
-    "version": "3.0.0",
+    "version": "3.0",
     "version_date": "2026-01-10",
     "description_line1": "Dieses Programm dient der Erfassung, Auswertung",
     "description_line2": "       und Ausgabe von Halobeobachtungen     "
@@ -210,18 +210,18 @@
       "whats_new": "Was ist neu",
       "help_text": "HALO Hilfe\\n\\nDiese Anwendung ist eine Web-Version des HALO-Programms zur Verwaltung von Halo-Beobachtungen.",
       "version_dialog": {
-        "title": "HALO 3.0.0",
-        "date_label": "Datum:",
+        "title": "HALO 3.0",
+        "date_label": "Datum",
         "date": "2026-01-10",
-        "author_label": "Autor:",
+        "author_label": "Autor",
         "author": "Sirko Molau",
         "description": "Programm zur Erfassung und Auswertung von Halobeobachtungen",
-          "workgroup": "Arbeitskreis Meteore (AKM)",
-          "contact_name": "Sirko Molau",
-          "contact_address_line1": "Abenstastr. 13b",
-          "contact_address_line2": "D-84072 Seysdorf",
-          "contact_country": "Germany",
-          "contact_email": "sirko@molau.de"
+        "workgroup": "Arbeitskreis Meteore (AKM)",
+        "contact_name": "Sirko Molau",
+        "contact_address_line1": "Abenstastr. 13b",
+        "contact_address_line2": "D-84072 Seysdorf",
+        "contact_country": "Germany",
+        "contact_email": "sirko@molau.de"
       }
     },
     "exit": {

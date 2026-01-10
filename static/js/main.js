@@ -1190,7 +1190,7 @@ async function showAddObservationDialogMenu() {
 
                     }
                 } catch (e) {
-                    console.error('[DEBUG autoFillGG] Error fetching observer GG:', e);
+                    console.error('Error fetching observer GG:', e);
                 }
             } else {
 
@@ -5815,7 +5815,7 @@ async function showWhatsNewDialog() {
                 <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">${i18nStrings.help.whats_new}</h5>
+                            <h5 class="modal-title">${i18nStrings.menus.help.whats_new}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body" style="font-size: 14px; line-height: 1.6;">
