@@ -5,11 +5,11 @@ Python web application for maintenance of halo observations, modernized from the
 ## Architecture
 
 ### Backend (Python/Flask)
-- `models/` - Data structures (Observation, Observer, FilterMask)
-- `services/` - Business logic (database operations, analysis, validation)
-- `io/` - File I/O (CSV format, v2.5)
-- `resources/` - i18n JSON strings (German/English)
-- `api/` - REST API endpoints
+- `models/` - Data structures (Observation dataclass, constants, halo calculations)
+- `services/` - Configuration persistence (settings.py)
+- `io/` - CSV file handler (ObservationCSV class)
+- `resources/` - i18n JSON strings (German/English), help files, observer metadata
+- `api/` - REST API endpoints (routes.py with astronomy calculations, update.py with auto-updater)
 - `web/` - Flask application
 
 ### Frontend (HTML/CSS/JavaScript)
@@ -18,11 +18,12 @@ Python web application for maintenance of halo observations, modernized from the
 - Works on desktop, tablet, and mobile
 
 ### Data
-- `data/` - Observation CSV files
-- 102,920 observations (1986-2005)
-- 160 observers, 99 halo types, 39 regions
+- `data/` - Observation CSV files (.CSV format)
+- `resources/` - Observer metadata (halobeo.csv)
 
 ## Data Import/Export
+
+HALOpy uses **CSV format** for all observation data storage. This simplifies data handling and makes files human-readable.
 
 ### CSV Export Settings (from original HALO software)
 When exporting observations from the original HALO application, use these settings:
@@ -31,12 +32,18 @@ When exporting observations from the original HALO application, use these settin
 
 These settings ensure the CSV file has the correct 20+ field format that HALOpy expects.
 
+### Migration from Binary Format
+The original HALO software used compressed binary files (.HAL, .BEO). To migrate:
+1. Export your data from the original HALO software using the CSV export function
+2. Use the settings above to generate compatible CSV files
+3. Import into HALOpy
+
 ## Deployment Options
 
 ### Local Development
 ```bash
 pip install -r requirements.txt
-python -m halo.web
+python run.py
 # Opens browser at http://localhost:5000
 ```
 
