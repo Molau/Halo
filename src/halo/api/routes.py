@@ -7,10 +7,94 @@ Licensed under MIT License - see LICENSE file for details.
 from flask import Blueprint, jsonify, request, current_app
 from pathlib import Path
 from typing import Dict, Any
+import math
 from halo.io.csv_handler import ObservationCSV
-from halo.services.astronomy import calculate_solar_altitude, get_observer_coordinates
 
 api_blueprint = Blueprint('api', __name__, url_prefix='/api')
+
+
+# ============================================================================
+# Astronomical Calculations (translated from H_AUSW.PAS)
+# ============================================================================
+
+def calculate_solar_altitude(
+    year: int, month: int, day: int, hour: int, minute: int, duration: int,
+    longitude: float, latitude: float, altitude_type: str = 'mean', gg: int = 0
+) -> int:
+    """Calculate solar altitude (sun's elevation above horizon) in degrees."""
+    jahr = 1900 + year
+    if jahr < 1950:
+        jahr = jahr + 100
+    
+    def calc_altitude_at_time(zeit):
+        zeit = zeit % 24
+        n = (math.trunc(275 / 9 * month) - 
+             math.trunc((month + 9) / 12) * 
+             (1 + math.trunc((jahr - 4 * math.trunc(jahr / 4) + 2) / 3)) + 
+             day - 30)
+        t = n + (zeit - longitude / 15.0) / 24.0
+        m = 0.985600 * t - 3.289
+        l = m + 1.916 * math.sin(m * math.pi / 180.0) + 0.020 * math.sin(2 * m * math.pi / 180.0) + 282.634
+        l = l % 360
+        al = 180 * math.atan(0.91746 * math.sin(l * math.pi / 180.0) / math.cos(l * math.pi / 180.0)) / math.pi
+        if (l > 90) and (l < 270):
+            al = al + 180
+        de = 180 * math.asin(0.39782 * math.sin(l * math.pi / 180.0)) / math.pi
+        if month > 2:
+            jd = math.trunc(30.6001 * (month + 1)) + math.trunc(365.25 * jahr)
+        else:
+            jd = math.trunc(30.6001 * (month + 13)) + math.trunc(365.25 * (jahr - 1))
+        jd = jd + 1720994.5 + 2 - math.trunc(jahr / 100) + math.trunc(jahr / 400) + day + zeit / 24.0
+        t2 = (jd - 2451545) / 36525.0
+        st0 = 6.697375 + 2400.051337 * t2 + 0.0000359 * t2 * t2
+        st = st0 + longitude / 15.0 + 1.002737909 * (zeit - 1)
+        sw = (15 * st - al) % 360
+        altitude_rad = math.asin(
+            math.sin(latitude * math.pi / 180.0) * math.sin(de * math.pi / 180.0) +
+            math.cos(sw * math.pi / 180.0) * math.cos(de * math.pi / 180.0) * math.cos(latitude * math.pi / 180.0)
+        )
+        return altitude_rad / math.pi * 180.0
+    
+    time_start = hour + minute / 60.0
+    if altitude_type == 'mean':
+        time_mid = time_start + duration / 120.0
+        altitude_deg = calc_altitude_at_time(time_mid)
+    else:
+        altitude_start = calc_altitude_at_time(time_start)
+        time_end = time_start + duration / 60.0
+        altitude_end = calc_altitude_at_time(time_end)
+        altitude_deg = min(altitude_start, altitude_end) if altitude_type == 'min' else max(altitude_start, altitude_end)
+    
+    return round(altitude_deg)
+
+
+def get_observer_coordinates(observer_record: dict, gg: int) -> tuple[float, float]:
+    """Extract observer's latitude and longitude from observer record."""
+    if gg == 0:
+        lon_deg = int(observer_record.get('HLG', 0) or 0)
+        lon_min = int(observer_record.get('HLM', 0) or 0)
+        lon_ew = observer_record.get('HOW', 'O')
+        lat_deg = int(observer_record.get('HBG', 0) or 0)
+        lat_min = int(observer_record.get('HBM', 0) or 0)
+        lat_ns = observer_record.get('HNS', 'N')
+    elif gg == 2:
+        lon_deg = int(observer_record.get('NLG', 0) or 0)
+        lon_min = int(observer_record.get('NLM', 0) or 0)
+        lon_ew = observer_record.get('NOW', 'O')
+        lat_deg = int(observer_record.get('NBG', 0) or 0)
+        lat_min = int(observer_record.get('NBM', 0) or 0)
+        lat_ns = observer_record.get('NNS', 'N')
+    else:
+        return (0.0, 0.0)
+    
+    longitude = lon_deg + lon_min / 60.0
+    if lon_ew == 'W':
+        longitude = -longitude
+    latitude = lat_deg + lat_min / 60.0
+    if lat_ns == 'S':
+        latitude = -latitude
+    
+    return longitude, latitude
 
 
 def get_days_in_month(month: int, year: int) -> int:
