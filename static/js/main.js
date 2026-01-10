@@ -1691,7 +1691,8 @@ async function checkForUpdates() {
         const json = await resp.json();
         const latestTag = json.tag_name || json.name || '';
         const latest = latestTag.replace(/^v/, '');
-        const latestDate = json.published_at ? new Date(json.published_at).toLocaleDateString() : '';
+        // Use ISO date format (YYYY-MM-DD) for consistency
+        const latestDate = json.published_at ? json.published_at.split('T')[0] : '';
         if (isNewerVersion(latest, current)) {
             const title = i18nStrings.update?.title || 'Update';
             const msgTpl = i18nStrings.update?.message || 'New version {latest} from {latestDate} (current {current} from {currentDate}). Update?';

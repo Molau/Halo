@@ -65,8 +65,10 @@ def update_from_github(repo: str, tag: str | None, root_path: Path) -> dict:
         zip_url = f"https://github.com/{repo}/archive/refs/heads/main.zip"
 
     try:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir_path = Path(tmpdir)
+        # Create temp directory manually (don't auto-cleanup to avoid Windows file locking)
+        tmpdir = tempfile.mkdtemp()
+        tmpdir_path = Path(tmpdir)
+        try:
             zip_path = tmpdir_path / "update.zip"
             _download_zip(zip_url, zip_path)
 
@@ -87,6 +89,12 @@ def update_from_github(repo: str, tag: str | None, root_path: Path) -> dict:
                 "resources/halo.cfg",
             ]
             _copy_tree(source_root, root_path, exclude)
+        finally:
+            # Manual cleanup - use ignore_errors to handle Windows file locks
+            try:
+                shutil.rmtree(tmpdir, ignore_errors=True)
+            except:
+                pass  # Temp dir will be cleaned up by OS eventually
 
         return {"success": True}
     except Exception as e:
