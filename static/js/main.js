@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadCurrentLanguage();
     await loadI18n(currentLanguage);
 
-    // Check for updates on startup (if repo configured)
+    // Check for updates FIRST - blocks until user decides
     await checkForUpdates();
 
     setupLanguageSwitcher();
@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         clearFileInfoDisplay();
     }
     
-    // Check for autosave recovery first
+    // Check for autosave recovery AFTER update check
     await checkAutosaveRecovery();
     
     // Check if data is loaded on server and update file info display
@@ -1694,38 +1694,55 @@ async function checkForUpdates() {
         // Use ISO date format (YYYY-MM-DD) for consistency
         const latestDate = json.published_at ? json.published_at.split('T')[0] : '';
         if (isNewerVersion(latest, current)) {
-            const title = i18nStrings.update?.title || 'Update';
-            const msgTpl = i18nStrings.update?.message || 'New version {latest} from {latestDate} (current {current} from {currentDate}). Update?';
-            const message = msgTpl
-                .replace('{latest}', latest)
-                .replace('{latestDate}', latestDate)
-                .replace('{current}', current)
-                .replace('{currentDate}', currentDate);
-            showConfirmDialog(title, message, async () => {
-                try {
-                    const downloading = i18nStrings.update?.downloading || 'Downloading update...';
-                    showInfoModal(title, downloading);
-                    const updResp = await fetch('/api/update', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ repo, tag: latestTag })
-                    });
-                    const updJson = await updResp.json();
-                    if (updResp.ok && updJson.success) {
+            // Block startup until user decides
+            await new Promise((resolve) => {
+                const title = i18nStrings.update?.title || 'Update';
+                const msgTpl = i18nStrings.update?.message || 'New version {latest} from {latestDate} (current {current} from {currentDate}). Update?';
+                const message = msgTpl
+                    .replace('{latest}', latest)
+                    .replace('{latestDate}', latestDate)
+                    .replace('{current}', current)
+                    .replace('{currentDate}', currentDate);
+                showConfirmDialog(title, message, async () => {
+                    try {
+                        const downloading = i18nStrings.update?.downloading || 'Downloading update...';
+                        const { modal, modalEl } = showInfoModal(title, downloading);
+                        
+                        // Send update request - expect connection to be reset when Flask reloads
+                        try {
+                            await fetch('/api/update', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ repo, tag: latestTag })
+                            });
+                        } catch (fetchErr) {
+                            // Connection reset is expected - Flask reloader kills connection
+                            // Update likely succeeded, just wait a moment
+                        }
+                        
+                        // Close loading modal
+                        modal.hide();
+                        modalEl.remove();
+                        
+                        // Show success message
                         const successMsg = i18nStrings.update?.manual_restart || i18nStrings.update?.success || 'Update complete. Please restart the application manually.';
-                        showInfoModal(title, successMsg);
-                        // Don't auto-restart - prevents Windows file locking issues in debug mode
-                    } else {
-                        const err = updJson.error || (await updResp.text());
+                        const { modal: successModal, modalEl: successModalEl } = showSuccessModal(title, successMsg);
+                        
+                        // Wait for user to close success modal, then resolve
+                        successModalEl.addEventListener('hidden.bs.modal', () => {
+                            successModalEl.remove();
+                            resolve();
+                        });
+                    } catch (e) {
                         const errTpl = i18nStrings.update?.error || 'Update failed: {error}';
-                        const errMsg = errTpl.replace('{error}', err);
+                        const errMsg = errTpl.replace('{error}', String(e));
                         showErrorDialog(title, errMsg);
+                        resolve();
                     }
-                } catch (e) {
-                    const errTpl = i18nStrings.update?.error || 'Update failed: {error}';
-                    const errMsg = errTpl.replace('{error}', String(e));
-                    showErrorDialog(title, errMsg);
-                }
+                }, () => {
+                    // User clicked Cancel
+                    resolve();
+                });
             });
         }
     } catch (e) {
@@ -4962,6 +4979,32 @@ function showInfoModal(title, message) {
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     const modalEl = document.getElementById('info-modal');
     const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+    modal.show();
+    return { modal, modalEl };
+}
+
+function showSuccessModal(title, message) {
+    const modalHtml = `
+        <div class="modal fade" id="success-modal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">${title}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-0">${message}</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modalEl = document.getElementById('success-modal');
+    const modal = new bootstrap.Modal(modalEl);
     modal.show();
     return { modal, modalEl };
 }
