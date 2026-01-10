@@ -6,7 +6,7 @@ Simpler alternative to binary format for initial development
 import csv
 from pathlib import Path
 from typing import List
-from ..models.types import Observation, Observer
+from ..models.types import Observation
 
 
 class ObservationCSV:
