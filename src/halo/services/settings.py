@@ -10,11 +10,11 @@ class Settings:
         key,value\n
         Example keys:
             - INPUT_MODE: 'M' or 'N'
-            - OUTPUT_MODE: 'H' or 'P'
+            - OUTPUT_MODE: 'H', 'P', or 'M'
             - ACTIVE_OBSERVERS_ONLY: '0' or '1'
     """
 
-    DEFAULT_FILENAME = 'HALO.CFG'
+    DEFAULT_FILENAME = 'halo.cfg'
 
     @staticmethod
     def _cfg_path(root_path: Path) -> Path:
@@ -41,7 +41,7 @@ class Settings:
                     if key == 'INPUT_MODE':
                         app_config['INPUT_MODE'] = value if value in ('M', 'N') else app_config.get('INPUT_MODE', 'N')
                     elif key == 'OUTPUT_MODE':
-                        app_config['OUTPUT_MODE'] = value if value in ('H', 'P') else app_config.get('OUTPUT_MODE', 'P')
+                        app_config['OUTPUT_MODE'] = value if value in ('H', 'P', 'M') else app_config.get('OUTPUT_MODE', 'P')
                     elif key == 'ACTIVE_OBSERVERS_ONLY':
                         app_config['ACTIVE_OBSERVERS_ONLY'] = value in ('1', 'true', 'True')
                     elif key == 'FIXED_OBSERVER':

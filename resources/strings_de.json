@@ -6,6 +6,7 @@
     "description_line1": "Dieses Programm dient der Erfassung, Auswertung",
     "description_line2": "       und Ausgabe von Halobeobachtungen     "
   },
+  "copyright_years": "1992-2026",
   "common": {
     "ok": "OK",
     "cancel": "Abbrechen",
@@ -25,6 +26,13 @@
     "no_file_loaded": "Keine Datei geladen!",
     "error_loading": "Fehler beim Laden",
     "unknown_error": "Unbekannter Fehler"
+  },
+  "update": {
+    "title": "Neue Version verfügbar",
+    "message": "Eine neue Version ist verfügbar: {latest} (aktuell: {current}). Möchten Sie die neue Version herunterladen und installieren?",
+    "downloading": "Aktualisierung wird heruntergeladen...",
+    "success": "Aktualisierung erfolgreich. Anwendung wird neu gestartet...",
+    "error": "Aktualisierung fehlgeschlagen: {error}"
   },
   "action": {
     "select_month": "Monat auswählen",
@@ -192,6 +200,7 @@
       "output_type_question": "Welche Ausgabeart bevorzugen Sie?",
       "output_type_html": "HTML-Tabellen",
       "output_type_pseudo": "Pseudografik",
+      "output_type_markdown": "Markdown",
       "output_type_changed": "Ausgabeart wurde geändert.",
       "data_dir_prompt": "Geben Sie bitte das Datenverzeichnis ein:",
       "data_dir_changed": "Datenverzeichnis wurde geändert."

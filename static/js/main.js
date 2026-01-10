@@ -66,6 +66,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Get current language from server session
     await loadCurrentLanguage();
     await loadI18n(currentLanguage);
+
+    // Check for updates on startup (if repo configured)
+    await checkForUpdates();
+
     setupLanguageSwitcher();
     setupMenuHandlers();
     setupHoverDropdowns();
@@ -1668,6 +1672,67 @@ async function loadI18n(lang) {
     } catch (error) {
         console.error('Failed to load i18n strings:', error);
     }
+}
+
+// Auto-update: check GitHub releases and prompt user
+async function checkForUpdates() {
+    try {
+        const repo = window.UPDATE_REPO;
+        if (!repo) return;
+        const current = i18nStrings.app?.version || '0.0.0';
+        const resp = await fetch(`https://api.github.com/repos/${repo}/releases/latest`);
+        if (!resp.ok) return;
+        const json = await resp.json();
+        const latestTag = json.tag_name || json.name || '';
+        const latest = latestTag.replace(/^v/, '');
+        if (isNewerVersion(latest, current)) {
+            const title = i18nStrings.update?.title || 'Update';
+            const msgTpl = i18nStrings.update?.message || 'New version {latest} (current {current}). Update?';
+            const message = msgTpl.replace('{latest}', latest).replace('{current}', current);
+            showConfirmDialog(title, message, async () => {
+                try {
+                    const downloading = i18nStrings.update?.downloading || 'Downloading update...';
+                    showInfoModal(title, downloading);
+                    const updResp = await fetch('/api/update', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ repo, tag: latestTag })
+                    });
+                    const updJson = await updResp.json();
+                    if (updResp.ok && updJson.success) {
+                        await fetch('/api/restart', { method: 'POST' });
+                        const successMsg = i18nStrings.update?.success || 'Update successful. Restarting...';
+                        showInfoModal(title, successMsg);
+                        setTimeout(() => window.location.reload(), 1500);
+                    } else {
+                        const err = updJson.error || (await updResp.text());
+                        const errTpl = i18nStrings.update?.error || 'Update failed: {error}';
+                        const errMsg = errTpl.replace('{error}', err);
+                        showErrorDialog(title, errMsg);
+                    }
+                } catch (e) {
+                    const errTpl = i18nStrings.update?.error || 'Update failed: {error}';
+                    const errMsg = errTpl.replace('{error}', String(e));
+                    showErrorDialog(title, errMsg);
+                }
+            });
+        }
+    } catch (e) {
+        // Silent fail on update check
+        console.warn('Update check failed:', e);
+    }
+}
+
+function isNewerVersion(a, b) {
+    const pa = a.split('.').map(x => parseInt(x, 10) || 0);
+    const pb = b.split('.').map(x => parseInt(x, 10) || 0);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+        const da = pa[i] || 0;
+        const db = pb[i] || 0;
+        if (da > db) return true;
+        if (da < db) return false;
+    }
+    return false;
 }
 
 // Update page text with current language
@@ -4864,6 +4929,33 @@ function showErrorDialog(message, onClose = null) {
     });
 }
 
+// Show info/success modal (simple non-dismissable spinner or message)
+function showInfoModal(title, message) {
+    const modalHtml = `
+        <div class="modal fade" id="info-modal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">${title}</h5>
+                    </div>
+                    <div class="modal-body text-center py-4">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mb-0">${message}</p>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modalEl = document.getElementById('info-modal');
+    const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+    modal.show();
+    return { modal, modalEl };
+}
+
+
 // Load file dialog
 async function showLoadFileDialog() {
     const isDirty = window.haloData.isDirty;
@@ -5540,6 +5632,10 @@ async function showAusgabeartDialog() {
                             <div class="form-check form-check-inline mb-0">
                                 <input class="form-check-input" type="radio" name="ausgabeart" id="mode-p" value="P" ${currentMode === 'P' ? 'checked' : ''}>
                                 <label class="form-check-label" for="mode-p">${i18nStrings.menus.settings.output_type_pseudo}</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="radio" name="ausgabeart" id="mode-m" value="M" ${currentMode === 'M' ? 'checked' : ''}>
+                                <label class="form-check-label" for="mode-m">${i18nStrings.menus.settings.output_type_markdown}</label>
                             </div>
                         </div>
                         <div class="modal-footer">

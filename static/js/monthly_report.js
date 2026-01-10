@@ -401,14 +401,25 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Modal title shows i18n title
         reportTitle.textContent = i18n.output?.monthly_report;
         
+        // Expose output mode for save/print helpers
+        window.currentOutputMode = outputMode;
+        
         // Build report content based on output mode
         let html = '';
         
         if (outputMode === 'P') {
             // Pseudografik format (current implementation)
             html = buildPseudografikReport(data, i18n);
+        } else if (outputMode === 'M') {
+            // Markdown format: render to HTML if 'marked' is available, else show raw markdown
+            const md = buildMarkdownSource(data, i18n);
+            if (window.marked && typeof window.marked.parse === 'function') {
+                html = `<div class="markdown-body" style="padding:16px;">${window.marked.parse(md)}</div>`;
+            } else {
+                html = `<div class="analysis-results"><pre style="font-family: monospace; font-size: 12px; line-height: 1.5;">${md}</pre></div>`;
+            }
         } else {
-            // HTML-Tabellen format (stub)
+            // HTML-Tabellen format
             html = buildHTMLTableReport(data, i18n);
         }
         
@@ -548,9 +559,56 @@ document.addEventListener('DOMContentLoaded', async function() {
         return html;
     }
     
-    // Generate plain text report content for save/print (reuses modal display layout)
+    // Build Markdown source text for report
+    function buildMarkdownSource(data, i18n) {
+        // Use i18n month names
+        const monthName = i18n.months?.[data.mm] || data.mm;
+        
+        // Format title
+        const year = data.jj < 50 ? 2000 + data.jj : 1900 + data.jj;
+        const title = i18n.monthly_report.report_title_template
+            .replace('{observer}', data.observer_name)
+            .replace('{month}', monthName)
+            .replace('{year}', year);
+        
+        let md = `# ${title}\n\n`;
+        
+        // Header line (HALO key format) with fixed padding to align columns
+        md += '```\n';
+        const sectorsLabel = i18n.monthly_report.sectors;
+        const remarksLabel = i18n.monthly_report.remarks;
+        const headerLine = `KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ${sectorsLabel.padEnd(15)} ${remarksLabel.padEnd(47)}`;
+        md += headerLine + '\n';
+        md += '```\n\n';
+        
+        // Observations using kurzausgabe format
+        if (data.observations.length === 0) {
+            const noObsMsg = i18n.ui?.messages?.no_observations;
+            md += `**${noObsMsg}**\n\n`;
+        } else {
+            md += '```\n';
+            for (const obs of data.observations) {
+                const line = kurzausgabe(obs);
+                md += line + '\n';
+            }
+            md += '```\n\n';
+        }
+        
+        // Footer with observer locations
+        md += `## ${i18n.monthly_report.main_location}\n`;
+        md += `${data.observer_hbort}\n\n`;
+        md += `## ${i18n.monthly_report.secondary_location}\n`;
+        md += `${data.observer_nbort}\n`;
+        
+        return md;
+    }
+    
+    // Generate plain text report content for save/print (generates based on output mode)
     function generateReportText() {
         if (!currentReportData) return '';
+        
+        // Check current output mode
+        let outputMode = window.currentOutputMode || 'P'; // Default: Pseudografik
         
         const data = currentReportData;
         const monthName = i18n.months[data.mm];
@@ -562,51 +620,108 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         let text = '';
         
-        // Header box (same as modal display)
-        const titlePadLeft = Math.floor((122 - title.length) / 2);
-        text += ' '.repeat(titlePadLeft) + title + '\n';
-        text += ' '.repeat(titlePadLeft) + '═'.repeat(title.length) + '\n\n';
-        text += '╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗\n';
-        const sectors = i18n.monthly_report.sectors;
-        const remarks = i18n.monthly_report.remarks;
-        const headerLine = `KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ${sectors.padEnd(15)} ${remarks.padEnd(47)}`;
-        text += '║ ' + headerLine.substring(0, 118).padEnd(118) + ' ║\n';
-        text += '╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣\n';
-        
-        // Observations (same as modal display)
-        let lastDay = -1;
-        for (const obs of data.observations) {
-            if (lastDay !== -1 && obs.TT !== lastDay) {
-                text += '╟────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╢\n';
+        // Generate format based on output mode
+        if (outputMode === 'M') {
+            // Markdown format
+            text += `# ${title}\n\n`;
+            text += '```\n';
+            text += 'KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18n.monthly_report.sectors + ' ' + i18n.monthly_report.remarks + '\n';
+            text += '```\n\n';
+            
+            if (data.observations.length === 0) {
+                const noObsMsg = i18n.ui?.messages?.no_observations;
+                text += `**${noObsMsg}**\n\n`;
+            } else {
+                text += '```\n';
+                for (const obs of data.observations) {
+                    try {
+                        text += kurzausgabe(obs) + '\n';
+                    } catch (err) {
+                        console.error('Error formatting observation:', obs, err);
+                        text += 'ERROR formatting observation\n';
+                    }
+                }
+                text += '```\n\n';
             }
-            try {
-                text += '║ ' + kurzausgabe(obs) + ' ║\n';
-            } catch (err) {
-                console.error('Error formatting observation:', obs, err);
-                text += '║ ERROR formatting observation                                                                                           ║\n';
+            
+            text += `## ${i18n.monthly_report.main_location}\n`;
+            text += `${data.observer_hbort}\n\n`;
+            text += `## ${i18n.monthly_report.secondary_location}\n`;
+            text += `${data.observer_nbort}\n`;
+        } else if (outputMode === 'H') {
+            // HTML format - return as plain monospace text
+            text += title + '\n';
+            text += '═'.repeat(title.length) + '\n\n';
+            text += 'KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18n.monthly_report.sectors + ' ' + i18n.monthly_report.remarks + '\n';
+            text += '─'.repeat(120) + '\n';
+            
+            if (data.observations.length === 0) {
+                const noObsMsg = i18n.ui?.messages?.no_observations;
+                text += noObsMsg + '\n';
+            } else {
+                for (const obs of data.observations) {
+                    try {
+                        text += kurzausgabe(obs) + '\n';
+                    } catch (err) {
+                        console.error('Error formatting observation:', obs, err);
+                        text += 'ERROR formatting observation\n';
+                    }
+                }
             }
-            lastDay = obs.TT;
+            
+            text += '─'.repeat(120) + '\n';
+            text += `${i18n.monthly_report.main_location}: ${data.observer_hbort}\n`;
+            text += `${i18n.monthly_report.secondary_location}: ${data.observer_nbort}\n`;
+        } else {
+            // Pseudografik format (original)
+            text = '';
+            
+            // Header box
+            const titlePadLeft = Math.floor((122 - title.length) / 2);
+            text += ' '.repeat(titlePadLeft) + title + '\n';
+            text += ' '.repeat(titlePadLeft) + '═'.repeat(title.length) + '\n\n';
+            text += '╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗\n';
+            const sectors = i18n.monthly_report.sectors;
+            const remarks = i18n.monthly_report.remarks;
+            const headerLine = `KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ${sectors.padEnd(15)} ${remarks.padEnd(47)}`;
+            text += '║ ' + headerLine.substring(0, 118).padEnd(118) + ' ║\n';
+            text += '╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣\n';
+            
+            // Observations
+            let lastDay = -1;
+            for (const obs of data.observations) {
+                if (lastDay !== -1 && obs.TT !== lastDay) {
+                    text += '╟────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╢\n';
+                }
+                try {
+                    text += '║ ' + kurzausgabe(obs) + ' ║\n';
+                } catch (err) {
+                    console.error('Error formatting observation:', obs, err);
+                    text += '║ ERROR formatting observation                                                                                           ║\n';
+                }
+                lastDay = obs.TT;
+            }
+            
+            // No observations message
+            if (data.observations.length === 0) {
+                const noObsMsg = i18n.ui?.messages?.no_observations;
+                const padding = Math.floor((118 - noObsMsg.length) / 2);
+                text += '║' + ' '.repeat(118) + '║\n';
+                text += '║' + ' '.repeat(padding) + noObsMsg + ' '.repeat(118 - padding - noObsMsg.length) + '║\n';
+                text += '║' + ' '.repeat(118) + '║\n';
+            }
+            
+            // Footer
+            text += '╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣\n';
+            let hbLine = i18n.monthly_report.main_location + ': ' + data.observer_hbort;
+            let nbLine = i18n.monthly_report.secondary_location + ': ' + data.observer_nbort;
+            const hbPadLeft = Math.floor((122 - hbLine.length) / 2);
+            hbLine = ' '.repeat(hbPadLeft) + hbLine;
+            nbLine = ' '.repeat(hbPadLeft) + nbLine;
+            text += '║' + hbLine.substring(0, 118).padEnd(120, ' ') + '║\n';
+            text += '║' + nbLine.substring(0, 118).padEnd(120, ' ') + '║\n';
+            text += '╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝\n';
         }
-        
-        // No observations message (same as modal display)
-        if (data.observations.length === 0) {
-            const noObsMsg = i18n.ui?.messages?.no_observations;
-            const padding = Math.floor((118 - noObsMsg.length) / 2);
-            text += '║' + ' '.repeat(118) + '║\n';
-            text += '║' + ' '.repeat(padding) + noObsMsg + ' '.repeat(118 - padding - noObsMsg.length) + '║\n';
-            text += '║' + ' '.repeat(118) + '║\n';
-        }
-        
-        // Footer (same as modal display)
-        text += '╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣\n';
-        let hbLine = i18n.monthly_report.main_location + ': ' + data.observer_hbort;
-        let nbLine = i18n.monthly_report.secondary_location + ': ' + data.observer_nbort;
-        const hbPadLeft = Math.floor((122 - hbLine.length) / 2);
-        hbLine = ' '.repeat(hbPadLeft) + hbLine;
-        nbLine = ' '.repeat(hbPadLeft) + nbLine;
-        text += '║' + hbLine.substring(0, 118).padEnd(120, ' ') + '║\n';
-        text += '║' + nbLine.substring(0, 118).padEnd(120, ' ') + '║\n';
-        text += '╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝\n';
         
         return text;
     }
@@ -668,73 +783,93 @@ document.addEventListener('DOMContentLoaded', async function() {
             };
         }
         
-        // Save button - format: KK-MONTHJJ.CSV (e.g., 44-MAR88.CSV)
+        // Save button - format based on output mode
         if (btnSave) {
             btnSave.onclick = () => {
                 if (!currentReportData) return;
+                
+                // Use globally exposed output mode
+                const outputMode = window.currentOutputMode || 'P';
                 
                 const data = currentReportData;
                 const monthShort = i18n.months_short?.[data.mm] || String(data.mm).padStart(2, '0');
                 const kkPadded = String(data.kk).padStart(2, '0');
                 const jjPadded = String(data.jj).padStart(2, '0');
-                const filename = `${kkPadded}-${monthShort.toUpperCase()}${jjPadded}.CSV`;
                 
-                // Generate CSV with comma-separated fields
-                let csv = 'KK,O,JJ,MM,TT,g,ZZZZ,d,DD,N,C,c,EE,H,F,V,f,zz,GG,8HHHH,Sektoren,Bemerkungen\n';
-                for (const obs of data.observations) {
-                    try {
-                        // Extract and format each field - use nullish coalescing for proper zero handling
-                        const kk = String(obs.KK ?? '').padStart(2, '0');
-                        const o = (obs.O ?? '') === '' ? '' : String(obs.O);
-                        const jj = String(obs.JJ ?? '').padStart(2, '0');
-                        const mm = String(obs.MM ?? '').padStart(2, '0');
-                        const tt = String(obs.TT ?? '').padStart(2, '0');
-                        const g = (obs.g ?? '') === '' ? '' : String(obs.g);
-                        const zzzz = String(obs.ZS ?? '').padStart(2, '0') + String(obs.ZM ?? '').padStart(2, '0');
-                        const d = (obs.d ?? '') === '' ? '' : String(obs.d);
-                        const dd = String(obs.DD ?? '').padStart(2, '0');
-                        const n = (obs.N ?? '') === '' ? '' : String(obs.N);
-                        const c_upper = (obs.C ?? '') === '' ? '' : String(obs.C);
-                        const c_lower = (obs.c ?? '') === '' ? '' : String(obs.c);
-                        const ee = String(obs.EE ?? '').padStart(2, '0');
-                        const h = (obs.H ?? '') === '' ? '' : String(obs.H);
-                        const f_upper = (obs.F ?? '') === '' ? '' : String(obs.F);
-                        const v = (obs.V ?? '') === '' ? '' : String(obs.V);
-                        const f_lower = (obs.f ?? '') === '' ? '' : String(obs.f);
-                        const zz = String(obs.zz ?? '').padStart(2, '0');
-                        const gg = String(obs.GG ?? 0).padStart(2, '0');
-                        
-                        // Height fields - 8HHHH
-                        let hhhh = '';
-                        if (obs.EE === 8 && obs.HO != null) {
-                            hhhh = '8' + String(obs.HO).padStart(2, '0') + '//';
-                        } else if (obs.EE === 9 && obs.HU != null) {
-                            hhhh = '8//' + String(obs.HU).padStart(2, '0');
-                        } else if (obs.EE === 10 && obs.HO != null && obs.HU != null) {
-                            hhhh = '8' + String(obs.HO).padStart(2, '0') + String(obs.HU).padStart(2, '0');
-                        } else if ([8, 9, 10].includes(obs.EE)) {
-                            hhhh = '8////';
+                if (outputMode === 'M') {
+                    // Save as Markdown file (lowercase filename)
+                    const filename = `${kkPadded}-${monthShort.toLowerCase()}${jjPadded}.md`;
+                    const reportText = buildMarkdownSource(data, i18n);
+                    const blob = new Blob([reportText], { type: 'text/markdown;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                } else {
+                    // Save as CSV file (lowercase filename) for H and P modes
+                    const filename = `${kkPadded}-${monthShort.toLowerCase()}${jjPadded}.csv`;
+                    
+                    // Generate CSV with comma-separated fields
+                    let csv = 'KK,O,JJ,MM,TT,g,ZZZZ,d,DD,N,C,c,EE,H,F,V,f,zz,GG,8HHHH,Sektoren,Bemerkungen\n';
+                    for (const obs of data.observations) {
+                        try {
+                            // Extract and format each field - use nullish coalescing for proper zero handling
+                            const kk = String(obs.KK ?? '').padStart(2, '0');
+                            const o = (obs.O ?? '') === '' ? '' : String(obs.O);
+                            const jj = String(obs.JJ ?? '').padStart(2, '0');
+                            const mm = String(obs.MM ?? '').padStart(2, '0');
+                            const tt = String(obs.TT ?? '').padStart(2, '0');
+                            const g = (obs.g ?? '') === '' ? '' : String(obs.g);
+                            const zzzz = String(obs.ZS ?? '').padStart(2, '0') + String(obs.ZM ?? '').padStart(2, '0');
+                            const d = (obs.d ?? '') === '' ? '' : String(obs.d);
+                            const dd = String(obs.DD ?? '').padStart(2, '0');
+                            const n = (obs.N ?? '') === '' ? '' : String(obs.N);
+                            const c_upper = (obs.C ?? '') === '' ? '' : String(obs.C);
+                            const c_lower = (obs.c ?? '') === '' ? '' : String(obs.c);
+                            const ee = String(obs.EE ?? '').padStart(2, '0');
+                            const h = (obs.H ?? '') === '' ? '' : String(obs.H);
+                            const f_upper = (obs.F ?? '') === '' ? '' : String(obs.F);
+                            const v = (obs.V ?? '') === '' ? '' : String(obs.V);
+                            const f_lower = (obs.f ?? '') === '' ? '' : String(obs.f);
+                            const zz = String(obs.zz ?? '').padStart(2, '0');
+                            const gg = String(obs.GG ?? 0).padStart(2, '0');
+                            
+                            // Height fields - 8HHHH
+                            let hhhh = '';
+                            if (obs.EE === 8 && obs.HO != null) {
+                                hhhh = '8' + String(obs.HO).padStart(2, '0') + '//';
+                            } else if (obs.EE === 9 && obs.HU != null) {
+                                hhhh = '8//' + String(obs.HU).padStart(2, '0');
+                            } else if (obs.EE === 10 && obs.HO != null && obs.HU != null) {
+                                hhhh = '8' + String(obs.HO).padStart(2, '0') + String(obs.HU).padStart(2, '0');
+                            } else if ([8, 9, 10].includes(obs.EE)) {
+                                hhhh = '8////';
+                            }
+                            
+                            // Sectors and remarks - check both property names
+                            const sektoren = (obs.sectors ?? obs.SE ?? '').trim();
+                            const bemerkungen = (obs.remarks ?? obs.BEM ?? '').replace(/,/g, ';').trim(); // Escape commas in remarks
+                            
+                            csv += `${kk},${o},${jj},${mm},${tt},${g},${zzzz},${d},${dd},${n},${c_upper},${c_lower},${ee},${h},${f_upper},${v},${f_lower},${zz},${gg},${hhhh},${sektoren},${bemerkungen}\n`;
+                        } catch (err) {
+                            console.error('Error formatting observation:', obs, err);
                         }
-                        
-                        // Sectors and remarks - check both property names
-                        const sektoren = (obs.sectors ?? obs.SE ?? '').trim();
-                        const bemerkungen = (obs.remarks ?? obs.BEM ?? '').replace(/,/g, ';').trim(); // Escape commas in remarks
-                        
-                        csv += `${kk},${o},${jj},${mm},${tt},${g},${zzzz},${d},${dd},${n},${c_upper},${c_lower},${ee},${h},${f_upper},${v},${f_lower},${zz},${gg},${hhhh},${sektoren},${bemerkungen}\n`;
-                    } catch (err) {
-                        console.error('Error formatting observation:', obs, err);
                     }
+                    
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
                 }
-                
-                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
             };
         }
     }

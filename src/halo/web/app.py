@@ -44,12 +44,13 @@ def create_app(config=None):
         'OBSERVERS': [],  # Observer metadata from halobeo.csv
         'ACTIVE_OBSERVERS_ONLY': False,  # Setting: filter to active observers only
         'DIRTY': False,  # Track unsaved changes
+        'UPDATE_REPO': '',  # e.g., 'owner/HALOpy'; leave empty to disable
     })
     
     if config:
         app.config.update(config)
     
-    # Load persisted settings from HALO.CFG (CSV)
+    # Load persisted settings from halo.cfg (CSV)
     Settings.load_into(app.config, root_path)
     
     # Load startup file if configured
@@ -110,12 +111,15 @@ def create_app(config=None):
             '_': get_string,  # Translation function (like gettext)
             'lang': get_language,  # Current language
             'i18n': g.i18n if hasattr(g, 'i18n') else get_i18n(),
-            'static_version': int(time.time())  # Cache-busting timestamp
+            'static_version': int(time.time()),  # Cache-busting timestamp
+            'update_repo': app.config.get('UPDATE_REPO', '')
         }
     
-    # Register API blueprint
+    # Register API blueprints
     from halo.api import api_blueprint
+    from halo.api.update import update_blueprint
     app.register_blueprint(api_blueprint)
+    app.register_blueprint(update_blueprint)
     
     # Web routes
     @app.route('/')

@@ -1043,8 +1043,8 @@ def outputmode() -> Dict[str, Any]:
         data = request.get_json()
         mode = data.get('mode', 'P')
         
-        if mode not in ['H', 'P']:
-            return jsonify({'error': 'Invalid mode. Must be H or P'}), 400
+        if mode not in ['H', 'P', 'M']:
+            return jsonify({'error': 'Invalid mode. Must be H, P, or M'}), 400
         
         current_app.config['OUTPUT_MODE'] = mode
         # Persist setting
@@ -1053,16 +1053,27 @@ def outputmode() -> Dict[str, Any]:
         from halo.services.settings import Settings
         Settings.save_key(current_app.config, root_path, 'OUTPUT_MODE', mode)
         
+        display_map = {
+            'H': 'HTML-Tabellen',
+            'P': 'Pseudografik',
+            'M': 'Markdown'
+        }
+        
         return jsonify({
             'success': True,
             'mode': mode,
-            'display': 'HTML-Tabellen' if mode == 'H' else 'Pseudografik'
+            'display': display_map.get(mode, 'Pseudografik')
         })
     else:
         mode = current_app.config.get('OUTPUT_MODE', 'P')
+        display_map = {
+            'H': 'HTML-Tabellen',
+            'P': 'Pseudografik',
+            'M': 'Markdown'
+        }
         return jsonify({
             'mode': mode,
-            'display': 'HTML-Tabellen' if mode == 'H' else 'Pseudografik'
+            'display': display_map.get(mode, 'Pseudografik')
         })
 
 

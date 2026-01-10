@@ -5,6 +5,7 @@
     "version_date": "2026-01-10",
     "description": "Atmospheric halo observation database"
   },
+  "copyright_years": "1992-2026",
   "action": {
     "select_month": "Select Month",
     "select_year": "Select Year"
@@ -163,6 +164,7 @@
       "output_type_question": "Which output format do you prefer?",
       "output_type_html": "HTML Tables",
       "output_type_pseudo": "Pseudographics",
+      "output_type_markdown": "Markdown",
       "output_type_changed": "Output format has been changed.",
       "data_dir_prompt": "Please enter the data directory:",
       "data_dir_changed": "Data directory has been changed."
@@ -409,6 +411,13 @@
     "no_file_loaded": "No file loaded!",
     "error_loading": "Error loading",
     "unknown_error": "Unknown error"
+  },
+  "update": {
+    "title": "New Version Available",
+    "message": "A new version is available: {latest} (current: {current}). Do you want to download and install it?",
+    "downloading": "Downloading update...",
+    "success": "Update successful. Restarting application...",
+    "error": "Update failed: {error}"
   },
   "errors": {
     "unknown_observer": "Unknown observer code"
