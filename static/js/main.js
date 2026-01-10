@@ -1680,8 +1680,13 @@ async function checkForUpdates() {
         const repo = window.UPDATE_REPO;
         if (!repo) return;
         const current = i18nStrings.app?.version || '0.0.0';
-        const resp = await fetch(`https://api.github.com/repos/${repo}/releases/latest`);
-        if (!resp.ok) return;
+        const resp = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
+            signal: AbortSignal.timeout(5000)  // 5 second timeout
+        });
+        if (!resp.ok) {
+            // Silent exit for 404 (repo not found) or other errors
+            return;
+        }
         const json = await resp.json();
         const latestTag = json.tag_name || json.name || '';
         const latest = latestTag.replace(/^v/, '');

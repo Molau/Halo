@@ -46,7 +46,7 @@ def create_app(config=None):
         'OBSERVERS': [],  # Observer metadata from halobeo.csv
         'ACTIVE_OBSERVERS_ONLY': False,  # Setting: filter to active observers only
         'DIRTY': False,  # Track unsaved changes
-        'UPDATE_REPO': '',  # e.g., 'owner/HALOpy'; leave empty to disable
+        'UPDATE_REPO': 'Molau/Halo',  # GitHub repository for auto-updates
     })
     
     if config:
