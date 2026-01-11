@@ -5,7 +5,7 @@
     Automated installer for HALOpy - similar to the original HALO.EXE installer.
     Downloads Python, installs dependencies, and sets up HALOpy.
 .NOTES
-    Run as Administrator for Python installation
+    Running as Administrator is optional; use it only if Python installation is blocked
     
 .USAGE
     To run this unsigned script:
@@ -224,12 +224,12 @@ if (-not $pythonInstalled) {
             Write-Host "  1618 - Another installation is in progress"
             Write-Host ""
             Write-Host "You can try:"
-            Write-Host "  1. Run this installer as Administrator"
+            Write-Host "  1. Re-run as Administrator only if Python installation is blocked"
             Write-Host "  2. Download Python manually from: https://www.python.org/downloads/"
             Write-Host "  3. Make sure no other installations are running"
             Write-Host ""
-            $continue = Read-Host "Continue without Python? (Y/N) [N]"
-            if ($continue -ne "Y" -and $continue -ne "y") {
+            $continue = Read-Host "Continue without Python? (Y/N) [Y]"
+            if ($continue -eq "N" -or $continue -eq "n") {
                 exit 1
             }
         }
@@ -243,8 +243,8 @@ if (-not $pythonInstalled) {
         Write-Error-Message "Failed to download or install Python: $_"
         Write-Host "Please download Python manually from: https://www.python.org/downloads/"
         Write-Host ""
-        $continue = Read-Host "Continue without Python? (Y/N) [N]"
-        if ($continue -ne "Y" -and $continue -ne "y") {
+        $continue = Read-Host "Continue without Python? (Y/N) [Y]"
+        if ($continue -eq "N" -or $continue -eq "n") {
             exit 1
         }
     }
