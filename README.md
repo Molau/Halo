@@ -47,7 +47,20 @@ The original HALO software used compressed binary files (.HAL, .BEO). To migrate
 
 ## Installation
 
-### Prerequisites
+### Quick Install (Windows)
+
+**Automated Installer** - Similar to the original HALO.EXE installer:
+
+1. Download `install.ps1` from the [installer](installer/) folder
+2. Right-click → "Run with PowerShell"
+3. Follow the prompts (installs Python, dependencies, creates start script)
+4. Double-click `halo.bat` to start HALOpy
+
+See [installer/README.md](installer/README.md) for detailed installation instructions and troubleshooting.
+
+### Manual Installation
+
+#### Prerequisites
 
 **Python Installation:**
 
