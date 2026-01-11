@@ -11,8 +11,7 @@
     To run this unsigned script:
     Right-click install.ps1 -> "Run with PowerShell"
     OR
-    Open PowerShell as Administrator and run:
-    Set-ExecutionPolicy Bypass -Scope Process -Force; .\install.ps1
+    Run install.bat (easiest)
 #>
 
 # Configuration
@@ -34,25 +33,25 @@ function Write-ColorOutput($ForegroundColor) {
 function Write-Header {
     param([string]$Message)
     Write-Host ""
-    Write-ColorOutput Green "Ã¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢Â"
+    Write-ColorOutput Green "==========================================================="
     Write-ColorOutput Green "  $Message"
-    Write-ColorOutput Green "Ã¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢Â"
+    Write-ColorOutput Green "==========================================================="
     Write-Host ""
 }
 
 function Write-Step {
     param([string]$Message)
-    Write-ColorOutput Cyan "-> $Message"
+    Write-ColorOutput Cyan "[*] $Message"
 }
 
 function Write-Success {
     param([string]$Message)
-    Write-ColorOutput Green "OK $Message"
+    Write-ColorOutput Green "[OK] $Message"
 }
 
 function Write-Error-Message {
     param([string]$Message)
-    Write-ColorOutput Red "ERROR $Message"
+    Write-ColorOutput Red "[ERROR] $Message"
 }
 
 # Check for Administrator privileges
@@ -63,9 +62,9 @@ Clear-Host
 Write-Header "HALOpy Installation"
 
 if (-not $isAdmin) {
-    Write-ColorOutput Yellow "Ã¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢Â"
+    Write-ColorOutput Yellow "==========================================================="
     Write-ColorOutput Yellow "  WARNING: Not running as Administrator!"
-    Write-ColorOutput Yellow "Ã¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢ÂÃ¢€¢Â"
+    Write-ColorOutput Yellow "==========================================================="
     Write-Host ""
     Write-ColorOutput Yellow "This script is not running with Administrator privileges."
     Write-Host "Python installation may fail without admin rights."
@@ -110,31 +109,29 @@ Write-Header "Step 1: Checking Python Installation"
 $pythonInstalled = $false
 $pythonPath = $null
 
-# Check if python is in PATH
+# Check if py launcher exists (most reliable)
 try {
-    $pythonVersion = & python --version 2>&1
-    if ($pythonVersion -match "Python 3\.\d+\.\d+") {
+    $pyVersion = & py -3 --version 2>&1
+    if ($pyVersion -match "Python 3") {
         $pythonInstalled = $true
-        $pythonPath = (Get-Command python).Source
-        Write-Success "Python is already installed: $pythonVersion"
-        Write-Host "  Location: $pythonPath"
+        Write-Success "Python is already installed: $pyVersion"
     }
 } catch {
-    # Python not found
+    # py launcher not found
 }
 
-# If not found, try python3
+# Fallback: check if python is in PATH
 if (-not $pythonInstalled) {
     try {
-        $pythonVersion = & python3 --version 2>&1
-        if ($pythonVersion -match "Python 3\.\d+\.\d+") {
+        $pythonVersion = & python --version 2>&1
+        if ($pythonVersion -match "Python 3") {
             $pythonInstalled = $true
-            $pythonPath = (Get-Command python3).Source
+            $pythonPath = (Get-Command python).Source
             Write-Success "Python is already installed: $pythonVersion"
             Write-Host "  Location: $pythonPath"
         }
     } catch {
-        # Python3 not found either
+        # Python not found
     }
 }
 
@@ -222,17 +219,15 @@ if (Test-Path "requirements.txt") {
     Write-Step "Installing dependencies from requirements.txt..."
     
     try {
-        # Use python or python3, whichever is available
-        $pythonCmd = if (Get-Command python -ErrorAction SilentlyContinue) { "python" } else { "python3" }
-        
-        & $pythonCmd -m pip install --upgrade pip 2>&1 | Out-Null
-        & $pythonCmd -m pip install -r requirements.txt
+        # Use py launcher which is most reliable
+        & py -3 -m pip install --upgrade pip 2>&1 | Out-Null
+        & py -3 -m pip install -r requirements.txt
         
         Write-Success "Dependencies installed successfully"
     }
     catch {
         Write-Error-Message "Failed to install dependencies: $_"
-        Write-Host "You can install manually with: python -m pip install -r requirements.txt"
+        Write-Host "You can install manually with: py -3 -m pip install -r requirements.txt"
     }
 }
 else {
@@ -249,15 +244,16 @@ REM Created by install.ps1
 
 cd /d "%~dp0"
 
-REM Try python first, then python3
-where python >nul 2>nul
-if %ERRORLEVEL% EQU 0 (
-    python halo.py
-) else (
-    python3 halo.py
-)
+REM Use py launcher (more reliable on Windows 10/11)
+py -3 halo.py
 
-pause
+if errorlevel 1 (
+    echo.
+    echo Error: Could not start HALOpy
+    echo Make sure Python 3 is installed
+    echo.
+    pause
+)
 "@
 
 $batPath = Join-Path $INSTALL_DIR "halo.bat"
@@ -270,17 +266,22 @@ Write-Header "Step 5: Creating Desktop Shortcut"
 
 $createShortcut = Read-Host "Create desktop shortcut? (Y/N) [Y]"
 if ($createShortcut -eq "" -or $createShortcut -eq "Y" -or $createShortcut -eq "y") {
-    $WshShell = New-Object -ComObject WScript.Shell
-    $desktopPath = [Environment]::GetFolderPath("Desktop")
-    $shortcutPath = Join-Path $desktopPath "HALOpy.lnk"
-    
-    $shortcut = $WshShell.CreateShortcut($shortcutPath)
-    $shortcut.TargetPath = $batPath
-    $shortcut.WorkingDirectory = $INSTALL_DIR
-    $shortcut.Description = "HALOpy - Halo Observation Recording System"
-    $shortcut.Save()
-    
-    Write-Success "Desktop shortcut created"
+    try {
+        $WshShell = New-Object -ComObject WScript.Shell
+        $desktopPath = [Environment]::GetFolderPath("Desktop")
+        $shortcutPath = Join-Path $desktopPath "HALOpy.lnk"
+        
+        $shortcut = $WshShell.CreateShortcut($shortcutPath)
+        $shortcut.TargetPath = $batPath
+        $shortcut.WorkingDirectory = $INSTALL_DIR
+        $shortcut.Description = "HALOpy - Halo Observation Recording System"
+        $shortcut.Save()
+        
+        Write-Success "Desktop shortcut created"
+    }
+    catch {
+        Write-Error-Message "Could not create desktop shortcut: $_"
+    }
 }
 
 # Step 6: Create data directory
