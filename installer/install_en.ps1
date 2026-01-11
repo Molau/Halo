@@ -336,6 +336,13 @@ if (Test-Path "requirements.txt") {
     
     try {
         & $pythonCommand -m pip install --upgrade pip 2>&1 | Out-Null
+        & $pythonCommand -m pip cache purge 2>&1 | Out-Null
+        
+        if (-not $IS_64BIT) {
+            Write-Step "32-bit Windows detected; preinstalling kiwisolver with 32-bit wheel..."
+            & $pythonCommand -m pip install "kiwisolver==1.4.7"
+        }
+        
         & $pythonCommand -m pip install -r requirements.txt
         
         Write-Success "Dependencies installed successfully"
@@ -376,26 +383,36 @@ Set-Content -Path $batPath -Value $batContent -Encoding ASCII
 
 Write-Success "Start script created: halo.bat"
 
-# Step 5: Create Desktop Shortcut (optional)
-Write-Header "Step 5: Creating Desktop Shortcut"
+# Step 5: Create Desktop Shortcuts (optional)
+Write-Header "Step 5: Creating Desktop Shortcuts"
 
-$createShortcut = Read-Host "Create desktop shortcut? (Y/N) [Y]"
+$createShortcut = Read-Host "Create desktop shortcuts? (Y/N) [Y]"
 if ($createShortcut -eq "" -or $createShortcut -eq "Y" -or $createShortcut -eq "y") {
     try {
         $WshShell = New-Object -ComObject WScript.Shell
         $desktopPath = [Environment]::GetFolderPath("Desktop")
-        $shortcutPath = Join-Path $desktopPath "HALOpy.lnk"
         
-        $shortcut = $WshShell.CreateShortcut($shortcutPath)
-        $shortcut.TargetPath = $batPath
-        $shortcut.WorkingDirectory = $INSTALL_DIR
-        $shortcut.Description = "HALOpy - Halo Observation Recording System"
-        $shortcut.Save()
+        # Shortcut 1: Start HALOpy Server
+        $serverShortcutPath = Join-Path $desktopPath "HALOpy Server.lnk"
+        $serverShortcut = $WshShell.CreateShortcut($serverShortcutPath)
+        $serverShortcut.TargetPath = $batPath
+        $serverShortcut.WorkingDirectory = $INSTALL_DIR
+        $serverShortcut.Description = "Start HALOpy Server"
+        $serverShortcut.Save()
         
-        Write-Success "Desktop shortcut created"
+        # Shortcut 2: Open HALOpy in Browser
+        $clientShortcutPath = Join-Path $desktopPath "HALOpy Client.lnk"
+        $clientShortcut = $WshShell.CreateShortcut($clientShortcutPath)
+        $clientShortcut.TargetPath = "http://localhost:5000"
+        $clientShortcut.Description = "Open HALOpy in Browser"
+        $clientShortcut.Save()
+        
+        Write-Success "Desktop shortcuts created:"
+        Write-Host "  - HALOpy Server.lnk (starts the server)"
+        Write-Host "  - HALOpy Client.lnk (opens browser to http://localhost:5000)"
     }
     catch {
-        Write-Error-Message "Could not create desktop shortcut: $_"
+        Write-Error-Message "Could not create desktop shortcuts: $_"
     }
 }
 

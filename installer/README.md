@@ -1,5 +1,17 @@
 # HALOpy Installation Guide
 
+## Choose Your Language / Wählen Sie Ihre Sprache
+
+### English (English Installer)
+
+Use **install_en.bat** and **install_en.ps1** for the English installation.
+
+### Deutsch (German Installer)
+
+Verwenden Sie **install_de.bat** und **install_de.ps1** für die deutschsprachige Installation.
+
+---
+
 ## Quick Install (Windows)
 
 HALOpy includes an automated installer similar to the original HALO program.
@@ -8,18 +20,21 @@ HALOpy includes an automated installer similar to the original HALO program.
 
 1. **Download the installer files**
    - **IMPORTANT**: Use these direct "Raw" download links to avoid file corruption:
-   - [Download install.bat](https://github.com/Molau/Halo/raw/main/installer/install.bat) (Right-click → Save Link As)
-   - [Download install.ps1](https://github.com/Molau/Halo/raw/main/installer/install.ps1) (Right-click → Save Link As)
+   - **English**: [Download install_en.bat](https://github.com/Molau/Halo/raw/main/installer/install_en.bat) and [Download install_en.ps1](https://github.com/Molau/Halo/raw/main/installer/install_en.ps1)
+   - **Deutsch**: [Download install_de.bat](https://github.com/Molau/Halo/raw/main/installer/install_de.bat) and [Download install_de.ps1](https://github.com/Molau/Halo/raw/main/installer/install_de.ps1)
+   - Right-click each link → Save Link As
    - Save both files to the same location (e.g., Downloads folder)
    - **Do NOT** copy-paste the file content from GitHub's web view - this can corrupt the quotes!
 
 2. **Run the installer**
-   - **Option A (Easiest)**: Double-click `install.bat`
-   - **Option B**: Right-click `install.bat` → "Run as administrator" (for Python installation)
+   - **Option A (Easiest)**: Double-click the `.bat` file
+     - `install_en.bat` for English
+     - `install_de.bat` for Deutsch
+   - **Option B**: Right-click the `.bat` file → "Run as administrator" (for Python installation)
    - **Option C**: Open PowerShell as Administrator and run:
      ```powershell
      Set-ExecutionPolicy Bypass -Scope Process -Force
-     .\install.ps1
+     .\install_en.ps1    # or install_de.ps1 for German
      ```
 
 3. **Follow the prompts**

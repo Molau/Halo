@@ -805,7 +805,7 @@ async function showAddObservationDialogNumeric() {
 async function showAddObservationDialogMenu() {
     // Check if a file is loaded
     if (!window.haloData.isLoaded) {
-        showWarningModal(i18nStrings.menus.observations.no_file_loaded);
+        showWarningModal(i18nStrings.observations.no_file_loaded);
         return;
     }
 
@@ -2994,7 +2994,7 @@ async function showDisplayObservationsDialog() {
         }
         const data = await response.json();
         if (!data.total || data.total === 0) {
-            showWarningModal(i18nStrings.dialogs.no_data.messag);
+            showWarningModal(i18nStrings.dialogs.no_data.message);
             return;
         }
     } catch (error) {
@@ -3532,7 +3532,7 @@ async function showStartupFileDialog() {
 async function showSelectDialog() {
     // Check if a file is loaded
     if (!window.haloData.fileName) {
-        showWarningModal(i18nStrings.menus.observations.no_file_loaded || i18nStrings.observations.no_file_loaded);
+        showWarningModal(i18nStrings.observations.no_file_loaded);
         return;
     }
     
@@ -5097,7 +5097,7 @@ async function continueLoadFile() {
 async function showMergeFileDialog() {
     // Check if a file is loaded
     if (!window.haloData.fileName) {
-        showWarningModal(i18nStrings.menus.observations.no_file_loaded || i18nStrings.observations.no_file_loaded);
+        showWarningModal(i18nStrings.observations.no_file_loaded);
         return;
     }
     
