@@ -14,7 +14,7 @@
 $PYTHON_VERSION = "3.11.7"
 $PYTHON_INSTALLER_URL = "https://www.python.org/ftp/python/$PYTHON_VERSION/python-$PYTHON_VERSION-amd64.exe"
 $HALOPY_REPO_URL = "https://github.com/Molau/Halo/archive/refs/heads/main.zip"
-$INSTALL_DIR = "C:\ASTRO\HALOpy"
+$DEFAULT_INSTALL_DIR = "$env:USERPROFILE\HALOpy"
 
 # Colors for output
 function Write-ColorOutput($ForegroundColor) {
@@ -54,6 +54,22 @@ function Write-Error-Message {
 Clear-Host
 Write-Header "HALOpy Installation"
 Write-Host "This script will install HALOpy on your computer."
+Write-Host ""
+
+# Ask for installation directory
+Write-ColorOutput Cyan "Where do you want to install HALOpy?"
+Write-Host "Default: $DEFAULT_INSTALL_DIR"
+$userInput = Read-Host "Press Enter for default or type a different path"
+
+if ([string]::IsNullOrWhiteSpace($userInput)) {
+    $INSTALL_DIR = $DEFAULT_INSTALL_DIR
+} else {
+    $INSTALL_DIR = $userInput
+}
+
+Write-Host ""
+Write-Success "Installation directory: $INSTALL_DIR"
+Write-Host ""
 Write-Host "Press any key to continue or Ctrl+C to cancel..."
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 

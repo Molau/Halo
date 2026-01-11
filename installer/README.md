@@ -31,7 +31,7 @@ HALOpy includes an automated installer similar to the original HALO program.
 ### What Gets Installed
 
 - **Python 3.11.7** (if not already installed)
-- **HALOpy** in `C:\ASTRO\HALOpy`
+- **HALOpy** in your chosen directory (default: `%USERPROFILE%\HALOpy`)
 - **Python dependencies** (Flask, pandas, etc.)
 - **halo.bat** start script
 - **data/** directory for your observation files
