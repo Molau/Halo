@@ -54,34 +54,9 @@ function Write-Error-Message {
     Write-ColorOutput Red "[ERROR] $Message"
 }
 
-# Check for Administrator privileges
-$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-
 # Start installation
 Clear-Host
 Write-Header "HALOpy Installation"
-
-if (-not $isAdmin) {
-    Write-ColorOutput Yellow "==========================================================="
-    Write-ColorOutput Yellow "  WARNING: Not running as Administrator!"
-    Write-ColorOutput Yellow "==========================================================="
-    Write-Host ""
-    Write-ColorOutput Yellow "This script is not running with Administrator privileges."
-    Write-Host "Python installation may fail without admin rights."
-    Write-Host ""
-    Write-Host "Options:"
-    Write-Host "  1. Close this window and run PowerShell as Administrator"
-    Write-Host "  2. Continue anyway (Python installation will be skipped if it fails)"
-    Write-Host ""
-    $continue = Read-Host "Do you want to continue anyway? (Y/N) [N]"
-    if ($continue -ne "Y" -and $continue -ne "y") {
-        Write-Host "Installation cancelled. Please run as Administrator."
-        Write-Host "Press any key to exit..."
-        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-        exit 1
-    }
-    Write-Host ""
-}
 
 Write-Host "This script will install HALOpy on your computer."
 Write-Host ""
@@ -109,29 +84,69 @@ Write-Header "Step 1: Checking Python Installation"
 $pythonInstalled = $false
 $pythonPath = $null
 
-# Check if py launcher exists (most reliable)
+# Check multiple ways to find Python
+# Method 1: Try py launcher
 try {
     $pyVersion = & py -3 --version 2>&1
     if ($pyVersion -match "Python 3") {
         $pythonInstalled = $true
-        Write-Success "Python is already installed: $pyVersion"
+        Write-Success "Python found via py launcher: $pyVersion"
     }
 } catch {
-    # py launcher not found
+    # py launcher not found, continue
 }
 
-# Fallback: check if python is in PATH
+# Method 2: Try python command
 if (-not $pythonInstalled) {
     try {
         $pythonVersion = & python --version 2>&1
         if ($pythonVersion -match "Python 3") {
             $pythonInstalled = $true
-            $pythonPath = (Get-Command python).Source
-            Write-Success "Python is already installed: $pythonVersion"
-            Write-Host "  Location: $pythonPath"
+            Write-Success "Python found via python command: $pythonVersion"
         }
     } catch {
-        # Python not found
+        # python not found, continue
+    }
+}
+
+# Method 3: Try python3 command
+if (-not $pythonInstalled) {
+    try {
+        $pythonVersion = & python3 --version 2>&1
+        if ($pythonVersion -match "Python 3") {
+            $pythonInstalled = $true
+            Write-Success "Python found via python3 command: $pythonVersion"
+        }
+    } catch {
+        # python3 not found, continue
+    }
+}
+
+# Method 4: Check default installation paths
+if (-not $pythonInstalled) {
+    $pythonPaths = @(
+        "C:\Program Files\Python311\python.exe",
+        "C:\Program Files\Python310\python.exe",
+        "C:\Program Files (x86)\Python311\python.exe",
+        "C:\Program Files (x86)\Python310\python.exe",
+        "$env:LOCALAPPDATA\Programs\Python\Python311\python.exe",
+        "$env:LOCALAPPDATA\Programs\Python\Python310\python.exe"
+    )
+    
+    foreach ($path in $pythonPaths) {
+        if (Test-Path $path) {
+            try {
+                $pythonVersion = & $path --version 2>&1
+                if ($pythonVersion -match "Python 3") {
+                    $pythonInstalled = $true
+                    $pythonPath = $path
+                    Write-Success "Python found at: $pythonPath ($pythonVersion)"
+                    break
+                }
+            } catch {
+                # Continue to next path
+            }
+        }
     }
 }
 
