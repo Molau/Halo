@@ -2,16 +2,16 @@
 .SYNOPSIS
     HALOpy Installationsskript
 .DESCRIPTION
-    Automatisiertes Installationsprogramm für HALOpy - ähnlich dem ursprünglichen HALO.EXE Installer.
-    Lädt Python herunter, installiert Abhängigkeiten und richtet HALOpy ein.
+    Automatisiertes Installationsprogramm fuer HALOpy - aehnlich dem urspruenglichen HALO.EXE Installer.
+    Laeuft Python herunter, installiert Abhaengigkeiten und richtet HALOpy ein.
 .NOTES
-    Die Ausführung als Administrator ist optional; verwenden Sie es nur, wenn die Python-Installation blockiert wird
+    Die Ausfuehrung als Administrator ist optional; verwenden Sie es nur, wenn die Python-Installation blockiert wird
     
 .USAGE
-    So führen Sie dieses unsignierte Skript aus:
-    Klicken Sie mit der rechten Maustaste auf install_de.ps1 -> "Mit PowerShell ausführen"
+    So fuehren Sie dieses unsignierte Skript aus:
+    Klicken Sie mit der rechten Maustaste auf install_de.ps1 -> "Mit PowerShell ausfuehren"
     ODER
-    Führen Sie install_de.bat aus (am einfachsten)
+    Fuehren Sie install_de.bat aus (am einfachsten)
 #>
 
 # Konfiguration
@@ -31,7 +31,7 @@ if ($IS_64BIT) {
 $HALOPY_REPO_URL = "https://github.com/Molau/Halo/archive/refs/heads/main.zip"
 $DEFAULT_INSTALL_DIR = "$env:USERPROFILE\HALOpy"
 
-# Farben für Ausgabe
+# Farben fuer Ausgabe
 function Write-ColorOutput($ForegroundColor) {
     $fc = $host.UI.RawUI.ForegroundColor
     $host.UI.RawUI.ForegroundColor = $ForegroundColor
@@ -73,9 +73,9 @@ Write-Host "Dieses Skript wird HALOpy auf Ihrem Computer installieren."
 Write-Host ""
 
 # Nach Installationsverzeichnis fragen
-Write-ColorOutput Cyan "Wo möchten Sie HALOpy installieren?"
+Write-ColorOutput Cyan "Wo moechten Sie HALOpy installieren?"
 Write-Host "Standard: $DEFAULT_INSTALL_DIR"
-$userInput = Read-Host "Drücken Sie die Eingabetaste für Standard oder geben Sie einen anderen Pfad ein"
+$userInput = Read-Host "Druecken Sie die Eingabetaste fuer Standard oder geben Sie einen anderen Pfad ein"
 
 if ([string]::IsNullOrWhiteSpace($userInput)) {
     $INSTALL_DIR = $DEFAULT_INSTALL_DIR
@@ -86,11 +86,11 @@ if ([string]::IsNullOrWhiteSpace($userInput)) {
 Write-Host ""
 Write-Success "Installationsverzeichnis: $INSTALL_DIR"
 Write-Host ""
-Write-Host "Drücken Sie eine beliebige Taste zum Fortfahren oder Strg+C zum Abbrechen..."
+Write-Host "Druecken Sie eine beliebige Taste zum Fortfahren oder Strg+C zum Abbrechen..."
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 
-# Schritt 1: Python-Installation überprüfen
-Write-Header "Schritt 1: Python-Installation überprüfen"
+# Schritt 1: Python-Installation ueberpruefen
+Write-Header "Schritt 1: Python-Installation ueberpruefen"
 
 $pythonInstalled = $false
 $pythonPath = $null
@@ -133,7 +133,7 @@ if (-not $pythonInstalled) {
     }
 }
 
-# Methode 4: Überprüfen Sie Standard-Installationspfade
+# Methode 4: Ueberpruefen Sie Standard-Installationspfade
 if (-not $pythonInstalled) {
     $pythonPaths = @(
         "C:\Program Files\Python311\python.exe",
@@ -155,7 +155,7 @@ if (-not $pythonInstalled) {
                     break
                 }
             } catch {
-                # Zum nächsten Pfad fortfahren
+                # Zum naechsten Pfad fortfahren
             }
         }
     }
@@ -188,8 +188,8 @@ if (-not $pythonInstalled) {
             $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
             $env:Path = $machinePath + ";" + $userPath
             
-            # Installation überprüfen
-            Write-Step "Überprüfen der Python-Installation..."
+            # Installation ueberpruefen
+            Write-Step "Ueberpruefen der Python-Installation..."
             Start-Sleep -Seconds 2
             
             $verified = $false
@@ -197,15 +197,15 @@ if (-not $pythonInstalled) {
                 $pyVersion = & py -3 --version 2>&1
                 if ($pyVersion -match "Python 3") {
                     $verified = $true
-                    Write-Success "Python installiert und überprüft: $pyVersion"
+                    Write-Success "Python installiert und ueberprueft: $pyVersion"
                 }
             } catch {
-                Write-ColorOutput Yellow "  py Launcher nicht gefunden, überprüfung des python Befehls..."
+                Write-ColorOutput Yellow "  py Launcher nicht gefunden, ueberpruefung des python Befehls..."
                 try {
                     $pythonVersion = & python --version 2>&1
                     if ($pythonVersion -match "Python 3") {
                         $verified = $true
-                        Write-Success "Python installiert und überprüft: $pythonVersion"
+                        Write-Success "Python installiert und ueberprueft: $pythonVersion"
                     }
                 } catch {
                     Write-ColorOutput Yellow "  python Befehl noch nicht gefunden"
@@ -214,19 +214,19 @@ if (-not $pythonInstalled) {
             
             if (-not $verified) {
                 Write-ColorOutput Yellow "Warnung: Python kann installiert sein, ist aber noch nicht in PATH"
-                Write-ColorOutput Yellow "Möglicherweise müssen Sie Ihren Computer neu starten, damit die PATH-Änderungen wirksam werden"
+                Write-ColorOutput Yellow "Moeglichweise muessen Sie Ihren Computer neu starten, damit die PATH-Aenderungen wirksam werden"
             }
         }
         else {
             Write-Error-Message "Python-Installation fehlgeschlagen mit Exit-Code: $($process.ExitCode)"
-            Write-Host "Häufige Exit-Codes:"
+            Write-Host "Haeufige Exit-Codes:"
             Write-Host "  1602/1603 - Benutzer abgebrochen oder Installationsfehler"
-            Write-Host "  1618 - Eine andere Installation wird durchgeführt"
+            Write-Host "  1618 - Eine andere Installation wird durchgefuehrt"
             Write-Host ""
-            Write-Host "Sie können versuchen:"
+            Write-Host "Sie koennen versuchen:"
             Write-Host "  1. Nur als Administrator neu starten, wenn die Python-Installation blockiert wird"
             Write-Host "  2. Python manuell herunterladen von: https://www.python.org/downloads/"
-            Write-Host "  3. Stellen Sie sicher, dass keine anderen Installationen ausgeführt werden"
+            Write-Host "  3. Stellen Sie sicher, dass keine anderen Installationen ausgefuehrt werden"
             Write-Host ""
             $continue = Read-Host "Ohne Python fortfahren? (J/N) [J]"
             if ($continue -eq "N" -or $continue -eq "n") {
@@ -234,7 +234,7 @@ if (-not $pythonInstalled) {
             }
         }
         
-        # Installer aufräumen
+        # Installer aufraaeumen
         if (Test-Path $tempInstaller) {
             Remove-Item $tempInstaller -Force
         }
@@ -262,7 +262,7 @@ if (-not (Test-Path $INSTALL_DIR)) {
 $zipPath = Join-Path $INSTALL_DIR "halopy.zip"
 $extractPath = "$env:TEMP\halopy-extract"
 
-Write-Step "HALOpy Paket von GitHub überprüfen..."
+Write-Step "HALOpy Paket von GitHub ueberpruefen..."
 Write-Host "  Repository: https://github.com/Molau/Halo"
 
 $remoteSize = $null
@@ -271,21 +271,21 @@ try {
     $contentLength = $headResponse.Headers['Content-Length']
     if ($contentLength) {
         [void][int64]::TryParse($contentLength, [ref]$remoteSize)
-        Write-Step "Remote ZIP Größe: $remoteSize Bytes"
+        Write-Step "Remote ZIP Groesse: $remoteSize Bytes"
     }
 } catch {
-    Write-ColorOutput Yellow "Konnte Remote-ZIP-Größe nicht lesen; wird neu heruntergeladen"
+    Write-ColorOutput Yellow "Konnte Remote-ZIP-Groesse nicht lesen; wird neu heruntergeladen"
 }
 
 $useCachedZip = $false
 if (Test-Path $zipPath) {
     $localSize = (Get-Item $zipPath).Length
     if ($remoteSize -and $localSize -eq $remoteSize) {
-        Write-Success "Verwende gecachtes HALOpy-Download (Größe stimmt mit Remote überein)"
+        Write-Success "Verwende gecachtes HALOpy-Download (Groesse stimmt mit Remote ueberein)"
         $useCachedZip = $true
     }
     else {
-        Write-Step "Gecachtes ZIP unterscheidet sich oder Größe unbekannt; wird neu heruntergeladen..."
+        Write-Step "Gecachtes ZIP unterscheidet sich oder Groesse unbekannt; wird neu heruntergeladen..."
     }
 }
 
@@ -296,14 +296,14 @@ if (-not $useCachedZip) {
     }
     catch {
         Write-Error-Message "Fehler beim Herunterladen von HALOpy: $_"
-        Write-Host "Sie können manuell herunterladen von: https://github.com/Molau/Halo/archive/refs/heads/main.zip"
+        Write-Host "Sie koennen manuell herunterladen von: https://github.com/Molau/Halo/archive/refs/heads/main.zip"
         exit 1
     }
 }
 
 Write-Step "Dateien werden extrahiert..."
 
-# Alten Extraktionsordner löschen, falls vorhanden
+# Alten Extraktionsordner loeschen, falls vorhanden
 if (Test-Path $extractPath) {
     Remove-Item $extractPath -Recurse -Force
 }
@@ -316,11 +316,11 @@ Copy-Item -Path "$($extractedFolder.FullName)\*" -Destination $INSTALL_DIR -Recu
 
 Write-Success "Dateien extrahiert zu $INSTALL_DIR"
 
-# Extraktionsordner aufräumen (ZIP für zukünftige Läufe aufbewahren)
+# Extraktionsordner aufraaeumen (ZIP fuer zukuenftige Laeufe aufbewahren)
 Remove-Item $extractPath -Recurse -Force
 
-# Schritt 3: Abhängigkeiten installieren
-Write-Header "Schritt 3: Python-Abhängigkeiten installieren"
+# Schritt 3: Abhaengigkeiten installieren
+Write-Header "Schritt 3: Python-Abhaengigkeiten installieren"
 
 Set-Location $INSTALL_DIR
 
@@ -332,7 +332,7 @@ try {
 }
 
 if (Test-Path "requirements.txt") {
-    Write-Step "Abhängigkeiten aus requirements.txt installieren..."
+    Write-Step "Abhaengigkeiten aus requirements.txt installieren..."
     
     try {
         & $pythonCommand -m pip install --upgrade pip 2>&1 | Out-Null
@@ -345,11 +345,11 @@ if (Test-Path "requirements.txt") {
         
         & $pythonCommand -m pip install -r requirements.txt
         
-        Write-Success "Abhängigkeiten erfolgreich installiert"
+        Write-Success "Abhaengigkeiten erfolgreich installiert"
     }
     catch {
-        Write-Error-Message "Fehler beim Installieren von Abhängigkeiten: $_"
-        Write-Host "Sie können manuell installieren mit: $pythonCommand -m pip install -r requirements.txt"
+        Write-Error-Message "Fehler beim Installieren von Abhaengigkeiten: $_"
+        Write-Host "Sie koennen manuell installieren mit: $pythonCommand -m pip install -r requirements.txt"
     }
 }
 else {
@@ -366,7 +366,7 @@ REM Erstellt durch install_de.ps1
 
 cd /d "%~dp0"
 
-REM Verwenden Sie py Launcher (zuverlässiger unter Windows 10/11)
+REM Verwenden Sie py Launcher (zuverlaessiger unter Windows 10/11)
 py -3 halo.py
 
 if errorlevel 1 (
@@ -383,16 +383,16 @@ Set-Content -Path $batPath -Value $batContent -Encoding ASCII
 
 Write-Success "Start-Skript erstellt: halo.bat"
 
-# Schritt 5: Desktop-Verknüpfungen erstellen (optional)
-Write-Header "Schritt 5: Desktop-Verknüpfungen erstellen"
+# Schritt 5: Desktop-Verknuepfungen erstellen (optional)
+Write-Header "Schritt 5: Desktop-Verknuepfungen erstellen"
 
-$createShortcut = Read-Host "Desktop-Verknüpfungen erstellen? (J/N) [J]"
+$createShortcut = Read-Host "Desktop-Verknuepfungen erstellen? (J/N) [J]"
 if ($createShortcut -eq "" -or $createShortcut -eq "J" -or $createShortcut -eq "j") {
     try {
         $WshShell = New-Object -ComObject WScript.Shell
         $desktopPath = [Environment]::GetFolderPath("Desktop")
         
-        # Verknüpfung 1: HALOpy Server starten
+        # Verknuepfung 1: HALOpy Server starten
         $serverShortcutPath = Join-Path $desktopPath "HALOpy Server.lnk"
         $serverShortcut = $WshShell.CreateShortcut($serverShortcutPath)
         $serverShortcut.TargetPath = $batPath
@@ -400,19 +400,19 @@ if ($createShortcut -eq "" -or $createShortcut -eq "J" -or $createShortcut -eq "
         $serverShortcut.Description = "HALOpy Server starten"
         $serverShortcut.Save()
         
-        # Verknüpfung 2: HALOpy im Browser öffnen
+        # Verknuepfung 2: HALOpy im Browser oeffnen
         $clientShortcutPath = Join-Path $desktopPath "HALOpy Client.lnk"
         $clientShortcut = $WshShell.CreateShortcut($clientShortcutPath)
         $clientShortcut.TargetPath = "http://localhost:5000"
-        $clientShortcut.Description = "HALOpy im Browser öffnen"
+        $clientShortcut.Description = "HALOpy im Browser oeffnen"
         $clientShortcut.Save()
         
-        Write-Success "Desktop-Verknüpfungen erstellt:"
+        Write-Success "Desktop-Verknuepfungen erstellt:"
         Write-Host "  - HALOpy Server.lnk (startet den Server)"
-        Write-Host "  - HALOpy Client.lnk (öffnet Browser zu http://localhost:5000)"
+        Write-Host "  - HALOpy Client.lnk (oeffnet Browser zu http://localhost:5000)"
     }
     catch {
-        Write-Error-Message "Konnte Desktop-Verknüpfungen nicht erstellen: $_"
+        Write-Error-Message "Konnte Desktop-Verknuepfungen nicht erstellen: $_"
     }
 }
 
@@ -438,12 +438,12 @@ Write-Host "Installationsverzeichnis: $INSTALL_DIR"
 Write-Host ""
 Write-ColorOutput Cyan "Um HALOpy zu starten:"
 Write-Host "  1. Doppelklicken Sie auf: $batPath"
-Write-Host "  2. Oder führen Sie aus der Eingabeaufforderung aus: cd `"$INSTALL_DIR`" ; .\halo.bat"
+Write-Host "  2. Oder fuehren Sie aus der Eingabeaufforderung aus: cd `"$INSTALL_DIR`" ; .\halo.bat"
 Write-Host ""
 Write-ColorOutput Yellow "Erstes Mal einrichten:"
 Write-Host "  - Legen Sie Ihre Beobachtungsdateien (.HAL, .CSV) in: $dataDir"
-Write-Host "  - Öffnen Sie Ihren Webbrowser unter: http://localhost:5000"
-Write-Host "  - Das Programm führt einen lokalen Webserver aus"
+Write-Host "  - Oeffnen Sie Ihren Webbrowser unter: http://localhost:5000"
+Write-Host "  - Das Programm fuehrt einen lokalen Webserver aus"
 Write-Host ""
 
 $startNow = Read-Host "HALOpy jetzt starten? (J/N) [N]"
@@ -451,11 +451,11 @@ if ($startNow -eq "J" -or $startNow -eq "j") {
     Write-Host ""
     Write-Step "HALOpy wird gestartet..."
     Start-Process -FilePath $batPath -WorkingDirectory $INSTALL_DIR
-    Write-Host "HALOpy wird gestartet. Ihr Webbrowser sollte automatisch öffnen."
-    Write-Host "Falls nicht, öffnen Sie Ihren Browser und gehen Sie zu: http://localhost:5000"
+    Write-Host "HALOpy wird gestartet. Ihr Webbrowser sollte automatisch oeffnen."
+    Write-Host "Falls nicht, oeffnen Sie Ihren Browser und gehen Sie zu: http://localhost:5000"
 }
 
 Write-Host ""
 Write-ColorOutput Green "Danke, dass Sie HALOpy installiert haben!"
-Write-Host "Drücken Sie eine beliebige Taste zum Beenden..."
+Write-Host "Druecken Sie eine beliebige Taste zum Beenden..."
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
