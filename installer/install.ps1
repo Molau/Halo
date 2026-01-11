@@ -16,7 +16,17 @@
 
 # Configuration
 $PYTHON_VERSION = "3.11.7"
-$PYTHON_INSTALLER_URL = "https://www.python.org/ftp/python/$PYTHON_VERSION/python-$PYTHON_VERSION-amd64.exe"
+$PYTHON_BASE_URL = "https://www.python.org/ftp/python/$PYTHON_VERSION"
+
+# Detect system architecture
+if ([Environment]::Is64BitOperatingSystem) {
+    $PYTHON_INSTALLER_URL = "$PYTHON_BASE_URL/python-$PYTHON_VERSION-amd64.exe"
+    $ARCHITECTURE = "64-bit"
+} else {
+    $PYTHON_INSTALLER_URL = "$PYTHON_BASE_URL/python-$PYTHON_VERSION.exe"
+    $ARCHITECTURE = "32-bit"
+}
+
 $HALOPY_REPO_URL = "https://github.com/Molau/Halo/archive/refs/heads/main.zip"
 $DEFAULT_INSTALL_DIR = "$env:USERPROFILE\HALOpy"
 
@@ -152,11 +162,12 @@ if (-not $pythonInstalled) {
 
 # Install Python if not found
 if (-not $pythonInstalled) {
-    Write-Step "Python not found. Downloading Python $PYTHON_VERSION..."
+    Write-Step "Python not found. Downloading Python $PYTHON_VERSION ($ARCHITECTURE)..."
     
     $tempInstaller = "$env:TEMP\python-installer.exe"
     
     try {
+        Write-Host "  System architecture: $ARCHITECTURE"
         Write-Host "  Downloading from: $PYTHON_INSTALLER_URL"
         Invoke-WebRequest -Uri $PYTHON_INSTALLER_URL -OutFile $tempInstaller -UseBasicParsing
         Write-Success "Python installer downloaded to: $tempInstaller"
