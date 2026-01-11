@@ -7,9 +7,11 @@ HALOpy includes an automated installer similar to the original HALO program.
 ### Installation Steps
 
 1. **Download the installer files**
-   - Download both `install.bat` and `install.ps1` from https://github.com/Molau/Halo/tree/main/installer
-   - Or download from the [Releases](https://github.com/Molau/Halo/releases) page
+   - **IMPORTANT**: Use these direct "Raw" download links to avoid file corruption:
+   - [Download install.bat](https://github.com/Molau/Halo/raw/main/installer/install.bat) (Right-click → Save Link As)
+   - [Download install.ps1](https://github.com/Molau/Halo/raw/main/installer/install.ps1) (Right-click → Save Link As)
    - Save both files to the same location (e.g., Downloads folder)
+   - **Do NOT** copy-paste the file content from GitHub's web view - this can corrupt the quotes!
 
 2. **Run the installer**
    - **Option A (Easiest)**: Double-click `install.bat`
