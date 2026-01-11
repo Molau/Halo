@@ -157,27 +157,84 @@ if (-not $pythonInstalled) {
     $tempInstaller = "$env:TEMP\python-installer.exe"
     
     try {
+        Write-Host "  Downloading from: $PYTHON_INSTALLER_URL"
         Invoke-WebRequest -Uri $PYTHON_INSTALLER_URL -OutFile $tempInstaller -UseBasicParsing
-        Write-Success "Python installer downloaded"
+        Write-Success "Python installer downloaded to: $tempInstaller"
         
         Write-Step "Installing Python (this may take a few minutes)..."
-        $installArgs = "/quiet InstallAllUsers=1 PrependPath=1 Include_test=0"
-        Start-Process -FilePath $tempInstaller -ArgumentList $installArgs -Wait -NoNewWindow
+        Write-Host "  Installation parameters: InstallAllUsers=1 PrependPath=1"
         
-        # Refresh PATH
-        $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
-        $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
-        $env:Path = $machinePath + ";" + $userPath
+        # Use passive mode to show progress instead of silent
+        $installArgs = "/passive InstallAllUsers=1 PrependPath=1 Include_test=0 Include_launcher=1"
+        $process = Start-Process -FilePath $tempInstaller -ArgumentList $installArgs -Wait -PassThru
         
-        Write-Success "Python installed successfully"
+        Write-Host "  Installation exit code: $($process.ExitCode)"
+        
+        if ($process.ExitCode -eq 0) {
+            # Refresh PATH
+            $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+            $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
+            $env:Path = $machinePath + ";" + $userPath
+            
+            # Verify installation
+            Write-Step "Verifying Python installation..."
+            Start-Sleep -Seconds 2
+            
+            $verified = $false
+            try {
+                $pyVersion = & py -3 --version 2>&1
+                if ($pyVersion -match "Python 3") {
+                    $verified = $true
+                    Write-Success "Python installed and verified: $pyVersion"
+                }
+            } catch {
+                Write-ColorOutput Yellow "  py launcher not found, checking python command..."
+                try {
+                    $pythonVersion = & python --version 2>&1
+                    if ($pythonVersion -match "Python 3") {
+                        $verified = $true
+                        Write-Success "Python installed and verified: $pythonVersion"
+                    }
+                } catch {
+                    Write-ColorOutput Yellow "  python command not found yet"
+                }
+            }
+            
+            if (-not $verified) {
+                Write-ColorOutput Yellow "Warning: Python may have installed but is not in PATH yet"
+                Write-ColorOutput Yellow "You may need to restart your computer for PATH changes to take effect"
+            }
+        }
+        else {
+            Write-Error-Message "Python installation failed with exit code: $($process.ExitCode)"
+            Write-Host "Common exit codes:"
+            Write-Host "  1602/1603 - User cancelled or installation error"
+            Write-Host "  1618 - Another installation is in progress"
+            Write-Host ""
+            Write-Host "You can try:"
+            Write-Host "  1. Run this installer as Administrator"
+            Write-Host "  2. Download Python manually from: https://www.python.org/downloads/"
+            Write-Host "  3. Make sure no other installations are running"
+            Write-Host ""
+            $continue = Read-Host "Continue without Python? (Y/N) [N]"
+            if ($continue -ne "Y" -and $continue -ne "y") {
+                exit 1
+            }
+        }
         
         # Clean up installer
-        Remove-Item $tempInstaller -Force
+        if (Test-Path $tempInstaller) {
+            Remove-Item $tempInstaller -Force
+        }
     }
     catch {
         Write-Error-Message "Failed to download or install Python: $_"
         Write-Host "Please download Python manually from: https://www.python.org/downloads/"
-        exit 1
+        Write-Host ""
+        $continue = Read-Host "Continue without Python? (Y/N) [N]"
+        if ($continue -ne "Y" -and $continue -ne "y") {
+            exit 1
+        }
     }
 }
 
