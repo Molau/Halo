@@ -52,5 +52,10 @@ data/*.HAL
 data/*.BEO
 config.json
 
+# Environment variables (NEVER commit these!)
+.env
+.env.local
+.env.*.local
+
 # Temporary test files
 temp/
