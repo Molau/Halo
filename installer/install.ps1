@@ -19,7 +19,8 @@ $PYTHON_VERSION = "3.11.7"
 $PYTHON_BASE_URL = "https://www.python.org/ftp/python/$PYTHON_VERSION"
 
 # Detect system architecture
-if ([Environment]::Is64BitOperatingSystem) {
+$IS_64BIT = [Environment]::Is64BitOperatingSystem
+if ($IS_64BIT) {
     $PYTHON_INSTALLER_URL = "$PYTHON_BASE_URL/python-$PYTHON_VERSION-amd64.exe"
     $ARCHITECTURE = "64-bit"
 } else {
@@ -298,19 +299,29 @@ Write-Header "Step 3: Installing Python Dependencies"
 
 Set-Location $INSTALL_DIR
 
+$pythonCommand = "py -3"
+try {
+    & $pythonCommand --version 2>&1 | Out-Null
+} catch {
+    $pythonCommand = "python"
+}
+
 if (Test-Path "requirements.txt") {
     Write-Step "Installing dependencies from requirements.txt..."
     
     try {
-        # Use py launcher which is most reliable
-        & py -3 -m pip install --upgrade pip 2>&1 | Out-Null
-        & py -3 -m pip install -r requirements.txt
+        & $pythonCommand -m pip install --upgrade pip 2>&1 | Out-Null
+        if (-not $IS_64BIT) {
+            Write-Step "32-bit Windows detected; installing matplotlib<3.8 first to use available wheels..."
+            & $pythonCommand -m pip install "matplotlib<3.8"
+        }
+        & $pythonCommand -m pip install -r requirements.txt
         
         Write-Success "Dependencies installed successfully"
     }
     catch {
         Write-Error-Message "Failed to install dependencies: $_"
-        Write-Host "You can install manually with: py -3 -m pip install -r requirements.txt"
+        Write-Host "You can install manually with: $pythonCommand -m pip install -r requirements.txt"
     }
 }
 else {
