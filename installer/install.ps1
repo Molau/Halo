@@ -113,7 +113,7 @@ $pythonPath = $null
 # Check if python is in PATH
 try {
     $pythonVersion = & python --version 2>&1
-    if ($pythonVersion -match "Python 3\.([0-9]+)\.([0-9]+)") {
+    if ($pythonVersion -match "Python 3\.\d+\.\d+") {
         $pythonInstalled = $true
         $pythonPath = (Get-Command python).Source
         Write-Success "Python is already installed: $pythonVersion"
@@ -127,7 +127,7 @@ try {
 if (-not $pythonInstalled) {
     try {
         $pythonVersion = & python3 --version 2>&1
-        if ($pythonVersion -match "Python 3\.([0-9]+)\.([0-9]+)") {
+        if ($pythonVersion -match "Python 3\.\d+\.\d+") {
             $pythonInstalled = $true
             $pythonPath = (Get-Command python3).Source
             Write-Success "Python is already installed: $pythonVersion"
@@ -153,7 +153,9 @@ if (-not $pythonInstalled) {
         Start-Process -FilePath $tempInstaller -ArgumentList $installArgs -Wait -NoNewWindow
         
         # Refresh PATH
-        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+        $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+        $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
+        $env:Path = $machinePath + ";" + $userPath
         
         Write-Success "Python installed successfully"
         
@@ -301,7 +303,7 @@ Write-ColorOutput Green "HALOpy has been successfully installed!"
 Write-Host ""
 Write-Host "Installation directory: $INSTALL_DIR"
 Write-Host ""
-Write-ColorOutput Cyan "To start HALOpy:"
+Write-ColorOutput Cyan "To start HALOpy:"`"$INSTALL_DIR`" ; .\
 Write-Host "  1. Double-click on: $batPath"
 Write-Host "  2. Or run from command prompt: cd $INSTALL_DIR && halo.bat"
 Write-Host ""

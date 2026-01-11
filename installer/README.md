@@ -6,25 +6,21 @@ HALOpy includes an automated installer similar to the original HALO program.
 
 ### Installation Steps
 
-1. **Download the installer script**
-   - Download `install.ps1` from https://github.com/Molau/Halo/tree/main/installer
+1. **Download the installer files**
+   - Download both `install.bat` and `install.ps1` from https://github.com/Molau/Halo/tree/main/installer
    - Or download from the [Releases](https://github.com/Molau/Halo/releases) page
-   - Save to any location (e.g., Downloads folder)
+   - Save both files to the same location (e.g., Downloads folder)
 
 2. **Run the installer**
-   - **Option A (Recommended)**: Right-click on `install.ps1` → Select "Run with PowerShell"
-   - **Option B**: Open PowerShell as Administrator and run:
+   - **Option A (Easiest)**: Double-click `install.bat`
+   - **Option B**: Right-click `install.bat` → "Run as administrator" (for Python installation)
+   - **Option C**: Open PowerShell as Administrator and run:
      ```powershell
      Set-ExecutionPolicy Bypass -Scope Process -Force
      .\install.ps1
      ```
 
-3. **Handle security warnings**
-   - If you see "execution of scripts is disabled", use Option B above
-   - The script is unsigned, so Windows may show a security warning
-   - This is normal for PowerShell scripts from the internet
-
-4. **Follow the prompts**
+3. **Follow the prompts**
    - The installer will automatically:
      - ✓ Check for Python (install if needed - requires admin rights)
      - ✓ Download HALOpy files from GitHub
@@ -37,7 +33,7 @@ HALOpy includes an automated installer similar to the original HALO program.
    - Or use the desktop shortcut
    - Your browser will open to http://localhost:5000
 
-### What Gets Installed
+4## What Gets Installed
 
 - **Python 3.11.7** (if not already installed)
 - **HALOpy** in your chosen directory (default: `%USERPROFILE%\HALOpy`)
