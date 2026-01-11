@@ -24,24 +24,28 @@ HALOpy includes an automated installer similar to the original HALO program.
 
 3. **Follow the prompts**
    - The installer will automatically:
-     - ✓ Check for Python (install if needed - requires admin rights)
-     - ✓ Download HALOpy files from GitHub
-     - ✓ Install all dependencies
+     - ✓ Check for Python (install if needed)
+     - ✓ Download HALOpy files from GitHub (or use cached download)
+     - ✓ Install all dependencies (Flask, NumPy, Matplotlib)
      - ✓ Create start script (halo.bat)
      - ✓ Optionally create desktop shortcut
 
-5. **Start HALOpy**
+4. **Start HALOpy**
    - Double-click `halo.bat` in your installation directory
    - Or use the desktop shortcut
    - Your browser will open to http://localhost:5000
 
-4## What Gets Installed
+4. **What Gets Installed**
 
 - **Python 3.11.7** (if not already installed)
+  - **32-bit systems**: Python 3.11.7 (32-bit) - compatible with older hardware
+  - **64-bit systems**: Python 3.11.7 (64-bit)
 - **HALOpy** in your chosen directory (default: `%USERPROFILE%\HALOpy`)
-- **Python dependencies** (Flask, pandas, etc.)
+- **Python dependencies**: Flask, NumPy, Matplotlib (3 packages total)
 - **halo.bat** start script
 - **data/** directory for your observation files
+
+**Note**: HALOpy has minimal dependencies and works on both 32-bit and 64-bit Windows.
 
 ### Manual Installation (Alternative)
 

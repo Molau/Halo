@@ -5,7 +5,6 @@ Licensed under MIT License - see LICENSE file for details.
 """
 
 from flask import Flask, render_template, session, request, g
-from flask_cors import CORS
 from pathlib import Path
 from halo.services.settings import Settings
 
@@ -84,9 +83,6 @@ def create_app(config=None):
             app.config['OBSERVERS'] = list(reader)
     else:
         pass
-    
-    # Enable CORS for API endpoints
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
     
     # Initialize i18n
     from halo.resources import get_current_language, get_i18n

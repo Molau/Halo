@@ -116,9 +116,13 @@ Deploy to:
 
 ## Requirements
 
-- Python 3.10+
-- Flask web framework
+- Python 3.10+ (both 32-bit and 64-bit supported)
+- Flask web framework (3.0+)
+- NumPy (1.24+)
+- Matplotlib (3.7+)
 - Modern web browser
+
+**Note**: HALOpy has minimal dependencies (3 packages) for easy installation on any system.
 
 ## License
 

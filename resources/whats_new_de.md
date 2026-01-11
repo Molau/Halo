@@ -1,6 +1,6 @@
 **Ergänzungen und Änderungen in der Version 3.0**
 
-Version 3.0 ist eine komplette Neuprogrammierung des ursprünglichen DOS-Programms und keine bloße Übersetzung in eine andere Programmiersprache. Es wurde sich dabei so eng wie möglich das bewährte Original-Programm gehalten und Änderungen nur dort vorgenommen, wo sie technisch zwingend erforderlich waren (z.B. DOS-abhängige Funktionen durch Web-Äquivalente ersetzen).
+Version 3.0 ist eine komplette Neuprogrammierung des ursprünglichen DOS-Programms. Es wurde sich dabei so eng wie möglich das bewährte Original-Programm gehalten und Änderungen nur dort vorgenommen, wo sie technisch zwingend erforderlich waren (z.B. DOS-abhängige Funktionen durch Web-Äquivalente ersetzen).
 
 - Web-Umstieg und OS-Unabhängigkeit: Web-Applikation, Bedienung komplett im Browser; nicht mehr an DOS gebunden (kein DOS-Drucker-/Farbschalter).
 - Datenhandling: Nur noch CSV – sowohl Beobachtungsdateien (*.NAL) als auch Beobachterdatei (HALO.BEO) sind auf CSV umgestellt; kein Anpassen/Transfer/Export alter HAL-Dateien im Programm, kein Verzeichniswechsel nötig.

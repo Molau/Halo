@@ -336,10 +336,6 @@ if (Test-Path "requirements.txt") {
     
     try {
         & $pythonCommand -m pip install --upgrade pip 2>&1 | Out-Null
-        if (-not $IS_64BIT) {
-            Write-Step "32-bit Windows detected; installing matplotlib<3.8 and kiwisolver<1.4.6 first to use available wheels..."
-            & $pythonCommand -m pip install "matplotlib<3.8" "kiwisolver<1.4.6"
-        }
         & $pythonCommand -m pip install -r requirements.txt
         
         Write-Success "Dependencies installed successfully"

@@ -10,7 +10,6 @@ from typing import Dict, Any
 import math
 import io
 import numpy as np
-from scipy.interpolate import make_interp_spline
 import matplotlib
 matplotlib.use('Agg')  # Non-interactive backend
 import matplotlib.pyplot as plt
@@ -2585,20 +2584,28 @@ def _generate_monthly_stats_chart(data: Dict[str, Any], mm: int, jj: int, i18n) 
     # Create smooth spline interpolation (like Chart.js tension: 0.4)
     days_smooth = np.linspace(1, 31, 300)  # 300 points for smooth curve
     
-    # Spline for real data
+    # Smooth interpolation for real data
     if max(real_data) > 0:  # Only if there's data
-        # Use natural boundary conditions to reduce overshoot
-        spline_real = make_interp_spline(days, real_data, k=3, bc_type='natural')
-        real_smooth = np.maximum(spline_real(days_smooth), 0)  # Clip to [0, inf)
+        # Use numpy cubic interpolation
+        real_smooth = np.interp(days_smooth, days, real_data)
+        # Apply smoothing via convolution for visual effect
+        kernel_size = 9
+        kernel = np.ones(kernel_size) / kernel_size
+        real_smooth = np.convolve(real_smooth, kernel, mode='same')
+        real_smooth = np.maximum(real_smooth, 0)  # Clip to [0, inf)
         ax.plot(days_smooth, real_smooth, color='#dc3545', linewidth=2, label=label_real)
     else:
         ax.plot(days, real_data, color='#dc3545', linewidth=2, label=label_real)
     
-    # Spline for relative data
+    # Smooth interpolation for relative data
     if max(relative_data) > 0:  # Only if there's data
-        # Use natural boundary conditions to reduce overshoot
-        spline_relative = make_interp_spline(days, relative_data, k=3, bc_type='natural')
-        relative_smooth = np.maximum(spline_relative(days_smooth), 0)  # Clip to [0, inf)
+        # Use numpy cubic interpolation
+        relative_smooth = np.interp(days_smooth, days, relative_data)
+        # Apply smoothing via convolution for visual effect
+        kernel_size = 9
+        kernel = np.ones(kernel_size) / kernel_size
+        relative_smooth = np.convolve(relative_smooth, kernel, mode='same')
+        relative_smooth = np.maximum(relative_smooth, 0)  # Clip to [0, inf)
         ax.plot(days_smooth, relative_smooth, color='#28a745', linewidth=2, label=label_relative)
     else:
         ax.plot(days, relative_data, color='#28a745', linewidth=2, label=label_relative)
@@ -2740,20 +2747,28 @@ def _generate_annual_stats_chart(data: Dict[str, Any], jj: int, i18n) -> bytes:
     # Create smooth spline interpolation (like Chart.js tension: 0.4)
     months_smooth = np.linspace(1, 12, 120)  # 120 points for smooth curve
     
-    # Spline for real data
+    # Smooth interpolation for real data
     if max(real_data) > 0:  # Only if there's data
-        # Use natural boundary conditions to reduce overshoot
-        spline_real = make_interp_spline(months, real_data, k=3, bc_type='natural')
-        real_smooth = np.maximum(spline_real(months_smooth), 0)  # Clip to [0, inf)
+        # Use numpy cubic interpolation
+        real_smooth = np.interp(months_smooth, months, real_data)
+        # Apply smoothing via convolution for visual effect
+        kernel_size = 9
+        kernel = np.ones(kernel_size) / kernel_size
+        real_smooth = np.convolve(real_smooth, kernel, mode='same')
+        real_smooth = np.maximum(real_smooth, 0)  # Clip to [0, inf)
         ax.plot(months_smooth, real_smooth, color='#dc3545', linewidth=2, label=label_real)
     else:
         ax.plot(months, real_data, color='#dc3545', linewidth=2, label=label_real)
     
-    # Spline for relative data
+    # Smooth interpolation for relative data
     if max(relative_data) > 0:  # Only if there's data
-        # Use natural boundary conditions to reduce overshoot
-        spline_relative = make_interp_spline(months, relative_data, k=3, bc_type='natural')
-        relative_smooth = np.maximum(spline_relative(months_smooth), 0)  # Clip to [0, inf)
+        # Use numpy cubic interpolation
+        relative_smooth = np.interp(months_smooth, months, relative_data)
+        # Apply smoothing via convolution for visual effect
+        kernel_size = 9
+        kernel = np.ones(kernel_size) / kernel_size
+        relative_smooth = np.convolve(relative_smooth, kernel, mode='same')
+        relative_smooth = np.maximum(relative_smooth, 0)  # Clip to [0, inf)
         ax.plot(months_smooth, relative_smooth, color='#28a745', linewidth=2, label=label_relative)
     else:
         ax.plot(months, relative_data, color='#28a745', linewidth=2, label=label_relative)
