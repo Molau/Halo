@@ -1,5 +1,3 @@
-#Requires -RunAsAdministrator
-
 <#
 .SYNOPSIS
     HALOpy Installation Script
@@ -8,6 +6,13 @@
     Downloads Python, installs dependencies, and sets up HALOpy.
 .NOTES
     Run as Administrator for Python installation
+    
+.USAGE
+    To run this unsigned script:
+    Right-click install.ps1 -> "Run with PowerShell"
+    OR
+    Open PowerShell as Administrator and run:
+    Set-ExecutionPolicy Bypass -Scope Process -Force; .\install.ps1
 #>
 
 # Configuration
@@ -50,9 +55,35 @@ function Write-Error-Message {
     Write-ColorOutput Red "✗ $Message"
 }
 
+# Check for Administrator privileges
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
 # Start installation
 Clear-Host
 Write-Header "HALOpy Installation"
+
+if (-not $isAdmin) {
+    Write-ColorOutput Yellow "═══════════════════════════════════════════════════════════"
+    Write-ColorOutput Yellow "  WARNING: Not running as Administrator!"
+    Write-ColorOutput Yellow "═══════════════════════════════════════════════════════════"
+    Write-Host ""
+    Write-ColorOutput Yellow "This script is not running with Administrator privileges."
+    Write-Host "Python installation may fail without admin rights."
+    Write-Host ""
+    Write-Host "Options:"
+    Write-Host "  1. Close this window and run PowerShell as Administrator"
+    Write-Host "  2. Continue anyway (Python installation will be skipped if it fails)"
+    Write-Host ""
+    $continue = Read-Host "Do you want to continue anyway? (Y/N) [N]"
+    if ($continue -ne "Y" -and $continue -ne "y") {
+        Write-Host "Installation cancelled. Please run as Administrator."
+        Write-Host "Press any key to exit..."
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        exit 1
+    }
+    Write-Host ""
+}
+
 Write-Host "This script will install HALOpy on your computer."
 Write-Host ""
 

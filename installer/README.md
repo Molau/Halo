@@ -9,22 +9,31 @@ HALOpy includes an automated installer similar to the original HALO program.
 1. **Download the installer script**
    - Download `install.ps1` from https://github.com/Molau/Halo/tree/main/installer
    - Or download from the [Releases](https://github.com/Molau/Halo/releases) page
+   - Save to any location (e.g., Downloads folder)
 
 2. **Run the installer**
-   - Right-click on `install.ps1`
-   - Select "Run with PowerShell"
-   - If prompted, allow the script to run as Administrator
+   - **Option A (Recommended)**: Right-click on `install.ps1` → Select "Run with PowerShell"
+   - **Option B**: Open PowerShell as Administrator and run:
+     ```powershell
+     Set-ExecutionPolicy Bypass -Scope Process -Force
+     .\install.ps1
+     ```
 
-3. **Follow the prompts**
+3. **Handle security warnings**
+   - If you see "execution of scripts is disabled", use Option B above
+   - The script is unsigned, so Windows may show a security warning
+   - This is normal for PowerShell scripts from the internet
+
+4. **Follow the prompts**
    - The installer will automatically:
-     - ✓ Check for Python (install if needed)
+     - ✓ Check for Python (install if needed - requires admin rights)
      - ✓ Download HALOpy files from GitHub
      - ✓ Install all dependencies
      - ✓ Create start script (halo.bat)
      - ✓ Optionally create desktop shortcut
 
-4. **Start HALOpy**
-   - Double-click `halo.bat` in `C:\ASTRO\HALOpy`
+5. **Start HALOpy**
+   - Double-click `halo.bat` in your installation directory
    - Or use the desktop shortcut
    - Your browser will open to http://localhost:5000
 
@@ -62,10 +71,25 @@ If you prefer manual installation or the automated installer doesn't work:
 
 ### Troubleshooting
 
-**"Scripts are disabled on this system"**
-- Open PowerShell as Administrator
-- Run: `Set-ExecutionPolicy RemoteSigned`
-- Try the installer again
+**"Scripts are disabled on this system"** or **"Execution policy error"**
+- This is normal for unsigned PowerShell scripts
+- Solution 1: Right-click install.ps1 → "Run with PowerShell" (Windows will prompt you)
+- Solution 2: Open PowerShell as Administrator and run:
+  ```powershell
+  Set-ExecutionPolicy Bypass -Scope Process -Force
+  .\install.ps1
+  ```
+- This bypasses the policy only for this session
+
+**"This script is not digitally signed"**
+- HALOpy installer is not digitally signed (requires expensive certificate)
+- Safe to run - you can review the script source code before running
+- Use the bypass command above to run anyway
+
+**Not running as Administrator**
+- The script will warn you if not running as admin
+- Python installation requires admin rights
+- You can continue anyway if Python is already installed
 
 **Python not found after installation**
 - Close and reopen PowerShell/Command Prompt
