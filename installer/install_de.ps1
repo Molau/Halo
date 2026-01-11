@@ -359,7 +359,7 @@ else {
 # Schritt 4: Start-Skript erstellen
 Write-Header "Schritt 4: Start-Skript erstellen"
 
-$batContent = @"
+$batContent = @'
 @echo off
 REM HALOpy Launcher (Deutsch)
 REM Erstellt durch install_de.ps1
@@ -376,7 +376,7 @@ if errorlevel 1 (
     echo.
     pause
 )
-"@
+'@
 
 $batPath = Join-Path $INSTALL_DIR "halo.bat"
 Set-Content -Path $batPath -Value $batContent -Encoding ASCII
