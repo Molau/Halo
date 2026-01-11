@@ -259,40 +259,65 @@ if (-not (Test-Path $INSTALL_DIR)) {
     New-Item -ItemType Directory -Path $INSTALL_DIR -Force | Out-Null
 }
 
-$tempZip = "$env:TEMP\halopy.zip"
+$zipPath = Join-Path $INSTALL_DIR "halopy.zip"
 $extractPath = "$env:TEMP\halopy-extract"
 
-Write-Step "Downloading HALOpy from GitHub..."
+Write-Step "Checking HALOpy package from GitHub..."
 Write-Host "  Repository: https://github.com/Molau/Halo"
 
+$remoteSize = $null
 try {
-    Invoke-WebRequest -Uri $HALOPY_REPO_URL -OutFile $tempZip -UseBasicParsing
-    Write-Success "HALOpy downloaded"
-    
-    Write-Step "Extracting files..."
-    
-    # Remove old extraction folder if exists
-    if (Test-Path $extractPath) {
-        Remove-Item $extractPath -Recurse -Force
+    $headResponse = Invoke-WebRequest -Uri $HALOPY_REPO_URL -Method Head -UseBasicParsing
+    $contentLength = $headResponse.Headers['Content-Length']
+    if ($contentLength) {
+        [void][int64]::TryParse($contentLength, [ref]$remoteSize)
+        Write-Step "Remote ZIP size: $remoteSize bytes"
     }
-    
-    Expand-Archive -Path $tempZip -DestinationPath $extractPath -Force
-    
-    # Move files from extracted folder to install directory
-    $extractedFolder = Get-ChildItem -Path $extractPath -Directory | Select-Object -First 1
-    Copy-Item -Path "$($extractedFolder.FullName)\*" -Destination $INSTALL_DIR -Recurse -Force
-    
-    Write-Success "Files extracted to $INSTALL_DIR"
-    
-    # Clean up
-    Remove-Item $tempZip -Force
+} catch {
+    Write-ColorOutput Yellow "Could not read remote ZIP size; will download fresh"
+}
+
+$useCachedZip = $false
+if (Test-Path $zipPath) {
+    $localSize = (Get-Item $zipPath).Length
+    if ($remoteSize -and $localSize -eq $remoteSize) {
+        Write-Success "Using cached HALOpy download (size matches remote)"
+        $useCachedZip = $true
+    }
+    else {
+        Write-Step "Cached ZIP differs or size unknown; downloading fresh..."
+    }
+}
+
+if (-not $useCachedZip) {
+    try {
+        Invoke-WebRequest -Uri $HALOPY_REPO_URL -OutFile $zipPath -UseBasicParsing
+        Write-Success "HALOpy downloaded"
+    }
+    catch {
+        Write-Error-Message "Failed to download HALOpy: $_"
+        Write-Host "You can manually download from: https://github.com/Molau/Halo/archive/refs/heads/main.zip"
+        exit 1
+    }
+}
+
+Write-Step "Extracting files..."
+
+# Remove old extraction folder if exists
+if (Test-Path $extractPath) {
     Remove-Item $extractPath -Recurse -Force
 }
-catch {
-    Write-Error-Message "Failed to download HALOpy: $_"
-    Write-Host "You can manually download from: https://github.com/Molau/Halo/archive/refs/heads/main.zip"
-    exit 1
-}
+
+Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+
+# Move files from extracted folder to install directory
+$extractedFolder = Get-ChildItem -Path $extractPath -Directory | Select-Object -First 1
+Copy-Item -Path "$($extractedFolder.FullName)\*" -Destination $INSTALL_DIR -Recurse -Force
+
+Write-Success "Files extracted to $INSTALL_DIR"
+
+# Clean up extraction folder (keep ZIP for future runs)
+Remove-Item $extractPath -Recurse -Force
 
 # Step 3: Install Dependencies
 Write-Header "Step 3: Installing Python Dependencies"
@@ -312,8 +337,8 @@ if (Test-Path "requirements.txt") {
     try {
         & $pythonCommand -m pip install --upgrade pip 2>&1 | Out-Null
         if (-not $IS_64BIT) {
-            Write-Step "32-bit Windows detected; installing matplotlib<3.8 first to use available wheels..."
-            & $pythonCommand -m pip install "matplotlib<3.8"
+            Write-Step "32-bit Windows detected; installing matplotlib<3.8 and kiwisolver<1.4.6 first to use available wheels..."
+            & $pythonCommand -m pip install "matplotlib<3.8" "kiwisolver<1.4.6"
         }
         & $pythonCommand -m pip install -r requirements.txt
         
