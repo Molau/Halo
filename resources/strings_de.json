@@ -2,9 +2,7 @@
   "app": {
     "title": "Haloerfassungsprogramm",
     "version": "3.0",
-    "version_date": "2026-01-10",
-    "description_line1": "Dieses Programm dient der Erfassung, Auswertung",
-    "description_line2": "       und Ausgabe von Halobeobachtungen     "
+    "version_date": "2026-01-10"
   },
   "copyright_years": "1992-2026",
   "action": {
@@ -100,11 +98,20 @@
     "delete_site_question": "Möchten Sie diesen Ortseintrag löschen?",
     "delete_site_info": "Eintrag {0} von {1}",
     "error_no_sites": "Keine Ortseinträge gefunden",
-    "error_last_site": "Der letzte Ortseintrag kann nicht gelöscht werden"
+    "error_last_site": "Der letzte Ortseintrag kann nicht gelöscht werden",
+    "loading_error": "Fehler beim Laden der Beobachter."
   },
   "menus": {
-    "main": "  • Datei Beobachtungen Beobachter Auswertung Ausgabe Einstellungen Hilfe Ende",
+    "main": {
+      "file": "Datei",
+      "observations": "Beobachtungen",
+      "analysis": "Auswertung",
+      "output": "Ausgabe",
+      "settings": "Einstellungen",
+      "help": "Hilfe"
+    },
     "file": {
+      "title": "Datei",
       "new_file": "neue Datei",
       "adjust": "Anpassen",
       "load": "Laden",
@@ -112,30 +119,11 @@
       "merge": "Verbinden",
       "save": "Speichern",
       "save_as": "Speichern unter",
-      "transfer": "Übertragen",
-      "change_dir": "Verzeichniswechsel"
-    },
-    "transfer": {
-      "send": "Senden",
-      "receive": "Empfangen"
+      "transfer": "Übertragen"
     },
     "analysis": {
       "create": "Erstellen",
-      "load": "Laden",
-      "two_params_alert": "Zwei Parameter"
-    },
-    "analysis_type": {
-      "numeric": "numerisch",
-      "graphic": "grafisch"
-    },
-    "graphic_type": {
-      "line": "Liniengrafik",
-      "bar": "Balkengrafik"
-    },
-    "output_target": {
-      "screen": "Bildschirm",
-      "printer": "Drucker",
-      "file": "Datei"
+      "load": "Laden"
     },
     "settings": {
       "fixed_observer": "fester Beobachter",
@@ -198,8 +186,6 @@
       }
     },
     "exit": {
-      "exit": "Verlassen",
-      "return": "Rückkehr",
       "confirm_exit": "Anwendung beenden?"
     }
   },

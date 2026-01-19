@@ -2,8 +2,7 @@
   "app": {
     "title": "HALO Analysis Program",
     "version": "3.0",
-    "version_date": "2026-01-10",
-    "description": "Atmospheric halo observation database"
+    "version_date": "2026-01-10"
   },
   "copyright_years": "1992-2026",
   "action": {
@@ -17,8 +16,8 @@
     "print": "Print",
     "save": "Save",
     "chart": "Chart",
-    "bar_chart": "Bar Chart",
     "line_chart": "Line Chart"
+    "bar_chart": "Bar Chart",
   },
   "welcome": {
     "title": "Welcome to HALO Analysis Program",
@@ -45,6 +44,12 @@
     "table_secondary_site": "Secondary Site",
     "table_coordinates": "Coordinates",
     "table_region": "GG",
+    "pagination_first": "First Page",
+    "pagination_prev": "Previous Page",
+    "pagination_next": "Next Page",
+    "pagination_last": "Last Page",
+    "yes": "Yes",
+    "no": "No"
     "row_range_prefix": "Row",
     "row_range_of": "of",
     "records_label": "Records",
@@ -77,6 +82,7 @@
     "error_invalid_kk": "Invalid observer code (01-99)",
     "error_missing_required": "Please fill in all required fields!",
     "success_added": "Observer successfully added",
+    "success_deleted": "Successfully deleted",
     "modify_title": "Edit Observer",
     "select_observer": "Select Observer",
     "select_observer_prompt": "Select an observer:",
@@ -87,13 +93,13 @@
     "modify_delete_site": "Delete Site Entry",
     "edit_base_title": "Edit Basic Information",
     "success_updated": "Observer successfully updated",
-    "pagination_first": "First Page",
-    "pagination_prev": "Previous Page",
-    "pagination_next": "Next Page",
-    "pagination_last": "Last Page",
-    "loading_error": "Error loading observers.",
-    "yes": "Yes",
-    "no": "No"
+    "since_label": "Since",
+    "modify_edit_question": "Do you want to edit this site entry?",
+    "delete_site_question": "Do you want to delete this site entry?",
+    "delete_site_info": "Entry {0} of {1}",
+    "error_no_sites": "No site entries found",
+    "error_last_site": "The last site entry cannot be deleted",
+    "loading_error": "Error loading observers."
   },
   "menus": {
     "main": {
@@ -113,22 +119,13 @@
       "merge": "Merge",
       "save": "Save",
       "save_as": "Save as",
-      "transfer": "Transfer",
-      "open": "Open...",
-      "print": "Print",
-      "exit": "Exit"
+      "transfer": "Transfer"
     },
     "analysis": {
-      "title": "Analysis",
       "create": "Create",
-      "load": "Load",
-      "statistics": "Statistics",
-      "frequency": "Frequency Analysis",
-      "correlation": "Correlation Analysis",
-      "charts": "Charts"
+      "load": "Load"
     },
     "settings": {
-      "title": "Settings",
       "fixed_observer": "Fixed Observer",
       "fixed_observer_title": "Fixed Observer",
       "fixed_observer_question": "Select a preferred observer:",
@@ -140,6 +137,10 @@
       "startup_file_question": "Shall a file be loaded automatically on program start?",
       "startup_file_changed": "Startup file has been saved.",
       "startup_file_disabled": "Automatic loading has been disabled.",
+      "data_dir": "Data Path",
+      "observers": "Observer Management",
+      "language": "Language",
+      "preferences": "Preferences",
       "date_default": "Date",
       "date_setting_title": "Date Default Setting",
       "date_setting_question": "Which date default would you like to use?",
@@ -150,10 +151,6 @@
       "date_select_month": "Select month and year:",
       "date_setting_changed": "Date default setting changed.",
       "input_type": "Input Format",
-      "data_dir": "Data Path",
-      "observers": "Observer Management",
-      "language": "Language",
-      "preferences": "Preferences",
       "input_mode_title": "Input Mode Setting",
       "input_mode_question": "Which input mode do you prefer?",
       "input_mode_menu": "Menu inputs",
@@ -170,11 +167,8 @@
       "data_dir_changed": "Data directory has been changed."
     },
     "help": {
-      "title": "Help",
       "version": "Version",
       "whats_new": "What's New",
-      "contents": "Contents",
-      "about": "About",
       "help_text": "HALO Help\\n\\nThis application is a web version of the HALO program for managing halo observations.",
       "version_dialog": {
         "title": "HALO 3.0",
@@ -193,6 +187,41 @@
     },
     "exit": {
       "confirm_exit": "Exit application?"
+    }
+  },
+  "analysis_dialog": {
+    "dimension_title": "Analysis",
+    "dimension_question": "Which type of analysis would you like to perform?",
+    "one_dimensional": "Analysis with one parameter",
+    "two_dimensional": "Analysis with two parameters",
+    "first_param_prompt": "Please enter the first parameter!",
+    "second_param_prompt": "Please enter the second parameter!",
+    "param_prompt": "Please enter the desired parameter!",
+    "limit_question": "Shall this parameter be limited?",
+    "limit_yes": "Yes, limit parameter",
+    "limit_no": "No, full range",
+    "from_label": "From:",
+    "to_label": "To:",
+    "param_names": {
+      "JJ": "Year",
+      "MM": "Month",
+      "TT": "Day",
+      "ZZ": "Time",
+      "SH": "Solar altitude",
+      "KK": "Observer",
+      "GG": "Observing area",
+      "O": "Object",
+      "f": "Weather front",
+      "C": "Cirrus type",
+      "d": "Formation location",
+      "EE": "Halo type",
+      "DD": "Duration",
+      "H": "Brightness",
+      "F": "Halo colour",
+      "V": "Completeness",
+      "zz": "Time until precipitation",
+      "HO_HU": "Pillar height",
+      "SE": "Segments"
     }
   },
   "observations": {
@@ -249,54 +278,6 @@
       "remarks_long": "remarks           : ",
       "segments": "segments          : "
     }
-  },
-  "analysis_dialog": {
-    "dimension_title": "Analysis",
-    "dimension_question": "Which type of analysis would you like to perform?",
-    "one_dimensional": "Analysis with one parameter",
-    "two_dimensional": "Analysis with two parameters",
-    "first_param_prompt": "Please enter the first parameter!",
-    "second_param_prompt": "Please enter the second parameter!",
-    "param_prompt": "Please enter the desired parameter!",
-    "limit_question": "Shall this parameter be limited?",
-    "limit_yes": "Yes, limit parameter",
-    "limit_no": "No, full range",
-    "from_label": "From:",
-    "to_label": "To:",
-    "param_names": {
-      "JJ": "Year",
-      "MM": "Month",
-      "TT": "Day",
-      "ZZ": "Time",
-      "SH": "Solar altitude",
-      "KK": "Observer",
-      "GG": "Observing area",
-      "O": "Object",
-      "f": "Weather front",
-      "C": "Cirrus type",
-      "d": "Formation location",
-      "EE": "Halo type",
-      "DD": "Duration",
-      "H": "Brightness",
-      "F": "Halo colour",
-      "V": "Completeness",
-      "zz": "Time until precipitation",
-      "HO_HU": "Pillar height",
-      "SE": "Segments"
-    }
-  },
-  "analysis_results": {
-    "title": "Analysis",
-    "restriction": "Restriction",
-    "restrictions": "Restrictions",
-    "count": "Count",
-    "observations": "Observations",
-    "observation_s": "Observation(s)",
-    "observation_abbr": "Obs.",
-    "total": "Total",
-    "title_one_param": "Analysis with one parameter",
-    "title_two_params": "Analysis with two parameters",
-    "and": "and"
   },
   "output": {
     "monthly_report": "Monthly Report",
@@ -414,13 +395,6 @@
     "error_loading": "Error loading",
     "unknown_error": "Unknown error"
   },
-  "update": {
-    "title": "New Version Available",
-    "message": "A new version is available: {latest} from {latestDate} (current: {current} from {currentDate}). Do you want to download and install it?",
-    "downloading": "Downloading update...",
-    "success": "Update successful. Reloading application...",
-    "error": "Update failed: {error}"
-  },
   "errors": {
     "unknown_observer": "Unknown observer code"
   },
@@ -475,8 +449,8 @@
     "observers": "Observers",
     "analysis": "Analysis",
     "output": "Output",
-    "help": "Help",
     "settings": "Settings",
+    "help": "Help",
     "exit": "Exit"
   },
   "object_types": {
@@ -492,15 +466,14 @@
     "2": "other location"
   },
   "cirrus_density": {
-    "-1": "unknown",
-    "0": "0%",
-    "1": "up to 12.5%",
-    "2": "12.5-25%",
-    "3": "25-37.5%",
-    "4": "37.5-50%",
-    "5": "50-62.5%",
-    "6": "62.5-75%",
-    "7": "over 75%"
+    "-1": "not observed",
+    "0": "very thin to thin cirrus",
+    "1": "normal cirrus",
+    "2": "thick to very thick cirrus",
+    "4": "white frost",
+    "5": "snow cover",
+    "6": "ice nebulae/polar snow",
+    "7": "virga"
   },
   "cloud_cover": {
     "-1": "unknown",
@@ -585,7 +558,6 @@
   },
   "completeness": {
     "-1": "no information",
-    "0": "",
     "1": "incomplete",
     "2": "complete"
   },
@@ -762,6 +734,19 @@
     "max_60_chars": "max 60 chars",
     "not_applicable": "not applicable"
   },
+  "analysis_results": {
+    "title": "Analysis",
+    "restriction": "Restriction",
+    "restrictions": "Restrictions",
+    "count": "Count",
+    "observations": "Observations",
+    "observation_s": "Observation(s)",
+    "observation_abbr": "Obs.",
+    "total": "Total",
+    "title_one_param": "Analysis with one parameter",
+    "title_two_params": "Analysis with two parameters",
+    "and": "and"
+  },
   "ui": {
     "filter_dialog": {
       "title": "Filter Criteria",
@@ -818,4 +803,3 @@
     }
   }
 }
-
