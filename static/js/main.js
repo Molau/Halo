@@ -7156,9 +7156,9 @@ async function showEditSiteConfirmDialog(observer, sites, currentIndex) {
     const site = sites[currentIndex];
     
     // Generate month options
-    const monthOptions = Object.keys(months).map(m => {
+    const monthOptions = Object.keys(i18nStrings.months).map(m => {
         const monthNum = parseInt(m);
-        const monthName = months[m];
+        const monthName = i18nStrings.months[m];
         return `<option value="${monthNum}">${monthName}</option>`;
     }).join('');
     
@@ -7169,8 +7169,8 @@ async function showEditSiteConfirmDialog(observer, sites, currentIndex) {
     }).join('');
     
     // Generate region options
-    const regionOptions = Object.keys(regions).map(regionNum => {
-        const regionName = regions[regionNum];
+    const regionOptions = Object.keys(i18nStrings.geographic_regions).map(regionNum => {
+        const regionName = i18nStrings.geographic_regions[regionNum];
         if (regionName) {
             return `<option value="${regionNum.padStart(2, '0')}">${regionNum.padStart(2, '0')} - ${regionName}</option>`;
         }
@@ -7729,9 +7729,9 @@ async function showDeleteSiteConfirmDialog(observer, sites, currentIndex = 0) {
     const site = sites[currentIndex];
     
     // Generate month options
-    const monthOptions = Object.keys(months).map(m => {
+    const monthOptions = Object.keys(i18nStrings.months).map(m => {
         const monthNum = parseInt(m);
-        const monthName = months[m];
+        const monthName = i18nStrings.months[m];
         return `<option value="${monthNum}">${monthName}</option>`;
     }).join('');
     
@@ -7742,8 +7742,8 @@ async function showDeleteSiteConfirmDialog(observer, sites, currentIndex = 0) {
     }).join('');
     
     // Generate region options
-    const regionOptions = Object.keys(regions).map(regionNum => {
-        const regionName = regions[regionNum];
+    const regionOptions = Object.keys(i18nStrings.geographic_regions).map(regionNum => {
+        const regionName = i18nStrings.geographic_regions[regionNum];
         if (regionName) {
             return `<option value="${regionNum.padStart(2, '0')}">${regionNum.padStart(2, '0')} - ${regionName}</option>`;
         }
