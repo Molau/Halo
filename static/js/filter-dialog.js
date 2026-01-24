@@ -98,30 +98,30 @@ class FilterDialog {
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title" id="filterDialogLabel">Auswahlkriterien</h5>
+                            <h5 class="modal-title" id="filterDialogLabel">${i18nStrings.filter_dialog.title}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
                             <div class="filter-form">
                                 <div class="filter-group mb-3">
-                                    <label class="form-label">1. Wonach soll die Beobachtung ausgewählt werden?</label>
+                                    <label class="form-label">1. ${i18nStrings.filter_dialog.question_1}</label>
                                     <select id="filter-criterion-1" class="form-select">
-                                        <option value="none">kein Kriterium</option>
-                                        <option value="observer">Beobachter</option>
-                                        <option value="region">Beobachtungsgebiet</option>
+                                        <option value="none">${i18nStrings.filter_dialog.no_criterion}</option>
+                                        <option value="observer">${i18nStrings.common.observer}</option>
+                                        <option value="region">${i18nStrings.filter_dialog.region}</option>
                                     </select>
                                     <div id="filter-1-input" style="display:none;" class="mt-2">
                                         <select id="filter-1-select" class="form-select"></select>
                                     </div>
                                 </div>
                                 <div class="filter-group">
-                                    <label class="form-label">2. Geben Sie ein weiteres Auswahlkriterium ein</label>
+                                    <label class="form-label">2. ${i18nStrings.filter_dialog.question_2}</label>
                                     <select id="filter-criterion-2" class="form-select">
-                                        <option value="none">kein Kriterium</option>
-                                        <option value="date">Datum</option>
-                                        <option value="month">Monat</option>
-                                        <option value="year">Jahr</option>
-                                        <option value="halo-type">Haloart</option>
+                                        <option value="none">${i18nStrings.filter_dialog.no_criterion}</option>
+                                        <option value="date">${i18nStrings.common.day}</option>
+                                        <option value="month">${i18nStrings.common.month}</option>
+                                        <option value="year">${i18nStrings.common.year}</option>
+                                        <option value="halo-type">${i18nStrings.filter_dialog.halo_type}</option>
                                     </select>
                                     <div id="filter-2-input" style="display:none;" class="mt-2">
                                         <input type="text" id="filter-2-value" class="form-control" placeholder="">
@@ -188,25 +188,25 @@ class FilterDialog {
     updateText() {
         if (!i18nStrings) return;
                 
-        document.getElementById('filterDialogLabel').textContent = filter_dialog.title;
+        document.getElementById('filterDialogLabel').textContent = i18nStrings.filter_dialog.title;
         
         const filter1Label = document.querySelector('#filter-criterion-1').previousElementSibling;
-        if (filter1Label) filter1Label.textContent = '1. ' + filter_dialog.question_1;
+        if (filter1Label) filter1Label.textContent = '1. ' + i18nStrings.filter_dialog.question_1;
         
         const filter1Select = document.getElementById('filter-criterion-1');
-        filter1Select.options[0].textContent = filter_dialog.no_criterion;
-        filter1Select.options[1].textContent = common.observer;
-        filter1Select.options[2].textContent = filter_dialog.region;
+        filter1Select.options[0].textContent = i18nStrings.filter_dialog.no_criterion;
+        filter1Select.options[1].textContent = i18nStrings.common.observer;
+        filter1Select.options[2].textContent = i18nStrings.filter_dialog.region;
         
         const filter2Label = document.querySelector('#filter-criterion-2').previousElementSibling;
-        if (filter2Label) filter2Label.textContent = '2. ' + filter_dialog.question_2;
+        if (filter2Label) filter2Label.textContent = '2. ' + i18nStrings.filter_dialog.question_2;
         
         const filter2Select = document.getElementById('filter-criterion-2');
-        filter2Select.options[0].textContent = filter_dialog.no_criterion;
-        filter2Select.options[1].textContent = filter_dialog.date;
-        filter2Select.options[2].textContent = filter_dialog.month;
-        filter2Select.options[3].textContent = filter_dialog.year;
-        filter2Select.options[4].textContent = filter_dialog.halo_type;
+        filter2Select.options[0].textContent = i18nStrings.filter_dialog.no_criterion;
+        filter2Select.options[1].textContent = i18nStrings.common.day;
+        filter2Select.options[2].textContent = i18nStrings.common.month;
+        filter2Select.options[3].textContent = i18nStrings.common.year;
+        filter2Select.options[4].textContent = i18nStrings.filter_dialog.halo_type;
         
         document.getElementById('btn-cancel-filter').textContent = i18nStrings.common.cancel;
         const applyBtn = document.getElementById('btn-apply-filter');

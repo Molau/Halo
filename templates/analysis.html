@@ -3,11 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    {% if lang() == 'de' %}
-    <title>Auswertung - HALO</title>
-    {% else %}
-    <title>Analysis - HALO</title>
-    {% endif %}
+    <title>{{ g.i18n.get('menu_titles.auswertung') }} - HALO</title>
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='fonts/bootstrap-icons/bootstrap-icons.css') }}" rel="stylesheet">
@@ -130,32 +126,16 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">
-                        {% if lang() == 'de' %}
-                        Auswertung - Parameter auswählen
-                        {% else %}
-                        Analysis - Select Parameters
-                        {% endif %}
-                    </h5>
+                    <h5 class="modal-title">{{ g.i18n.get('analysis_dialog.title') }}</h5>
                 </div>
                 <div class="modal-body">
                     <!-- First Parameter (mandatory) -->
                     <div class="mb-3">
                         <label for="param1-select" class="form-label">
-                            {% if lang() == 'de' %}
-                            Erster Parameter <span class="text-danger">*</span>
-                            {% else %}
-                            First Parameter <span class="text-danger">*</span>
-                            {% endif %}
+                            {{ g.i18n.get('analysis_dialog.first_param') }} <span class="text-danger">*</span>
                         </label>
                         <select class="form-select" id="param1-select" required autofocus>
-                            <option value="">
-                                {% if lang() == 'de' %}
-                                -- Bitte wählen --
-                                {% else %}
-                                -- Please select --
-                                {% endif %}
-                            </option>
+                            <option value="">{{ g.i18n.get('analysis_dialog.please_select') }}</option>
                             <!-- Will be populated by JavaScript -->
                         </select>
                     </div>
@@ -164,25 +144,13 @@
                     <div id="param1-range" style="display: none;">
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label for="param1-from" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Von:
-                                    {% else %}
-                                    From:
-                                    {% endif %}
-                                </label>
+                                <label for="param1-from" class="form-label">{{ g.i18n.get('common.from') }}</label>
                                 <select class="form-select" id="param1-from">
                                     <!-- Will be populated by JavaScript -->
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label for="param1-to" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Bis:
-                                    {% else %}
-                                    To:
-                                    {% endif %}
-                                </label>
+                                <label for="param1-to" class="form-label">{{ g.i18n.get('common.to') }}</label>
                                 <select class="form-select" id="param1-to">
                                     <!-- Will be populated by JavaScript -->
                                 </select>
@@ -195,25 +163,13 @@
                         <!-- Day range restrictions (first and last day) on top -->
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label for="param1-day-from" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Von Tag:
-                                    {% else %}
-                                    From Day:
-                                    {% endif %}
-                                </label>
+                                <label for="param1-day-from" class="form-label">{{ g.i18n.get('analysis_dialog.from_day') }}</label>
                                 <select class="form-select" id="param1-day-from">
                                     <!-- Will be populated by JavaScript -->
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label for="param1-day-to" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Bis Tag:
-                                    {% else %}
-                                    To Day:
-                                    {% endif %}
-                                </label>
+                                <label for="param1-day-to" class="form-label">{{ g.i18n.get('analysis_dialog.to_day') }}</label>
                                 <select class="form-select" id="param1-day-to">
                                     <!-- Will be populated by JavaScript -->
                                 </select>
@@ -223,25 +179,13 @@
                         <!-- Month and Year as extra input below -->
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label for="param1-month" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Monat:
-                                    {% else %}
-                                    Month:
-                                    {% endif %}
-                                </label>
+                                <label for="param1-month" class="form-label">{{ g.i18n.get('common.month') }}:</label>
                                 <select class="form-select" id="param1-month">
                                     <!-- Will be populated by JavaScript -->
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label for="param1-year" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Jahr:
-                                    {% else %}
-                                    Year:
-                                    {% endif %}
-                                </label>
+                                <label for="param1-year" class="form-label">{{ g.i18n.get('common.year') }}:</label>
                                 <select class="form-select" id="param1-year">
                                     <!-- Will be populated by JavaScript -->
                                 </select>
@@ -252,30 +196,18 @@
                     <!-- Special fields for time parameter (ZZ) -->
                     <div id="param1-time-fields" style="display: none;">
                         <label class="form-label">
-                            {% if lang() == 'de' %}
-                            Zeitzone:
-                            {% else %}
-                            Time Zone:
-                            {% endif %}
+                            {{ g.i18n.get('analysis_dialog.timezone') }}
                         </label>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="param1-timezone" id="param1-tz-cet" value="cet" checked>
                             <label class="form-check-label" for="param1-tz-cet">
-                                {% if lang() == 'de' %}
-                                CET
-                                {% else %}
-                                CET
-                                {% endif %}
+                                {{ g.i18n.get('analysis_dialog.cet') }}
                             </label>
                         </div>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="param1-timezone" id="param1-tz-local" value="local">
                             <label class="form-check-label" for="param1-tz-local">
-                                {% if lang() == 'de' %}
-                                Ortszeit
-                                {% else %}
-                                Local Time
-                                {% endif %}
+                                {{ g.i18n.get('analysis_dialog.local_time') }}
                             </label>
                         </div>
                     </div>
@@ -286,11 +218,7 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label for="param1-sh-from" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Von:
-                                    {% else %}
-                                    From:
-                                    {% endif %}
+                                    {{ g.i18n.get('common.from') }}:
                                 </label>
                                 <select class="form-select" id="param1-sh-from">
                                     <!-- Will be populated by JavaScript -->
@@ -298,11 +226,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="param1-sh-to" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Bis:
-                                    {% else %}
-                                    To:
-                                    {% endif %}
+                                    {{ g.i18n.get('common.to') }}:
                                 </label>
                                 <select class="form-select" id="param1-sh-to">
                                     <!-- Will be populated by JavaScript -->
@@ -311,40 +235,24 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">
-                                {% if lang() == 'de' %}
-                                Welche Sonnenhöhe im Beobachtungsinterval soll verwendet werden:
-                                {% else %}
-                                Which solar altitude in the observation interval should be used:
-                                {% endif %}
+                                {{ g.i18n.get('analysis_dialog.sh_interval_question') }}
                             </label>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="param1-sh-time" id="param1-sh-min" value="min">
                                 <label class="form-check-label" for="param1-sh-min">
-                                    {% if lang() == 'de' %}
-                                    minimale
-                                    {% else %}
-                                    minimum
-                                    {% endif %}
+                                    {{ g.i18n.get('common.minimum') }}
                                 </label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="param1-sh-time" id="param1-sh-mean" value="mean" checked>
                                 <label class="form-check-label" for="param1-sh-mean">
-                                    {% if lang() == 'de' %}
-                                    mittlere
-                                    {% else %}
-                                    mean
-                                    {% endif %}
+                                    {{ g.i18n.get('common.mean') }}
                                 </label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="param1-sh-time" id="param1-sh-max" value="max">
                                 <label class="form-check-label" for="param1-sh-max">
-                                    {% if lang() == 'de' %}
-                                    maximale
-                                    {% else %}
-                                    maximum
-                                    {% endif %}
+                                    {{ g.i18n.get('common.maximum') }}
                                 </label>
                             </div>
                         </div>
@@ -356,11 +264,7 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label for="param1-ee-from" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Von:
-                                    {% else %}
-                                    From:
-                                    {% endif %}
+                                    {{ g.i18n.get('common.from') }}:
                                 </label>
                                 <select class="form-select" id="param1-ee-from">
                                     <!-- Will be populated by JavaScript -->
@@ -368,11 +272,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="param1-ee-to" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Bis:
-                                    {% else %}
-                                    To:
-                                    {% endif %}
+                                    {{ g.i18n.get('common.to') }}:
                                 </label>
                                 <select class="form-select" id="param1-ee-to">
                                     <!-- Will be populated by JavaScript -->
@@ -381,29 +281,19 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">
-                                {% if lang() == 'de' %}
-                                Zusammengesetzte Haloarten:
-                                {% else %}
-                                Complete halo elements:
-                                {% endif %}
+                                {{ g.i18n.get('analysis_dialog.composite_halo_types') }}
                             </label>
                             <br>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="param1-ee-split" id="param1-ee-split" value="split" checked>
                                 <label class="form-check-label" for="param1-ee-split">
-                                    {% if lang() == 'de' %}
-                                    Aufteilen
-                                    {% else %}
-                                    Split
-                                    {% endif %}
+                                    {{ g.i18n.get('common.split') }}
                                 </label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="param1-ee-split" id="param1-ee-nosplit" value="nosplit">
                                 <label class="form-check-label" for="param1-ee-nosplit">
-                                    {% if lang() == 'de' %}
-                                    Nicht aufteilen
-                                    {% else %}
+                                    {{ g.i18n.get('common.dont_split') }}
                                     Don't split
                                     {% endif %}
                                 </label>
@@ -417,11 +307,7 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label for="param1-c-from" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Von:
-                                    {% else %}
-                                    From:
-                                    {% endif %}
+                                    {{ g.i18n.get('common.from') }}:
                                 </label>
                                 <select class="form-select" id="param1-c-from">
                                     <!-- Will be populated by JavaScript -->
@@ -429,11 +315,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="param1-c-to" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Bis:
-                                    {% else %}
-                                    To:
-                                    {% endif %}
+                                    {{ g.i18n.get('common.to') }}:
                                 </label>
                                 <select class="form-select" id="param1-c-to">
                                     <!-- Will be populated by JavaScript -->
@@ -442,31 +324,19 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">
-                                {% if lang() == 'de' %}
-                                Zusammengesetzte Cirrusarten:
-                                {% else %}
-                                Complete cirrus types:
-                                {% endif %}
+                                {{ g.i18n.get('analysis_dialog.composite_cirrus_types') }}
                             </label>
                             <br>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="param1-c-split" id="param1-c-split" value="split" checked>
                                 <label class="form-check-label" for="param1-c-split">
-                                    {% if lang() == 'de' %}
-                                    Aufteilen
-                                    {% else %}
-                                    Split
-                                    {% endif %}
+                                    {{ g.i18n.get('common.split') }}
                                 </label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="param1-c-split" id="param1-c-nosplit" value="nosplit">
                                 <label class="form-check-label" for="param1-c-nosplit">
-                                    {% if lang() == 'de' %}
-                                    Nicht aufteilen
-                                    {% else %}
-                                    Don't split
-                                    {% endif %}
+                                    {{ g.i18n.get('common.dont_split') }}
                                 </label>
                             </div>
                         </div>
@@ -478,11 +348,7 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label for="param1-dd-from" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Von:
-                                    {% else %}
-                                    From:
-                                    {% endif %}
+                                    {{ g.i18n.get('common.from') }}:
                                 </label>
                                 <select class="form-select" id="param1-dd-from">
                                     <!-- Will be populated by JavaScript -->
@@ -490,11 +356,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="param1-dd-to" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Bis:
-                                    {% else %}
-                                    To:
-                                    {% endif %}
+                                    {{ g.i18n.get('common.to') }}:
                                 </label>
                                 <select class="form-select" id="param1-dd-to">
                                     <!-- Will be populated by JavaScript -->
@@ -503,30 +365,18 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">
-                                {% if lang() == 'de' %}
-                                Beobachtungen ohne Anfang oder Ende (kA, kE):
-                                {% else %}
-                                Observations without begin or end (kA, kE):
-                                {% endif %}
+                                {{ g.i18n.get('analysis_dialog.incomplete_observations') }}
                             </label><br>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="param1-dd-incomplete" id="param1-dd-incomplete" value="include" checked>
                                 <label class="form-check-label" for="param1-dd-incomplete">
-                                    {% if lang() == 'de' %}
-                                    Verwenden
-                                    {% else %}
-                                    Use
-                                    {% endif %}
+                                    {{ g.i18n.get('common.use') }}
                                 </label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="param1-dd-incomplete" id="param1-dd-complete" value="exclude">
                                 <label class="form-check-label" for="param1-dd-complete">
-                                    {% if lang() == 'de' %}
-                                    Nicht verwenden
-                                    {% else %}
-                                    Don't use
-                                    {% endif %}
+                                    {{ g.i18n.get('common.dont_use') }}
                                 </label>
                             </div>
                         </div>
@@ -535,19 +385,11 @@
                     <!-- Second Parameter (optional) -->
                     <div class="mb-3">
                         <label for="param2-select" class="form-label">
-                            {% if lang() == 'de' %}
-                            Zweiter Parameter
-                            {% else %}
-                            Second Parameter
-                            {% endif %}
+                            {{ g.i18n.get('analysis_dialog.second_param') }}
                         </label>
                         <select class="form-select" id="param2-select">
                             <option value="">
-                                {% if lang() == 'de' %}
-                                -- Kein zweiter Parameter --
-                                {% else %}
-                                -- No second parameter --
-                                {% endif %}
+                                {{ g.i18n.get('analysis_dialog.no_second_param') }}
                             </option>
                             <!-- Will be populated by JavaScript -->
                         </select>
@@ -558,11 +400,7 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label for="param2-from" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Von:
-                                    {% else %}
-                                    From:
-                                    {% endif %}
+                                    {{ g.i18n.get('common.from') }}:
                                 </label>
                                 <select class="form-select" id="param2-from">
                                     <!-- Will be populated by JavaScript -->
@@ -570,11 +408,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="param2-to" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Bis:
-                                    {% else %}
-                                    To:
-                                    {% endif %}
+                                    {{ g.i18n.get('common.to') }}:
                                 </label>
                                 <select class="form-select" id="param2-to">
                                     <!-- Will be populated by JavaScript -->
@@ -588,25 +422,13 @@
                         <!-- Day range restrictions (first and last day) on top -->
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label for="param2-day-from" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Von Tag:
-                                    {% else %}
-                                    From Day:
-                                    {% endif %}
-                                </label>
+                                <label for="param2-day-from" class="form-label">{{ g.i18n.get('analysis_dialog.from_day') }}</label>
                                 <select class="form-select" id="param2-day-from">
                                     <!-- Will be populated by JavaScript -->
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label for="param2-day-to" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Bis Tag:
-                                    {% else %}
-                                    To Day:
-                                    {% endif %}
-                                </label>
+                                <label for="param2-day-to" class="form-label">{{ g.i18n.get('analysis_dialog.to_day') }}</label>
                                 <select class="form-select" id="param2-day-to">
                                     <!-- Will be populated by JavaScript -->
                                 </select>
@@ -616,25 +438,13 @@
                         <!-- Month and Year as extra input below -->
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label for="param2-month" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Monat:
-                                    {% else %}
-                                    Month:
-                                    {% endif %}
-                                </label>
+                                <label for="param2-month" class="form-label">{{ g.i18n.get('common.month') }}:</label>
                                 <select class="form-select" id="param2-month">
                                     <!-- Will be populated by JavaScript -->
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label for="param2-year" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Jahr:
-                                    {% else %}
-                                    Year:
-                                    {% endif %}
-                                </label>
+                                <label for="param2-year" class="form-label">{{ g.i18n.get('common.year') }}:</label>
                                 <select class="form-select" id="param2-year">
                                     <!-- Will be populated by JavaScript -->
                                 </select>
@@ -645,30 +455,18 @@
                     <!-- Special fields for time parameter (ZZ) in param2 -->
                     <div id="param2-time-fields" style="display: none;">
                         <label class="form-label">
-                            {% if lang() == 'de' %}
-                            Zeitzone:
-                            {% else %}
-                            Time Zone:
-                            {% endif %}
+                            {{ g.i18n.get('analysis_dialog.timezone') }}
                         </label>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="param2-timezone" id="param2-tz-cet" value="cet" checked>
                             <label class="form-check-label" for="param2-tz-cet">
-                                {% if lang() == 'de' %}
-                                CET
-                                {% else %}
-                                CET
-                                {% endif %}
+                                {{ g.i18n.get('analysis_dialog.cet') }}
                             </label>
                         </div>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="param2-timezone" id="param2-tz-local" value="local">
                             <label class="form-check-label" for="param2-tz-local">
-                                {% if lang() == 'de' %}
-                                Ortszeit
-                                {% else %}
-                                Local Time
-                                {% endif %}
+                                {{ g.i18n.get('analysis_dialog.local_time') }}
                             </label>
                         </div>
                     </div>
@@ -679,11 +477,7 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label for="param2-sh-from" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Von:
-                                    {% else %}
-                                    From:
-                                    {% endif %}
+                                    {{ g.i18n.get('common.from') }}:
                                 </label>
                                 <select class="form-select" id="param2-sh-from">
                                     <!-- Will be populated by JavaScript -->
@@ -691,11 +485,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="param2-sh-to" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Bis:
-                                    {% else %}
-                                    To:
-                                    {% endif %}
+                                    {{ g.i18n.get('common.to') }}:
                                 </label>
                                 <select class="form-select" id="param2-sh-to">
                                     <!-- Will be populated by JavaScript -->
@@ -704,40 +494,24 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">
-                                {% if lang() == 'de' %}
-                                Welche Sonnenhöhe im Beobachtungsinterval soll verwendet werden:
-                                {% else %}
-                                Which solar altitude in the observation interval should be used:
-                                {% endif %}
+                                {{ g.i18n.get('analysis_dialog.sh_interval_question') }}
                             </label>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="param2-sh-time" id="param2-sh-min" value="min">
                                 <label class="form-check-label" for="param2-sh-min">
-                                    {% if lang() == 'de' %}
-                                    minimale
-                                    {% else %}
-                                    minimum
-                                    {% endif %}
+                                    {{ g.i18n.get('common.minimum') }}
                                 </label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="param2-sh-time" id="param2-sh-mean" value="mean" checked>
                                 <label class="form-check-label" for="param2-sh-mean">
-                                    {% if lang() == 'de' %}
-                                    mittlere
-                                    {% else %}
-                                    mean
-                                    {% endif %}
+                                    {{ g.i18n.get('common.mean') }}
                                 </label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="param2-sh-time" id="param2-sh-max" value="max">
                                 <label class="form-check-label" for="param2-sh-max">
-                                    {% if lang() == 'de' %}
-                                    maximale
-                                    {% else %}
-                                    maximum
-                                    {% endif %}
+                                    {{ g.i18n.get('common.maximum') }}
                                 </label>
                             </div>
                         </div>
@@ -749,11 +523,7 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label for="param2-ee-from" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Von:
-                                    {% else %}
-                                    From:
-                                    {% endif %}
+                                    {{ g.i18n.get('common.from') }}:
                                 </label>
                                 <select class="form-select" id="param2-ee-from">
                                     <!-- Will be populated by JavaScript -->
@@ -761,11 +531,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="param2-ee-to" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Bis:
-                                    {% else %}
-                                    To:
-                                    {% endif %}
+                                    {{ g.i18n.get('common.to') }}:
                                 </label>
                                 <select class="form-select" id="param2-ee-to">
                                     <!-- Will be populated by JavaScript -->
@@ -774,31 +540,19 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">
-                                {% if lang() == 'de' %}
-                                Zusammengesetzte Haloarten:
-                                {% else %}
-                                Complete halo elements:
-                                {% endif %}
+                                {{ g.i18n.get('analysis_dialog.composite_halo_types') }}
                             </label>
                             <br>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="param2-ee-split" id="param2-ee-split" value="split" checked>
                                 <label class="form-check-label" for="param2-ee-split">
-                                    {% if lang() == 'de' %}
-                                    Aufteilen
-                                    {% else %}
-                                    Split
-                                    {% endif %}
+                                    {{ g.i18n.get('common.split') }}
                                 </label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="param2-ee-split" id="param2-ee-nosplit" value="nosplit">
                                 <label class="form-check-label" for="param2-ee-nosplit">
-                                    {% if lang() == 'de' %}
-                                    Nicht aufteilen
-                                    {% else %}
-                                    Don't split
-                                    {% endif %}
+                                    {{ g.i18n.get('common.dont_split') }}
                                 </label>
                             </div>
                         </div>
@@ -810,11 +564,7 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label for="param2-c-from" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Von:
-                                    {% else %}
-                                    From:
-                                    {% endif %}
+                                    {{ g.i18n.get('common.from') }}:
                                 </label>
                                 <select class="form-select" id="param2-c-from">
                                     <!-- Will be populated by JavaScript -->
@@ -822,11 +572,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="param2-c-to" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Bis:
-                                    {% else %}
-                                    To:
-                                    {% endif %}
+                                    {{ g.i18n.get('common.to') }}:
                                 </label>
                                 <select class="form-select" id="param2-c-to">
                                     <!-- Will be populated by JavaScript -->
@@ -835,31 +581,19 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">
-                                {% if lang() == 'de' %}
-                                Zusammengesetzte Cirrusarten:
-                                {% else %}
-                                Complete cirrus types:
-                                {% endif %}
+                                {{ g.i18n.get('analysis_dialog.composite_cirrus_types') }}
                             </label>
                             <br>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="param2-c-split" id="param2-c-split" value="split" checked>
                                 <label class="form-check-label" for="param2-c-split">
-                                    {% if lang() == 'de' %}
-                                    Aufteilen
-                                    {% else %}
-                                    Split
-                                    {% endif %}
+                                    {{ g.i18n.get('common.split') }}
                                 </label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="param2-c-split" id="param2-c-nosplit" value="nosplit">
                                 <label class="form-check-label" for="param2-c-nosplit">
-                                    {% if lang() == 'de' %}
-                                    Nicht aufteilen
-                                    {% else %}
-                                    Don't split
-                                    {% endif %}
+                                    {{ g.i18n.get('common.dont_split') }}
                                 </label>
                             </div>
                         </div>
@@ -871,11 +605,7 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label for="param2-dd-from" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Von:
-                                    {% else %}
-                                    From:
-                                    {% endif %}
+                                    {{ g.i18n.get('common.from') }}:
                                 </label>
                                 <select class="form-select" id="param2-dd-from">
                                     <!-- Will be populated by JavaScript -->
@@ -883,11 +613,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="param2-dd-to" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Bis:
-                                    {% else %}
-                                    To:
-                                    {% endif %}
+                                    {{ g.i18n.get('common.to') }}:
                                 </label>
                                 <select class="form-select" id="param2-dd-to">
                                     <!-- Will be populated by JavaScript -->
@@ -896,30 +622,18 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">
-                                {% if lang() == 'de' %}
-                                Beobachtungen ohne Anfang oder Ende (kA, kE):
-                                {% else %}
-                                Observations without begin or end (kA, kE):
-                                {% endif %}
+                                {{ g.i18n.get('analysis_dialog.incomplete_observations') }}
                             </label><br>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="param2-dd-incomplete" id="param2-dd-incomplete" value="include" checked>
                                 <label class="form-check-label" for="param2-dd-incomplete">
-                                    {% if lang() == 'de' %}
-                                    Verwenden
-                                    {% else %}
-                                    Use
-                                    {% endif %}
+                                    {{ g.i18n.get('common.use') }}
                                 </label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="param2-dd-incomplete" id="param2-dd-complete" value="exclude">
                                 <label class="form-check-label" for="param2-dd-complete">
-                                    {% if lang() == 'de' %}
-                                    Nicht verwenden
-                                    {% else %}
-                                    Don't use
-                                    {% endif %}
+                                    {{ g.i18n.get('common.dont_use') }}
                                 </label>
                             </div>
                         </div>
@@ -929,40 +643,24 @@
                     <div id="percentage-mode-fields" style="display: none;">
                         <div class="mb-3">
                             <label class="form-label">
-                                {% if lang() == 'de' %}
-                                Prozentangaben bezogen auf:
-                                {% else %}
-                                Percentages relative to:
-                                {% endif %}
+                                {{ g.i18n.get('analysis_dialog.percentage_mode_label') }}
                             </label><br>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="percentage-mode" id="percentage-global" value="global" checked>
                                 <label class="form-check-label" for="percentage-global">
-                                    {% if lang() == 'de' %}
-                                    Gesamtanzahl (global)
-                                    {% else %}
-                                    Total count (global)
-                                    {% endif %}
+                                    {{ g.i18n.get('analysis_dialog.percentage_global') }}
                                 </label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="percentage-mode" id="percentage-param1" value="param1">
                                 <label class="form-check-label" for="percentage-param1">
-                                    {% if lang() == 'de' %}
-                                    Erster Parameter (Zeilensumme = 100%)
-                                    {% else %}
-                                    First parameter (row sum = 100%)
-                                    {% endif %}
+                                    {{ g.i18n.get('analysis_dialog.percentage_param1') }}
                                 </label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="percentage-mode" id="percentage-param2" value="param2">
                                 <label class="form-check-label" for="percentage-param2">
-                                    {% if lang() == 'de' %}
-                                    Zweiter Parameter (Spaltensumme = 100%)
-                                    {% else %}
-                                    Second parameter (column sum = 100%)
-                                    {% endif %}
+                                    {{ g.i18n.get('analysis_dialog.percentage_param2') }}
                                 </label>
                             </div>
                         </div>
@@ -971,19 +669,11 @@
                     <!-- First Filter Parameter (optional) -->
                     <div class="mb-3">
                         <label for="filter1-select" class="form-label">
-                            {% if lang() == 'de' %}
-                            Erster Filterparameter
-                            {% else %}
-                            First Filter Parameter
-                            {% endif %}
+                            {{ g.i18n.get('analysis_dialog.first_filter_param') }}
                         </label>
                         <select class="form-select" id="filter1-select">
                             <option value="">
-                                {% if lang() == 'de' %}
-                                -- Kein Filter --
-                                {% else %}
-                                -- No filter --
-                                {% endif %}
+                                {{ g.i18n.get('analysis_dialog.no_filter') }}
                             </option>
                             <!-- Will be populated by JavaScript -->
                         </select>
@@ -993,11 +683,7 @@
                     <div id="filter1-value" style="display: none;">
                         <div class="mb-3">
                             <label for="filter1-value-select" class="form-label">
-                                {% if lang() == 'de' %}
-                                Filterwert:
-                                {% else %}
-                                Filter value:
-                                {% endif %}
+                                {{ g.i18n.get('analysis_dialog.filter_value') }}
                             </label>
                             <select class="form-select" id="filter1-value-select">
                                 <!-- Will be populated by JavaScript -->
@@ -1010,11 +696,7 @@
                         <div class="row mb-3">
                             <div class="col-md-4">
                                 <label for="filter1-month-select" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Monat:
-                                    {% else %}
-                                    Month:
-                                    {% endif %}
+                                    {{ g.i18n.get('common.month') }}:
                                 </label>
                                 <select class="form-select" id="filter1-month-select">
                                     <!-- Will be populated by JavaScript -->
@@ -1022,11 +704,7 @@
                             </div>
                             <div class="col-md-4">
                                 <label for="filter1-year-select" class="form-label">
-                                    {% if lang() == 'de' %}
-                                    Jahr:
-                                    {% else %}
-                                    Year:
-                                    {% endif %}
+                                    {{ g.i18n.get('common.year') }}:
                                 </label>
                                 <select class="form-select" id="filter1-year-select">
                                     <!-- Will be populated by JavaScript -->
@@ -1039,24 +717,18 @@
                     <div id="filter1-time-fields" style="display: none;">
                         <div class="mb-3">
                             <label class="form-label">
-                                {% if lang() == 'de' %}
-                                Zeitangabe:
-                                {% else %}
-                                Time specification:
-                                {% endif %}
+                                {{ g.i18n.get('analysis_dialog.timezone') }}
                             </label><br>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="filter1-timezone" id="filter1-tz-cet" value="CET" checked>
-                                <label class="form-check-label" for="filter1-tz-cet">CET</label>
+                                <label class="form-check-label" for="filter1-tz-cet">
+                                    {{ g.i18n.get('analysis_dialog.cet') }}
+                                </label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="filter1-timezone" id="filter1-tz-local" value="local">
                                 <label class="form-check-label" for="filter1-tz-local">
-                                    {% if lang() == 'de' %}
-                                    Ortszeit
-                                    {% else %}
-                                    Local time
-                                    {% endif %}
+                                    {{ g.i18n.get('analysis_dialog.local_time') }}
                                 </label>
                             </div>
                         </div>
@@ -1066,40 +738,24 @@
                     <div id="filter1-sh-fields" style="display: none;">
                         <div class="mb-3">
                             <label class="form-label">
-                                {% if lang() == 'de' %}
-                                Sonnenhöhe:
-                                {% else %}
-                                Solar altitude:
-                                {% endif %}
+                                {{ g.i18n.get('common.solar_altitude') }}
                             </label><br>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="filter1-sh-time" id="filter1-sh-min" value="min">
                                 <label class="form-check-label" for="filter1-sh-min">
-                                    {% if lang() == 'de' %}
-                                    minimale
-                                    {% else %}
-                                    minimum
-                                    {% endif %}
+                                    {{ g.i18n.get('common.minimum') }}
                                 </label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="filter1-sh-time" id="filter1-sh-mean" value="mean" checked>
                                 <label class="form-check-label" for="filter1-sh-mean">
-                                    {% if lang() == 'de' %}
-                                    mittlere
-                                    {% else %}
-                                    mean
-                                    {% endif %}
+                                    {{ g.i18n.get('common.mean') }}
                                 </label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="filter1-sh-time" id="filter1-sh-max" value="max">
                                 <label class="form-check-label" for="filter1-sh-max">
-                                    {% if lang() == 'de' %}
-                                    maximale
-                                    {% else %}
-                                    maximum
-                                    {% endif %}
+                                    {{ g.i18n.get('common.maximum') }}
                                 </label>
                             </div>
                         </div>
@@ -1109,30 +765,18 @@
                     <div id="filter1-ee-fields" style="display: none;">
                         <div class="mb-3">
                             <label class="form-label">
-                                {% if lang() == 'de' %}
-                                Halo-Arten:
-                                {% else %}
-                                Halo types:
-                                {% endif %}
+                                {{ g.i18n.get('analysis_dialog.halo_types_label') }}
                             </label><br>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="filter1-ee-split" id="filter1-ee-split-yes" value="split" checked>
                                 <label class="form-check-label" for="filter1-ee-split-yes">
-                                    {% if lang() == 'de' %}
-                                    Aufteilen
-                                    {% else %}
-                                    Split
-                                    {% endif %}
+                                    {{ g.i18n.get('common.split') }}
                                 </label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="filter1-ee-split" id="filter1-ee-split-no" value="no-split">
                                 <label class="form-check-label" for="filter1-ee-split-no">
-                                    {% if lang() == 'de' %}
-                                    Nicht aufteilen
-                                    {% else %}
-                                    Don't split
-                                    {% endif %}
+                                    {{ g.i18n.get('common.dont_split') }}
                                 </label>
                             </div>
                         </div>
@@ -1142,30 +786,18 @@
                     <div id="filter1-c-fields" style="display: none;">
                         <div class="mb-3">
                             <label class="form-label">
-                                {% if lang() == 'de' %}
-                                Cirrus-Arten:
-                                {% else %}
-                                Cirrus types:
-                                {% endif %}
+                                {{ g.i18n.get('analysis_dialog.cirrus_types_label') }}
                             </label><br>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="filter1-c-split" id="filter1-c-split-yes" value="split" checked>
                                 <label class="form-check-label" for="filter1-c-split-yes">
-                                    {% if lang() == 'de' %}
-                                    Aufteilen
-                                    {% else %}
-                                    Split
-                                    {% endif %}
+                                    {{ g.i18n.get('common.split') }}
                                 </label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="filter1-c-split" id="filter1-c-split-no" value="no-split">
                                 <label class="form-check-label" for="filter1-c-split-no">
-                                    {% if lang() == 'de' %}
-                                    Nicht aufteilen
-                                    {% else %}
-                                    Don't split
-                                    {% endif %}
+                                    {{ g.i18n.get('common.dont_split') }}
                                 </label>
                             </div>
                         </div>
@@ -1175,30 +807,18 @@
                     <div id="filter1-dd-fields" style="display: none;">
                         <div class="mb-3">
                             <label class="form-label">
-                                {% if lang() == 'de' %}
-                                Beobachtungen ohne Anfang (kA) oder Ende (kE):
-                                {% else %}
-                                Observations without begin (kA) or end (kE):
-                                {% endif %}
+                                {{ g.i18n.get('analysis_dialog.incomplete_observations') }}
                             </label><br>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="filter1-dd-incomplete" id="filter1-dd-include" value="include" checked>
                                 <label class="form-check-label" for="filter1-dd-include">
-                                    {% if lang() == 'de' %}
-                                    Verwenden
-                                    {% else %}
-                                    Use
-                                    {% endif %}
+                                    {{ g.i18n.get('common.use') }}
                                 </label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="filter1-dd-incomplete" id="filter1-dd-exclude" value="exclude">
                                 <label class="form-check-label" for="filter1-dd-exclude">
-                                    {% if lang() == 'de' %}
-                                    Nicht verwenden
-                                    {% else %}
-                                    Don't use
-                                    {% endif %}
+                                    {{ g.i18n.get('common.dont_use') }}
                                 </label>
                             </div>
                         </div>
@@ -1207,19 +827,11 @@
                     <!-- Second Filter Parameter (optional) -->
                     <div class="mb-3">
                         <label for="filter2-select" class="form-label">
-                            {% if lang() == 'de' %}
-                            Zweiter Filterparameter
-                            {% else %}
-                            Second Filter Parameter
-                            {% endif %}
+                            {{ g.i18n.get('analysis_dialog.second_filter_param') }}
                         </label>
                         <select class="form-select" id="filter2-select">
                             <option value="">
-                                {% if lang() == 'de' %}
-                                -- Kein Filter --
-                                {% else %}
-                                -- No filter --
-                                {% endif %}
+                                {{ g.i18n.get('analysis_dialog.no_filter') }}
                             </option>
                             <!-- Will be populated by JavaScript -->
                         </select>
@@ -1229,11 +841,7 @@
                     <div id="filter2-value" style="display: none;">
                     <div class="mb-3">
                         <label for="filter2-value-select" class="form-label">
-                            {% if lang() == 'de' %}
-                            Filterwert:
-                            {% else %}
-                            Filter value:
-                            {% endif %}
+                            {{ g.i18n.get('analysis_dialog.filter_value') }}
                         </label>
                         <select class="form-select" id="filter2-value-select">
                             <!-- Will be populated by JavaScript -->
@@ -1246,11 +854,7 @@
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <label for="filter2-month-select" class="form-label">
-                                {% if lang() == 'de' %}
-                                Monat:
-                                {% else %}
-                                Month:
-                                {% endif %}
+                                {{ g.i18n.get('common.month') }}:
                             </label>
                             <select class="form-select" id="filter2-month-select">
                                 <!-- Will be populated by JavaScript -->
@@ -1258,11 +862,7 @@
                         </div>
                         <div class="col-md-4">
                             <label for="filter2-year-select" class="form-label">
-                                {% if lang() == 'de' %}
-                                Jahr:
-                                {% else %}
-                                Year:
-                                {% endif %}
+                                {{ g.i18n.get('common.year') }}:
                             </label>
                             <select class="form-select" id="filter2-year-select">
                                 <!-- Will be populated by JavaScript -->
@@ -1275,24 +875,16 @@
                 <div id="filter2-time-fields" style="display: none;">
                     <div class="mb-3">
                         <label class="form-label">
-                            {% if lang() == 'de' %}
-                            Zeitangabe:
-                            {% else %}
-                            Time specification:
-                            {% endif %}
+                            {{ g.i18n.get('analysis_dialog.timezone') }}
                         </label><br>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="filter2-timezone" id="filter2-tz-cet" value="CET" checked>
-                            <label class="form-check-label" for="filter2-tz-cet">CET</label>
+                            <label class="form-check-label" for="filter2-tz-cet">{{ g.i18n.get('analysis_dialog.cet') }}</label>
                         </div>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="filter2-timezone" id="filter2-tz-local" value="local">
                             <label class="form-check-label" for="filter2-tz-local">
-                                {% if lang() == 'de' %}
-                                Ortszeit
-                                {% else %}
-                                Local time
-                                {% endif %}
+                                {{ g.i18n.get('analysis_dialog.local_time') }}
                             </label>
                         </div>
                     </div>
@@ -1302,40 +894,24 @@
                 <div id="filter2-sh-fields" style="display: none;">
                     <div class="mb-3">
                         <label class="form-label">
-                            {% if lang() == 'de' %}
-                            Sonnenhöhe:
-                            {% else %}
-                            Solar altitude:
-                            {% endif %}
+                            {{ g.i18n.get('common.solar_altitude') }}
                         </label><br>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="filter2-sh-time" id="filter2-sh-min" value="min">
                             <label class="form-check-label" for="filter2-sh-min">
-                                {% if lang() == 'de' %}
-                                minimale
-                                {% else %}
-                                minimum
-                                {% endif %}
+                                {{ g.i18n.get('common.minimum') }}
                             </label>
                         </div>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="filter2-sh-time" id="filter2-sh-mean" value="mean" checked>
                             <label class="form-check-label" for="filter2-sh-mean">
-                                {% if lang() == 'de' %}
-                                mittlere
-                                {% else %}
-                                mean
-                                {% endif %}
+                                {{ g.i18n.get('common.mean') }}
                             </label>
                         </div>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="filter2-sh-time" id="filter2-sh-max" value="max">
                             <label class="form-check-label" for="filter2-sh-max">
-                                {% if lang() == 'de' %}
-                                maximale
-                                {% else %}
-                                maximum
-                                {% endif %}
+                                {{ g.i18n.get('common.maximum') }}
                             </label>
                         </div>
                     </div>
@@ -1345,30 +921,18 @@
                 <div id="filter2-ee-fields" style="display: none;">
                     <div class="mb-3">
                         <label class="form-label">
-                            {% if lang() == 'de' %}
-                            Halo-Arten:
-                            {% else %}
-                            Halo types:
-                            {% endif %}
+                            {{ g.i18n.get('analysis_dialog.halo_types_label') }}
                         </label><br>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="filter2-ee-split" id="filter2-ee-split-yes" value="split" checked>
                             <label class="form-check-label" for="filter2-ee-split-yes">
-                                {% if lang() == 'de' %}
-                                Aufteilen
-                                {% else %}
-                                Split
-                                {% endif %}
+                                {{ g.i18n.get('common.split') }}
                             </label>
                         </div>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="filter2-ee-split" id="filter2-ee-split-no" value="no-split">
                             <label class="form-check-label" for="filter2-ee-split-no">
-                                {% if lang() == 'de' %}
-                                Nicht aufteilen
-                                {% else %}
-                                Don't split
-                                {% endif %}
+                                {{ g.i18n.get('common.dont_split') }}
                             </label>
                         </div>
                     </div>
@@ -1378,30 +942,18 @@
                 <div id="filter2-c-fields" style="display: none;">
                     <div class="mb-3">
                         <label class="form-label">
-                            {% if lang() == 'de' %}
-                            Cirrus-Arten:
-                            {% else %}
-                            Cirrus types:
-                            {% endif %}
+                            {{ g.i18n.get('analysis_dialog.cirrus_types_label') }}
                         </label><br>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="filter2-c-split" id="filter2-c-split-yes" value="split" checked>
                             <label class="form-check-label" for="filter2-c-split-yes">
-                                {% if lang() == 'de' %}
-                                Aufteilen
-                                {% else %}
-                                Split
-                                {% endif %}
+                                {{ g.i18n.get('common.split') }}
                             </label>
                         </div>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="filter2-c-split" id="filter2-c-split-no" value="no-split">
                             <label class="form-check-label" for="filter2-c-split-no">
-                                {% if lang() == 'de' %}
-                                Nicht aufteilen
-                                {% else %}
-                                Don't split
-                                {% endif %}
+                                {{ g.i18n.get('common.dont_split') }}
                             </label>
                         </div>
                     </div>
@@ -1411,30 +963,18 @@
                 <div id="filter2-dd-fields" style="display: none;">
                     <div class="mb-3">
                         <label class="form-label">
-                            {% if lang() == 'de' %}
-                            Beobachtungen ohne Anfang (kA) oder Ende (kE):
-                            {% else %}
-                            Observations without begin (kA) or end (kE):
-                            {% endif %}
+                            {{ g.i18n.get('analysis_dialog.incomplete_observations') }}
                         </label><br>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="filter2-dd-incomplete" id="filter2-dd-include" value="include" checked>
                             <label class="form-check-label" for="filter2-dd-include">
-                                {% if lang() == 'de' %}
-                                Verwenden
-                                {% else %}
-                                Use
-                                {% endif %}
+                                {{ g.i18n.get('common.use') }}
                             </label>
                         </div>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="filter2-dd-incomplete" id="filter2-dd-exclude" value="exclude">
                             <label class="form-check-label" for="filter2-dd-exclude">
-                                {% if lang() == 'de' %}
-                                Nicht verwenden
-                                {% else %}
-                                Don't use
-                                {% endif %}
+                                {{ g.i18n.get('common.dont_use') }}
                             </label>
                         </div>
                     </div>
@@ -1442,18 +982,10 @@
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-cancel-param">
-                        {% if lang() == 'de' %}
-                        Abbrechen
-                        {% else %}
-                        Cancel
-                        {% endif %}
+                        {{ g.i18n.get('common.cancel') }}
                     </button>
                     <button type="button" class="btn btn-primary btn-sm px-3" id="btn-apply-param">
-                        {% if lang() == 'de' %}
-                        OK
-                        {% else %}
-                        OK
-                        {% endif %}
+                        {{ g.i18n.get('common.ok') }}
                     </button>
                 </div>
             </div>

@@ -212,7 +212,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (filterCriterion2Select && filterCriterion2Select.options.length >= 5) {
             const opt = filterCriterion2Select.options;
             opt[0].textContent = i18nStrings.filter_dialog.no_criterion;
-            opt[1].textContent = i18nStrings.common.date;
+            opt[1].textContent = i18nStrings.common.day;
+            opt[2].textContent = i18nStrings.common.month;
+            opt[3].textContent = i18nStrings.common.year;
+            opt[4].textContent = i18nStrings.filter_dialog.halo_type;
             opt[2].textContent = i18nStrings.common.month;
             opt[3].textContent = i18nStrings.common.year;
             opt[4].textContent = i18nStrings.filter_dialog.halo_type;
@@ -270,7 +273,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     async function loadObservations() {
         try {
-            compactTbody.textContent = i18n.i18nStrings.messages.loading_short;
+            compactTbody.textContent = i18nStrings.messages.loading_short;
             
             // Load observations
             const obsResponse = await fetch('/api/observations?limit=200000');
@@ -303,7 +306,7 @@ document.addEventListener('DOMContentLoaded', function() {
             updateFileInfo(obsData.file, allObservations.length);
         } catch (error) {
             console.error('Error loading observations:', error);
-            compactTbody.textContent = i18n.i18nStrings.messages.error_loading;
+            compactTbody.textContent = i18nStrings.messages.error_loading;
         }
     }
     
@@ -314,7 +317,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (fileInfo && fileNameElem && obsCountElem) {
             fileNameElem.textContent = fileName;
-            const countText = i18n.i18nStrings.common.observations;
+            const countText = i18nStrings.common.observations;
             obsCountElem.textContent = `${count} ${countText}`;
             fileInfo.style.display = 'flex';
         }
@@ -361,19 +364,19 @@ document.addEventListener('DOMContentLoaded', function() {
             filter2Input.style.display = 'block';
             filter2Value.style.display = 'block';
             filter2SelectElem.style.display = 'none';
-            filter2Value.placeholder = i18n.i18nStrings.common.date;
+            filter2Value.placeholder = i18nStrings.common.date;
             setTimeout(() => filter2Value.focus(), 50);
         } else if (value === 'month') {
             filter2Input.style.display = 'block';
             filter2Value.style.display = 'block';
             filter2SelectElem.style.display = 'none';
-            filter2Value.placeholder = i18n.i18nStrings.common.month;
+            filter2Value.placeholder = i18nStrings.common.month;
             setTimeout(() => filter2Value.focus(), 50);
         } else if (value === 'year') {
             filter2Input.style.display = 'block';
             filter2Value.style.display = 'block';
             filter2SelectElem.style.display = 'none';
-            filter2Value.placeholder = i18n.i18nStrings.common.year;
+            filter2Value.placeholder = i18nStrings.common.year;
             setTimeout(() => filter2Value.focus(), 50);
         } else if (value === 'halo-type') {
             filter2Input.style.display = 'block';
@@ -431,7 +434,7 @@ document.addEventListener('DOMContentLoaded', function() {
         for (let i = 1; i <= 99; i++) {
             const option = document.createElement('option');
             option.value = i;
-            option.textContent = `${String(i).padStart(2, '0')} - ${i18n.halo_types[i] || i18n.i18nStrings.common.unknown}`;
+            option.textContent = `${String(i).padStart(2, '0')} - ${i18n.halo_types[i] || i18nStrings.common.unknown}`;
             filter2SelectElem.appendChild(option);
         }
     }
@@ -466,12 +469,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (filterCriterion1 !== 'none') {
             if (filterCriterion1 === 'observer') {
                 if (!filter1SelectElem.value || filter1SelectElem.value === '') {
-                    showWarning(i18n.i18nStrings.messages.filter_value_required);
+                    showWarning(i18nStrings.messages.filter_value_required);
                     return;
                 }
             } else if (filterCriterion1 === 'region') {
                 if (!filter1SelectElem.value || filter1SelectElem.value === '') {
-                    showWarning(i18n.i18nStrings.messages.filter_value_required);
+                    showWarning(i18nStrings.messages.filter_value_required);
                     return;
                 }
             }
@@ -481,12 +484,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (filterCriterion2 !== 'none') {
             if (filterCriterion2 === 'date' || filterCriterion2 === 'month' || filterCriterion2 === 'year') {
                 if (!filter2Value.value.trim()) {
-                    showWarning(i18n.i18nStrings.messages.filter_value_required);
+                    showWarning(i18nStrings.messages.filter_value_required);
                     return;
                 }
             } else if (filterCriterion2 === 'halo-type') {
                 if (!filter2SelectElem.value || filter2SelectElem.value === '') {
-                    showWarning(i18n.i18nStrings.messages.filter_value_required);
+                    showWarning(i18nStrings.messages.filter_value_required);
                     return;
                 }
             }
@@ -549,7 +552,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Remove listener after it fires once
                 filterDialog.removeEventListener('hidden.bs.modal', onModalHidden);
                 
-                const overlay = showLoadingOverlay(i18n.i18nStrings.messages.loading);
+                const overlay = showLoadingOverlay(i18nStrings.messages.loading);
                 
                 // Process filters after modal is fully hidden
                 setTimeout(async () => {
@@ -582,7 +585,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             modal.hide();
         } else {
-            const overlay = showLoadingOverlay(i18n.i18nStrings.messages.loading);
+            const overlay = showLoadingOverlay(i18nStrings.messages.loading);
             
             setTimeout(async () => {
                 try {
@@ -608,11 +611,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // checkelem() function from H_BEOBNG.PAS - checks if observation matches filters
     function checkelem(obs) {
+        // DEBUG: Log filter check
+        if (filterCriterion1 === 'region' && filterValue1 !== null) {
+            console.log('🔍 DEBUG: Checking obs.KK=' + obs.KK + ' obs.GG=' + obs.GG + ' vs filterValue1=' + filterValue1);
+        }
         // First filter (auswahl)
         if (filterCriterion1 === 'observer') {
             if (filterValue1 !== null && obs.KK !== filterValue1) return false;
         } else if (filterCriterion1 === 'region') {
-            if (filterValue1 !== null && obs.g !== filterValue1) return false;
+            if (filterValue1 !== null && obs.GG !== filterValue1) return false;
         }
         
         // Second filter (auswahl2)
@@ -635,7 +642,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     async function applyFiltersInternal() {
         filteredObservations = allObservations.filter(checkelem);
-        recordCount.textContent = `${filteredObservations.length} ${i18n.i18nStrings.common.observations}`;
+        recordCount.textContent = `${filteredObservations.length} ${i18nStrings.common.observations}`;
         currentPage = 1;
         
         await displayPage();
@@ -856,7 +863,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const maxPage = Math.ceil(filteredObservations.length / pageSize);
         
         if (pageData.length === 0) {
-            compactTbody.textContent = i18n.i18nStrings.messages.no_observations;
+            compactTbody.textContent = i18nStrings.messages.no_observations;
             btnExitObservations.style.display = 'block';
             // Hide pagination controls
             btnFirstPage.style.display = 'none';
@@ -872,8 +879,8 @@ document.addEventListener('DOMContentLoaded', function() {
         compactTbody.textContent = lines.join('\n');
         
         // Update pagination info
-        const pageText = i18n.i18nStrings.common.page;
-        const ofText = i18n.i18nStrings.common.of;
+        const pageText = i18nStrings.common.page;
+        const ofText = i18nStrings.common.of;
         compactPageInfo.textContent = `${pageText} ${currentPage} ${ofText} ${maxPage}`;
         
         // Update button states
@@ -883,22 +890,55 @@ document.addEventListener('DOMContentLoaded', function() {
         btnLastPage.disabled = currentPage === maxPage;
         
         // Update record count at bottom
-        const rowText = i18n.i18nStrings.common.row;
-        pageInfo.textContent = `${rowText} ${startIndex + 1}-${endIndex} ${ofText} ${filteredObservations.length}`;
+        pageInfo.textContent = `${i18nStrings.common.row} ${startIndex + 1}-${endIndex} ${ofText} ${filteredObservations.length}`;
     }
     
     function displayDetailView() {
+        // Hide all views - modal will display the observation
         compactView.style.display = 'none';
-        detailView.style.display = 'block';
-        btnExitObservations.style.display = 'block';
+        detailView.style.display = 'none';
+        btnExitObservations.style.display = 'none';
         
         if (filteredObservations.length === 0) {
-            detailContent.textContent = i18n.i18nStrings.messages.no_observations;
-            document.getElementById('detail-counter').textContent = `0 ${i18n.i18nStrings.common.of} 0`;
+            detailContent.textContent = i18nStrings.messages.no_observations;
+            document.getElementById('detail-counter').textContent = `0 ${i18nStrings.common.of} 0`;
             return;
         }
         
         currentDetailIndex = (currentPage - 1) * pageSize;
+        showDetailRecord();
+    }
+    
+    function showDetailRecord() {
+        if (currentDetailIndex < 0 || currentDetailIndex >= filteredObservations.length) return;
+        
+        const obs = filteredObservations[currentDetailIndex];
+        showObservationFormForView(obs, currentDetailIndex + 1, filteredObservations.length, 
+            () => {
+                // Next button
+                if (currentDetailIndex < filteredObservations.length - 1) {
+                    currentDetailIndex++;
+                    showDetailRecord();
+                }
+            }, 
+            () => {
+                // Previous button
+                if (currentDetailIndex > 0) {
+                    currentDetailIndex--;
+                    showDetailRecord();
+                }
+            }, 
+            () => {
+                // Close button - return to main
+                window.location.href = '/';
+            }
+        );
+    }
+    
+    function navigateDetail(direction) {
+        currentDetailIndex += direction;
+        if (currentDetailIndex < 0) currentDetailIndex = 0;
+        if (currentDetailIndex >= filteredObservations.length) currentDetailIndex = filteredObservations.length - 1;
         showDetailRecord();
     }
         

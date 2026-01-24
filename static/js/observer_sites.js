@@ -338,12 +338,6 @@ function showEditSiteConfirmDialog(observer, sites, currentIndex) {
     modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
 }
 
-function showEditSiteFormDialog(observer, oldSite) {
-    // This will be very similar to showAddSiteDialog but pre-filled with oldSite data
-    // Implementation continues...
-    showErrorDialog(i18nStrings.messages.not_implemented);
-}
-
 // Delete observation site
 async function showDeleteSiteDialog(observer) {
     

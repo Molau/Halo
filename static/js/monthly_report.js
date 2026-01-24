@@ -438,7 +438,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Build HTML-Tabellen format report (implementation)
     function buildHTMLTableReport(data, i18n) {
         // Use i18n month names
-        const monthName = i18nStrings.months.[data.mm];
+        const monthName = i18nStrings.months[data.mm];
         
         // Format title
         const year = data.jj < 50 ? 2000 + data.jj : 1900 + data.jj;
@@ -679,7 +679,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const outputMode = window.currentOutputMode || 'P';
                 
                 const data = currentReportData;
-                const monthShort = i18nStrings.months_short.[data.mm];
+                const monthShort = i18nStrings.months_short[data.mm];
                 const kkPadded = String(data.kk).padStart(2, '0');
                 const jjPadded = String(data.jj).padStart(2, '0');
                 

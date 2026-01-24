@@ -89,6 +89,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 50);
     }
     
+    // Mark this as an active session (for autosave recovery logic)
+    // This flag prevents the recovery dialog from showing during normal navigation
+    // It will only be absent on first browser startup or after a crash
+    sessionStorage.setItem('activeSession', 'true');
+    
     // Clear file info on startup - but only if sessionStorage didn't restore data
     if (!window.haloData.isLoaded) {
         clearFileInfoDisplay();
@@ -1151,8 +1156,6 @@ async function showAddObservationDialogMenu() {
     // Auto-fill GG when g is selected
     async function autoFillGG() {
         const g = parseInt(fields.g.value);
-
-
         
         if (g === 0 || g === 2) {
             // Auto-fill GG based on observer and date
@@ -1171,31 +1174,20 @@ async function showAddObservationDialogMenu() {
                     if (resp.ok) {
                         const data = await resp.json();
 
-
-                        if (data.observer) {
-
-
-                        }
                         if (data.observer && data.observer.GH !== undefined && data.observer.GN !== undefined) {
-                            const gg = g === 0 ? data.observer.GH : data.observer.GN;
+                            const ggRaw = g === 0 ? data.observer.GH : data.observer.GN;
+                            const gg = parseInt(ggRaw); // Parse as integer to match dropdown option values
 
                             fields.gg.value = gg;
                             fields.gg.disabled = true;
                             checkRequired();
-                        } else {
-
                         }
-                    } else {
-
                     }
                 } catch (e) {
                     console.error('Error fetching observer GG:', e);
                 }
-            } else {
-
             }
         } else {
-
             fields.gg.disabled = false;
             fields.gg.value = '';
         }
@@ -1299,14 +1291,14 @@ async function showAddObservationDialogMenu() {
     okBtn.addEventListener('click', async () => {
         try {
             const obs = {
-                k: parseInt(fields.kk.value),
-                o: parseInt(fields.o.value),
-                j: parseInt(fields.jj.value),
-                m: parseInt(fields.mm.value),
-                t: parseInt(fields.tt.value),
+                KK: parseInt(fields.kk.value),
+                O: parseInt(fields.o.value),
+                JJ: parseInt(fields.jj.value),
+                MM: parseInt(fields.mm.value),
+                TT: parseInt(fields.tt.value),
                 g: parseInt(fields.g.value),
-                gg: parseInt(fields.gg.value),
-                e: parseInt(fields.ee.value),
+                GG: parseInt(fields.gg.value),
+                EE: parseInt(fields.ee.value),
                 zs: fields.zs.value ? parseInt(fields.zs.value) : 99,
                 zm: fields.zm.value ? parseInt(fields.zm.value) : 99,
                 d: fields.d.value ? parseInt(fields.d.value) : -1,
@@ -1820,13 +1812,17 @@ function updateMenuText() {
     updateDropdownItem('save-as', i18nStrings.file.save_as);
     updateDropdownItem('upload', i18nStrings.file.upload);
     updateDropdownItem('download', i18nStrings.file.download);
-    updateDropdownItem('obs-display', i18nStrings.observations.display);
-    updateDropdownItem('obs-add', i18nStrings.observations.add);
-    updateDropdownItem('obs-modify', i18nStrings.observations.modify);
-    updateDropdownItem('obs-delete', i18nStrings.observations.delete);
-    updateDropdownItem('observer-add', i18nStrings.observations.add);
-    updateDropdownItem('observer-modify', i18nStrings.observations.modify);
-    updateDropdownItem('observer-delete', i18nStrings.observations.delete);
+    
+    // Observations menu (Display uses href, handled separately below)
+    updateDropdownItem('obs-add', i18nStrings.common.add);
+    updateDropdownItem('obs-modify', i18nStrings.common.modify);
+    updateDropdownItem('obs-delete', i18nStrings.common.delete);
+    
+    // Observers menu (Display uses href, handled separately below)
+    updateDropdownItem('observer-add', i18nStrings.common.add);
+    updateDropdownItem('observer-modify', i18nStrings.common.modify);
+    updateDropdownItem('observer-delete', i18nStrings.common.delete);
+    
     updateDropdownItem('output-monthly-report', i18nStrings.output.monthly_report);
     updateDropdownItem('output-monthly-stats', i18nStrings.output.monthly_stats);
     updateDropdownItem('output-yearly-stats', i18nStrings.output.yearly_stats);
@@ -1836,11 +1832,11 @@ function updateMenuText() {
         updateDropdownItem('settings-active-observers', i18nStrings.settings.active_observers);
     }
     
-    // Update link text for observations (has href, not data-action)
+    // Update display links (use href, not data-action, so need separate handling)
     const obsLink = document.querySelector('a[href="/observations"]');
-    if (obsLink) obsLink.textContent = i18nStrings.observations.display;
-    const returnLink = document.querySelector('a[href="/"]');
-    if (returnLink) returnLink.textContent = i18nStrings.messages.back_to_main;
+    if (obsLink) obsLink.textContent = i18nStrings.common.display;
+    const observerLink = document.querySelector('a[href="/observers"]');
+    if (observerLink) observerLink.textContent = i18nStrings.common.display;
 }
 
 function updateDropdownItem(action, text) {
@@ -1993,13 +1989,17 @@ async function showModifySingleObservations(filterState) {
     // Show observations one by one in edit form
     let currentIndex = 0;
     
-    const showNextObservation = async () => {
-        if (currentIndex >= filteredObs.length) {
+    const showObservationAt = async (index) => {
+        if (index < 0) {
+            index = 0;
+        }
+        if (index >= filteredObs.length) {
             // All observations processed - return to main menu
             window.location.href = '/';
             return;
         }
         
+        currentIndex = index;
         const obs = filteredObs[currentIndex];
         
         // Find the index of this observation in the full observations array
@@ -2011,12 +2011,19 @@ async function showModifySingleObservations(filterState) {
             window.location.href = '/';
         }, () => {
             // User chose to skip this observation - show next
-            currentIndex++;
-            showNextObservation();
-        }, obsIndex);
+            showObservationAt(currentIndex + 1);
+        }, obsIndex,
+        () => {
+            // Next button pressed
+            showObservationAt(currentIndex + 1);
+        },
+        () => {
+            // Previous button pressed
+            showObservationAt(currentIndex - 1);
+        });
     };
     
-    showNextObservation();
+    showObservationAt(0);
 }
 
 // Show group modification form - edit multiple observations at once
@@ -2623,10 +2630,14 @@ async function applyFilterToObservations(filterState) {
     
     return allObs.filter(obs => {
         // First filter criterion
+        // DEBUG: Log filter state
+        if (filterState.criterion1 === 'region' && filterState.value1 !== null) {
+            console.log('🔍 DEBUG: Checking obs.KK=' + obs.KK + ' obs.GG=' + obs.GG + ' vs filterState.value1=' + filterState.value1);
+        }
         if (filterState.criterion1 === 'observer') {
             if (filterState.value1 !== null && obs.KK !== filterState.value1) return false;
         } else if (filterState.criterion1 === 'region') {
-            if (filterState.value1 !== null && obs.g !== filterState.value1) return false;
+            if (filterState.value1 !== null && obs.GG !== filterState.value1) return false;
         }
         
         // Second filter criterion
@@ -2827,7 +2838,7 @@ function formatObservationForDisplay(obs) {
 }
 
 // Show observation form for editing
-async function showObservationFormForEdit(obs, currentNum, totalNum, onModified, onCancelled, obsIndex = null) {
+async function showObservationFormForEdit(obs, currentNum, totalNum, onModified, onCancelled, obsIndex = null, onNext = null, onPrev = null) {
     const form = new ObservationForm();
     await form.initialize('edit');
     
@@ -2925,7 +2936,19 @@ async function showObservationFormForEdit(obs, currentNum, totalNum, onModified,
         }
     }, () => {
         if (onCancelled) onCancelled();
-    }, currentNum, totalNum);
+    }, currentNum, totalNum, null, 
+    onNext || (() => {
+        // onYes callback - Next button: skip to next observation
+        if (onCancelled) onCancelled();
+    }),
+    onPrev || (() => {
+        // onNo callback - Previous button: go to previous observation  
+        if (onCancelled) onCancelled();
+    }),
+    () => {
+        // onCancelBtn callback - Cancel button: return to main
+        if (onModified) onModified();
+    });
 }
 
 // Show observation form for deletion (read-only display with Yes/No/Cancel)
@@ -3324,16 +3347,12 @@ async function showActiveObserversDialog() {
         const config = await response.json();
         const enabled = !!config.enabled;
 
-        const title = i18nStrings.settings.active_observers_question;
-        const i18nStrings.common.yes = i18nStrings.common.yes;
-        const i18nStrings.common.no = i18nStrings.common.no;
-
         const modalHtml = `
             <div class="modal fade" id="active-observers-modal" tabindex="-1">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">${title}</h5>
+                            <h5 class="modal-title">${i18nStrings.settings.active_observers_question}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
@@ -3549,13 +3568,13 @@ async function showSelectDialog() {
                         <div id="select-month-fields" style="display: none;">
                             <div class="row mb-3">
                                 <div class="col-md-6">
-                                    <label for="select-month" class="form-label">${i18nStrings.common.month}</label>
+                                    <label for="select-month" class="form-label">${i18nStrings.common.month}:</label>
                                     <select class="form-select" id="select-month">
                                         <!-- Will be populated by JavaScript -->
                                     </select>
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="select-year" class="form-label">${i18nStrings.common.year}</label>
+                                    <label for="select-year" class="form-label">${i18nStrings.common.year}:</label>
                                     <select class="form-select" id="select-year">
                                         <!-- Will be populated by JavaScript -->
                                     </select>
@@ -3567,19 +3586,19 @@ async function showSelectDialog() {
                         <div id="select-day-fields" style="display: none;">
                             <div class="row mb-3">
                                 <div class="col-md-4">
-                                    <label for="select-day" class="form-label">${i18nStrings.common.day}</label>
+                                    <label for="select-day" class="form-label">${i18nStrings.common.day}:</label>
                                     <select class="form-select" id="select-day">
                                         <!-- Will be populated by JavaScript -->
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label for="select-day-month" class="form-label">${i18nStrings.common.month}</label>
+                                    <label for="select-day-month" class="form-label">${i18nStrings.common.month}:</label>
                                     <select class="form-select" id="select-day-month">
                                         <!-- Will be populated by JavaScript -->
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label for="select-day-year" class="form-label">${i18nStrings.common.year}</label>
+                                    <label for="select-day-year" class="form-label">${i18nStrings.common.year}:</label>
                                     <select class="form-select" id="select-day-year">
                                         <!-- Will be populated by JavaScript -->
                                     </select>
@@ -4343,9 +4362,7 @@ async function showSelectDialog() {
                         
                         // Load the filtered file into memory so we can continue working with it
                         try {
-                            const loadResponse = await fetch(`/api/file/load/${encodeURIComponent(filename)}`, {
-                                method: 'POST'
-                            });
+                            const loadResponse = await fetch(`/api/file/load/${encodeURIComponent(filename)}`);
                             
                             if (loadResponse.ok) {
                                 const loadResult = await loadResponse.json();
@@ -4515,20 +4532,6 @@ async function showNewFileDialog() {
     modalEl.addEventListener('hidden.bs.modal', () => {
         clearMenuHighlights();
         modalEl.remove();
-    });
-    
-    // Handle Enter key
-    input.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            document.getElementById('ok-new').click();
-        }
-    });
-    
-    // Handle Escape key
-    dialog.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            document.body.removeChild(dialog);
-        }
     });
 }
 
@@ -4729,7 +4732,7 @@ async function showUploadDialog() {
             // User confirmed - proceed with upload
             
             // Show progress spinner
-            showSpinner(i18nStrings.upload_download.upload_progress);
+            const spinner = showInfoModal(i18nStrings.upload_download.upload_title, i18nStrings.upload_download.upload_progress);
             
             try {
                 // Upload to halo.online API
@@ -4746,7 +4749,9 @@ async function showUploadDialog() {
                 
                 const result = await response.json();
                 
-                hideSpinner();
+                // Hide spinner
+                spinner.modal.hide();
+                setTimeout(() => spinner.modalEl.remove(), 300);
                 
                 if (response.ok && result.success) {
                     // Success - show toast notification
@@ -4756,7 +4761,9 @@ async function showUploadDialog() {
                     showErrorDialog(i18nStrings.common.error + ': ' + (result.error));
                 }
             } catch (error) {
-                hideSpinner();
+                // Hide spinner on error
+                spinner.modal.hide();
+                setTimeout(() => spinner.modalEl.remove(), 300);
                 showErrorDialog(i18nStrings.common.error + ': ' + error.message);
             }
         });
@@ -4828,9 +4835,10 @@ async function showDownloadDialog() {
 }
 
 async function processDownload(filename) {
+    let spinner = null;
     try {
         // Show progress spinner
-        showSpinner(i18nStrings.upload_download.download_progress);
+        spinner = showInfoModal(i18nStrings.upload_download.download_title, i18nStrings.upload_download.download_progress);
         
         // Download from halo.online API
         // TODO: Define exact API endpoint URL
@@ -4847,7 +4855,11 @@ async function processDownload(filename) {
         
         const result = await response.json();
         
-        hideSpinner();
+        // Hide spinner
+        if (spinner) {
+            spinner.modal.hide();
+            setTimeout(() => spinner.modalEl.remove(), 300);
+        }
         
         if (response.ok && result.success) {
             // Update global state
@@ -4863,10 +4875,14 @@ async function processDownload(filename) {
             const successMessage = i18nStrings.upload_download.download_success.replace('{0}', result.count);
             showNotification(successMessage, 'success');
         } else {
-            showErrorDialog(i18nStrings.common.error + ': ' + (result.error);
+            showErrorDialog(i18nStrings.common.error + ': ' + result.error);
         }
     } catch (error) {
-        hideSpinner();
+        // Hide spinner on error
+        if (spinner) {
+            spinner.modal.hide();
+            setTimeout(() => spinner.modalEl.remove(), 300);
+        }
         showErrorDialog(i18nStrings.common.error + ': ' + error.message);
     }
 }
@@ -4900,7 +4916,13 @@ async function checkAutosaveRecovery() {
     try {
         // Skip autosave recovery if we already have observations loaded in memory
         if (window.haloData.isLoaded && window.haloData.observations.length > 0) {
-
+            return;
+        }
+        
+        // Skip if this is an active session (not a crash recovery)
+        // The 'activeSession' flag is set when any page navigation happens during normal use
+        const activeSession = sessionStorage.getItem('activeSession');
+        if (activeSession === 'true') {
             return;
         }
         
@@ -5978,7 +6000,7 @@ async function showAddObserverDialog(formData = null) {
     // Build month options with names
     const monthOptions = Array.from({length: 12}, (_, i) => {
         const month = i + 1;
-        const monthName = months[month] || month.toString().padStart(2, '0');
+        const monthName = i18nStrings.months[month];
         return `<option value="${month}">${monthName}</option>`;
     }).join('');
     
@@ -5992,7 +6014,7 @@ async function showAddObserverDialog(formData = null) {
     // Build region options with real names (1-39)
     const regionOptions = Array.from({length: 39}, (_, i) => {
         const region = i + 1;
-        const regionName = regions[region];
+        const regionName = i18nStrings.geographic_regions[region];
         if (regionName) {
             return `<option value="${region}">${region} - ${regionName}</option>`;
         }
@@ -6169,8 +6191,8 @@ async function showAddObserverDialog(formData = null) {
                         </form>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${common.cancel}</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-add-observer-ok">${common.ok}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="btn-add-observer-ok">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -6407,8 +6429,8 @@ async function showDeleteObserverDialog() {
                             </select>
                         </div>
                         <div class="modal-footer py-1">
-                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${common.cancel}</button>
-                            <button type="button" class="btn btn-primary btn-sm" id="btn-select-delete-observer-ok">${common.ok}</button>
+                            <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                            <button type="button" class="btn btn-primary btn-sm px-3" id="btn-select-delete-observer-ok">${i18nStrings.common.ok}</button>
                         </div>
                     </div>
                 </div>
@@ -6461,9 +6483,9 @@ async function showDeleteObserverConfirmDialog(observer, sites) {
     const tableRows = sites.map(site => {
         const yearNum = parseInt(site.seit_year);
         const fullYear = yearNum < 50 ? 2000 + yearNum : 1900 + yearNum;
-        const monthName = months[site.seit_month];
+        const monthName = i18nStrings.months[site.seit_month];
         const seitDisplay = `${String(site.seit_month).padStart(2, '0')}/${String(yearNum).padStart(2, '0')}`;
-        const aktivDisplay = site.active === 1 ? (common.yes) : (common.no);
+        const aktivDisplay = site.active === 1 ? i18nStrings.common.yes : i18nStrings.common.no;
         
         return `
             <tr>
@@ -6512,8 +6534,8 @@ async function showDeleteObserverConfirmDialog(observer, sites) {
                         </div>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-delete-observer-no">${common.no}</button>
-                        <button type="button" class="btn btn-outline-primary btn-sm" id="btn-delete-observer-yes">${common.yes}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="btn-delete-observer-no">${i18nStrings.common.no}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-delete-observer-yes">${i18nStrings.common.yes}</button>
                     </div>
                 </div>
             </div>
@@ -6628,8 +6650,8 @@ async function showEditObserverDialog() {
                             </select>
                         </div>
                         <div class="modal-footer py-1">
-                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${common.cancel}</button>
-                            <button type="button" class="btn btn-primary btn-sm" id="btn-select-observer-ok">${common.ok}</button>
+                            <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                            <button type="button" class="btn btn-primary btn-sm px-3" id="btn-select-observer-ok">${i18nStrings.common.ok}</button>
                         </div>
                     </div>
                 </div>
@@ -6702,8 +6724,8 @@ function showEditTypeDialog(observer) {
                         </div>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${common.cancel}</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-edit-type-ok">${common.ok}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="btn-edit-type-ok">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -6765,8 +6787,8 @@ function showEditBaseDataDialog(observer) {
                         </form>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${common.cancel}</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-edit-base-ok">${common.ok}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="btn-edit-base-ok">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -6844,9 +6866,9 @@ function showEditBaseDataDialog(observer) {
 async function showAddSiteDialog(observer) {
     
     // Generate month options
-    const monthOptions = Object.keys(months).map(m => {
+    const monthOptions = Object.keys(i18nStrings.months).map(m => {
         const monthNum = parseInt(m);
-        const monthName = months[m];
+        const monthName = i18nStrings.months[m];
         return `<option value="${monthNum}">${monthName}</option>`;
     }).join('');
     
@@ -6857,8 +6879,8 @@ async function showAddSiteDialog(observer) {
     }).join('');
     
     // Generate region options
-    const regionOptions = Object.keys(regions).map(regionNum => {
-        const regionName = regions[regionNum];
+    const regionOptions = Object.keys(i18nStrings.geographic_regions).map(regionNum => {
+        const regionName = i18nStrings.geographic_regions[regionNum];
         if (regionName) {
             return `<option value="${regionNum.padStart(2, '0')}">${regionNum.padStart(2, '0')} - ${regionName}</option>`;
         }
@@ -7012,8 +7034,8 @@ async function showAddSiteDialog(observer) {
                         </form>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${common.cancel}</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-add-site-ok">${common.ok}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="btn-add-site-ok">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -7303,9 +7325,9 @@ async function showEditSiteConfirmDialog(observer, sites, currentIndex) {
                         <p class="text-muted small mt-2">${i18nStrings.observers.delete_site_info.replace('{0}', currentIndex + 1).replace('{1}', sites.length)}</p>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${common.cancel}</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-edit-site-no">${common.no}</button>
-                        <button type="button" class="btn btn-outline-primary btn-sm" id="btn-edit-site-yes">${common.yes}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="btn-edit-site-no">${i18nStrings.common.no}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-edit-site-yes">${i18nStrings.common.yes}</button>
                     </div>
                 </div>
             </div>
@@ -7378,9 +7400,9 @@ async function showEditSiteFormDialog(observer, sites, currentIndex) {
     const site = sites[currentIndex];
     
     // Generate month options
-    const monthOptions = Object.keys(months).map(m => {
+    const monthOptions = Object.keys(i18nStrings.months).map(m => {
         const monthNum = parseInt(m);
-        const monthName = months[m];
+        const monthName = i18nStrings.months[m];
         return `<option value="${monthNum}">${monthName}</option>`;
     }).join('');
     
@@ -7391,8 +7413,8 @@ async function showEditSiteFormDialog(observer, sites, currentIndex) {
     }).join('');
     
     // Generate region options
-    const regionOptions = Object.keys(regions).map(regionNum => {
-        const regionName = regions[regionNum];
+    const regionOptions = Object.keys(i18nStrings.geographic_regions).map(regionNum => {
+        const regionName = i18nStrings.geographic_regions[regionNum];
         if (regionName) {
             return `<option value="${regionNum.padStart(2, '0')}">${regionNum.padStart(2, '0')} - ${regionName}</option>`;
         }
@@ -7546,8 +7568,8 @@ async function showEditSiteFormDialog(observer, sites, currentIndex) {
                         </form>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${common.cancel}</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-edit-site-ok">${common.ok}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="btn-edit-site-ok">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -7874,9 +7896,9 @@ async function showDeleteSiteConfirmDialog(observer, sites, currentIndex = 0) {
                         </form>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${common.cancel}</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-delete-site-no">${common.no}</button>
-                        <button type="button" class="btn btn-outline-primary btn-sm" id="btn-delete-site-yes">${common.yes}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="btn-delete-site-no">${i18nStrings.common.no}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-delete-site-yes">${i18nStrings.common.yes}</button>
                     </div>
                 </div>
             </div>

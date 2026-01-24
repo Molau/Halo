@@ -28,6 +28,27 @@
 
 ## Core Principles
 
+### 0. Debug Logging Standard - Decision #024
+- **Date**: 2026-01-24
+- **Status**: ✓ Approved
+- **Core Rule**: All debug/diagnostic output MUST be clearly labeled for easy identification and removal
+- **Labeling Convention**:
+  - Python: Prefix with `# DEBUG:` comment and use `print("🔍 DEBUG: ...")` 
+  - JavaScript: Use `console.log("🔍 DEBUG: ...")`
+  - HTML templates: Use `<!-- DEBUG: ... -->`
+- **Purpose**: Enable temporary debugging without polluting production code
+- **Removal**: Search for `DEBUG:` or `🔍` to find all debug statements before merging
+- **Example Python**:
+  ```python
+  # DEBUG: Check filter values
+  print(f"🔍 DEBUG: filter_type={filter_type}, value={value}, obs.GG={getattr(obs, attr, None)}")
+  ```
+- **Example JavaScript**:
+  ```javascript
+  // DEBUG: Log filter state
+  console.log("🔍 DEBUG: filterCriterion1=", this.filterCriterion1, "filterValue1=", this.filterValue1);
+  ```
+
 ### 1. Observation Record Format (HALO Key)
 - **Decision**: ✓ Preserve standardized observation record format exactly
 - **Format**: `KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen`

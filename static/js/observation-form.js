@@ -99,14 +99,22 @@ class ObservationForm {
             setTimeout(() => {
                 this.disableAllFields();
             }, 0);
-        } else if (mode === 'add' && this.dateDefault) {
-            // Pre-fill date fields for new observations
+        } else if (mode === 'add') {
+            // Pre-fill fields for new observations
             setTimeout(() => {
-                if (this.fields.mm) {
-                    this.fields.mm.value = this.dateDefault.mm;
+                // Pre-fill date fields
+                if (this.dateDefault) {
+                    if (this.fields.mm) {
+                        this.fields.mm.value = this.dateDefault.mm;
+                    }
+                    if (this.fields.jj) {
+                        this.fields.jj.value = this.dateDefault.jj;
+                    }
                 }
-                if (this.fields.jj) {
-                    this.fields.jj.value = this.dateDefault.jj;
+                
+                // Pre-fill fixed observer if set
+                if (this.fixedObserver && this.fields.kk) {
+                    this.fields.kk.value = this.fixedObserver;
                 }
             }, 0);
         }
@@ -130,7 +138,7 @@ class ObservationForm {
         } else if (this.mode === 'delete') {
             title = i18nStrings.observations.delete_question;
         } else if (this.mode === 'view') {
-            title = i18nStrings.observations.display;
+            title = i18nStrings.observations.display_title;
         } else {
             title = i18nStrings.observations.add_observation;
         }
@@ -167,14 +175,17 @@ class ObservationForm {
                             <div class="alert alert-danger mt-2" id="obs-form-error" style="display:none;"></div>
                         </div>
                         <div class="modal-footer py-1">
-                            ${this.mode === 'view' ? `<button type="button" class="btn btn-secondary btn-sm" id="btn-obs-form-prev" ${this.currentNum === 1 ? 'disabled' : ''}>${i18nStrings.common.previous}</button>` : ''}
-                            ${this.mode === 'view' ? `<button type="button" class="btn btn-secondary btn-sm" id="btn-obs-form-next" ${this.currentNum === this.totalNum ? 'disabled' : ''}>${i18nStrings.common.next}</button>` : ''}
-                            ${this.mode === 'view' ? `<button type="button" class="btn btn-primary btn-sm" id="btn-obs-form-ok-view">${i18nStrings.common.ok}</button>` : ''}
-                            ${this.mode !== 'view' ? `<button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>` : ''}
-                            ${(this.mode === 'edit' || this.mode === 'delete') ? `<button type="button" class="btn btn-outline-primary btn-sm" id="btn-obs-form-no">${i18nStrings.common.no}</button>` : ''}
-                            ${(this.mode === 'edit' || this.mode === 'delete') ? `<button type="button" class="btn btn-primary btn-sm" id="btn-obs-form-yes">${i18nStrings.common.yes}</button>` : ''}
-                            ${this.mode === 'add' ? `<button type="button" class="btn btn-primary btn-sm" id="btn-obs-form-ok" disabled>${i18nStrings.common.ok}</button>` : ''}
-                            ${(this.mode === 'edit' || this.mode === 'delete') ? `<button type="button" class="btn btn-primary btn-sm" id="btn-obs-form-ok" style="display:none;">${i18nStrings.common.ok}</button>` : ''}
+                            ${(this.mode === 'edit' || this.mode === 'delete') ? `<button type="button" class="btn btn-secondary btn-sm px-3" id="btn-obs-form-prev" ${this.currentNum === 1 ? 'disabled' : ''}>${i18nStrings.common.previous}</button>` : ''}
+                            ${this.mode === 'view' ? `<button type="button" class="btn btn-secondary btn-sm px-3" id="btn-obs-form-prev" ${this.currentNum === 1 ? 'disabled' : ''}>${i18nStrings.common.previous}</button>` : ''}
+                            ${(this.mode === 'edit' || this.mode === 'delete') ? `<button type="button" class="btn btn-secondary btn-sm px-3" id="btn-obs-form-next" ${this.currentNum === this.totalNum ? 'disabled' : ''}>${i18nStrings.common.next}</button>` : ''}
+                            ${this.mode === 'view' ? `<button type="button" class="btn btn-primary btn-sm px-3" id="btn-obs-form-next" ${this.currentNum === this.totalNum ? 'disabled' : ''}>${i18nStrings.common.next}</button>` : ''}
+                            ${this.mode === 'view' ? `<button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>` : ''}
+                            ${this.mode === 'delete' ? `<button type="button" class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>` : ''}
+                            ${this.mode === 'edit' || this.mode === 'add' ? `<button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>` : ''}
+                            ${this.mode === 'add' ? `<button type="button" class="btn btn-primary btn-sm px-3" id="btn-obs-form-ok" disabled>${i18nStrings.common.ok}</button>` : ''}
+                            ${this.mode === 'edit' ? `<button type="button" class="btn btn-primary btn-sm px-3" id="btn-obs-form-yes">${i18nStrings.common.yes}</button>` : ''}
+                            ${this.mode === 'delete' ? `<button type="button" class="btn btn-secondary btn-sm px-3" id="btn-obs-form-yes">${i18nStrings.common.yes}</button>` : ''}
+                            ${(this.mode === 'edit' || this.mode === 'delete') ? `<button type="button" class="btn btn-primary btn-sm px-3" id="btn-obs-form-ok" style="display:none;" disabled>${i18nStrings.common.ok}</button>` : ''}
                         </div>
                     </div>
                 </div>
@@ -198,11 +209,11 @@ class ObservationForm {
                 <label class="form-label">O - ${i18nStrings.fields.object} <span class="text-danger">*</span></label>
                 <select class="form-select form-select-sm" id="form-o" required>
                     <option value="">-- ${i18nStrings.fields.select} --</option>
-                    <option value="1">1 - ${i18nStrings.object_types.['1']}</option>
-                    <option value="2">2 - ${i18nStrings.object_types.['2']}</option>
-                    <option value="3">3 - ${i18nStrings.object_types.['3']}</option>
-                    <option value="4">4 - ${i18nStrings.object_types.['4']}</option>
-                    <option value="5">5 - ${i18nStrings.object_types.['5']}</option>
+                    <option value="1">1 - ${i18nStrings.object_types['1']}</option>
+                    <option value="2">2 - ${i18nStrings.object_types['2']}</option>
+                    <option value="3">3 - ${i18nStrings.object_types['3']}</option>
+                    <option value="4">4 - ${i18nStrings.object_types['4']}</option>
+                    <option value="5">5 - ${i18nStrings.object_types['5']}</option>
                 </select>
             </div>
             <div class="col-md-4">
@@ -234,9 +245,9 @@ class ObservationForm {
                 <label class="form-label">g - ${i18nStrings.fields.observing_area } <span class="text-danger">*</span></label>
                 <select class="form-select form-select-sm" id="form-g" required>
                     <option value="">-- ${i18nStrings.fields.select } --</option>
-                    <option value="0">0 - ${i18nStrings.location_types.['0']}</option>
-                    <option value="1">1 - ${i18nStrings.location_types.['1']}</option>
-                    <option value="2">2 - ${i18nStrings.location_types.['2']}</option>
+                    <option value="0">0 - ${i18nStrings.location_types['0']}</option>
+                    <option value="1">1 - ${i18nStrings.location_types['1']}</option>
+                    <option value="2">2 - ${i18nStrings.location_types['2']}</option>
                 </select>
             </div>
             <div class="col-md-2">
@@ -257,13 +268,13 @@ class ObservationForm {
                 <label class="form-label">d - ${i18nStrings.fields.cirrus_density}</label>
                 <select class="form-select form-select-sm" id="form-d">
                     <option value="-1">-- ${i18nStrings.fields.not_specified} --</option>
-                    <option value="0">0 - ${i18nStrings.cirrus_density.['0']}</option>
-                    <option value="1">1 - ${i18nStrings.cirrus_density.['1'] }</option>
-                    <option value="2">2 - ${i18nStrings.cirrus_density.['2']}</option>
-                    <option value="4">4 - ${i18nStrings.cirrus_density.['4']}</option>
-                    <option value="5">5 - ${i18nStrings.cirrus_density.['5']}</option>
-                    <option value="6">6 - ${i18nStrings.cirrus_density.['6']}</option>
-                    <option value="7">7 - ${i18nStrings.cirrus_density.['7']}</option>
+                    <option value="0">0 - ${i18nStrings.cirrus_density['0']}</option>
+                    <option value="1">1 - ${i18nStrings.cirrus_density['1'] }</option>
+                    <option value="2">2 - ${i18nStrings.cirrus_density['2']}</option>
+                    <option value="4">4 - ${i18nStrings.cirrus_density['4']}</option>
+                    <option value="5">5 - ${i18nStrings.cirrus_density['5']}</option>
+                    <option value="6">6 - ${i18nStrings.cirrus_density['6']}</option>
+                    <option value="7">7 - ${i18nStrings.cirrus_density['7']}</option>
                 </select>
             </div>
             <div class="col-md-3">
@@ -278,7 +289,7 @@ class ObservationForm {
                 <select class="form-select form-select-sm" id="form-n">
                     <option value="-1">--</option>
                     ${Array.from({length: 10}, (_, i) => {
-                        const label = i18nStrings.cloud_cover.[i.toString()];
+                        const label = i18nStrings.cloud_cover[i.toString()];
                         return `<option value="${i}">${i} - ${label}</option>`;
                     }).join('')}
                 </select>
@@ -288,7 +299,7 @@ class ObservationForm {
                 <select class="form-select form-select-sm" id="form-C">
                     <option value="-1">--</option>
                     ${Array.from({length: 8}, (_, i) => {
-                        const label = i18nStrings.cirrus_types.[i.toString()];
+                        const label = i18nStrings.cirrus_types[i.toString()];
                         return `<option value="${i}">${i} - ${label}</option>`;
                     }).join('')}
                 </select>
@@ -298,7 +309,7 @@ class ObservationForm {
                 <select class="form-select form-select-sm" id="form-c">
                     <option value="-1">--</option>
                     ${Array.from({length: 10}, (_, i) => {
-                        const label = i18nStrings.low_clouds.[i.toString()];
+                        const label = i18nStrings.low_clouds[i.toString()];
                         return `<option value="${i}">${i} - ${label}</option>`;
                     }).join('')}
                 </select>
@@ -315,7 +326,7 @@ class ObservationForm {
                 <select class="form-select form-select-sm" id="form-h">
                     <option value="-1">--</option>
                     ${Array.from({length: 4}, (_, i) => {
-                        const label = i18nStrings.brightness.[i.toString()];
+                        const label = i18nStrings.brightness[i.toString()];
                         return `<option value="${i}">${i} - ${label}</option>`;
                     }).join('')}
                 </select>
@@ -325,7 +336,7 @@ class ObservationForm {
                 <select class="form-select form-select-sm" id="form-F">
                     <option value="-1">--</option>
                     ${Array.from({length: 6}, (_, i) => {
-                        const label = i18nStrings.color.[i.toString()];
+                        const label = i18nStrings.color[i.toString()];
                         return `<option value="${i}">${i} - ${label}</option>`;
                     }).join('')}
                 </select>
@@ -334,8 +345,8 @@ class ObservationForm {
                 <label class="form-label">V - ${i18nStrings.fields.completeness}</label>
                 <select class="form-select form-select-sm" id="form-v">
                     <option value="-1">--</option>
-                    <option value="1">1 - ${i18nStrings.completeness.['1']}</option>
-                    <option value="2">2 - ${i18nStrings.completeness.['2']}</option>
+                    <option value="1">1 - ${i18nStrings.completeness['1']}</option>
+                    <option value="2">2 - ${i18nStrings.completeness['2']}</option>
                 </select>
             </div>
             <div class="col-md-3">
@@ -343,7 +354,7 @@ class ObservationForm {
                 <select class="form-select form-select-sm" id="form-weather_front">
                     <option value="-1">--</option>
                     ${Array.from({length: 9}, (_, i) => {
-                        const label = i18nStrings.weather_front.[i.toString()];
+                        const label = i18nStrings.weather_front[i.toString()];
                         return `<option value="${i}">${i} - ${label}</option>`;
                     }).join('')}
                 </select>
@@ -455,27 +466,39 @@ class ObservationForm {
         // Auto-fill GG based on g, kk, jj, mm
         const autoFillGG = async () => {
             const g = parseInt(this.fields.g.value);
+            // DEBUG: Log trigger
+            console.log("🔍 DEBUG: autoFillGG triggered, g=", g);
             if (g === 0 || g === 2) {
                 const kk = this.fields.kk.value;
                 const jj = parseInt(this.fields.jj.value) % 100;
                 const mm = this.fields.mm.value;
+                // DEBUG: Log parameters
+                console.log("🔍 DEBUG: Fetching GG for kk=", kk, "jj=", jj, "mm=", mm);
                 if (kk && jj && mm) {
                     try {
-                        const resp = await fetch(`/api/observers?kk=${kk}&jj=${jj}&mm=${mm}`);
+                        const url = `/api/observers?kk=${kk}&jj=${jj}&mm=${mm}`;
+                        console.log("🔍 DEBUG: Fetching:", url);
+                        const resp = await fetch(url);
+                        console.log("🔍 DEBUG: Response status:", resp.status);
                         if (resp.ok) {
                             const data = await resp.json();
+                            console.log("🔍 DEBUG: Observer data:", data);
                             if (data.observer) {
                                 const gg = g === 0 ? data.observer.GH : data.observer.GN;
+                                console.log("🔍 DEBUG: Setting GG to", gg, "(from", g === 0 ? "GH" : "GN", ")");
                                 this.fields.gg.value = gg;
                                 this.fields.gg.disabled = true;
                                 checkRequired();
+                            } else {
+                                console.log("🔍 DEBUG: No observer data returned");
                             }
                         }
                     } catch (e) {
-                        console.error('Error fetching GG:', e);
+                        console.error('🔍 DEBUG: Error fetching GG:', e);
                     }
                 }
             } else {
+                console.log("🔍 DEBUG: g is not 0 or 2, enabling GG field");
                 this.fields.gg.disabled = false;
                 if (!this.originalObservation) {
                     this.fields.gg.value = '';
@@ -560,15 +583,22 @@ class ObservationForm {
                     this.isEditingMode = true;
                     this.enableAllFields();
                     
-                    // Hide Yes/No buttons, show OK button
+                    // Hide Yes button and Previous/Next buttons
                     yesBtn.style.display = 'none';
                     const noBtn = document.getElementById('btn-obs-form-no');
                     if (noBtn) noBtn.style.display = 'none';
                     
+                    const prevBtn = document.getElementById('btn-obs-form-prev');
+                    if (prevBtn) prevBtn.style.display = 'none';
+                    
+                    const nextBtn = document.getElementById('btn-obs-form-next');
+                    if (nextBtn) nextBtn.style.display = 'none';
+                    
+                    // Show OK button
                     if (okBtn) {
                         okBtn.style.display = 'block';
                         okBtn.textContent = i18nStrings.common.ok;
-                        okBtn.className = 'btn btn-primary btn-sm';
+                        okBtn.className = 'btn btn-primary btn-sm px-3';
                         checkRequired();
                     }
                 }
@@ -610,22 +640,27 @@ class ObservationForm {
         const prevBtn = document.getElementById('btn-obs-form-prev');
         const okViewBtn = document.getElementById('btn-obs-form-ok-view');
         
-        if (nextBtn && this.mode === 'view') {
+        // Next button - works in view, edit, and delete modes
+        if (nextBtn) {
             nextBtn.addEventListener('click', () => {
                 this.navigating = true;
                 this.modal.hide();
-                if (this.onYes) {
-                    this.onYes(); // Next
+                if (this.mode === 'view' && this.onYes) {
+                    this.onYes(); // Next in view mode
+                } else if ((this.mode === 'edit' || this.mode === 'delete') && this.onYes) {
+                    this.onYes(); // Next in edit/delete mode
                 }
             });
             
             // Bind Enter key to Next button in view mode
-            this.modalElement.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    nextBtn.click();
-                }
-            });
+            if (this.mode === 'view') {
+                this.modalElement.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        nextBtn.click();
+                    }
+                });
+            }
         }
         
         // OK button in view mode should close and return to main (like ESC/Cancel)
@@ -636,12 +671,15 @@ class ObservationForm {
             });
         }
         
-        if (prevBtn && this.mode === 'view') {
+        // Previous button - works in view, edit, and delete modes
+        if (prevBtn) {
             prevBtn.addEventListener('click', () => {
                 this.navigating = true;
                 this.modal.hide();
-                if (this.onNo) {
-                    this.onNo(); // Previous
+                if (this.mode === 'view' && this.onNo) {
+                    this.onNo(); // Previous in view mode
+                } else if ((this.mode === 'edit' || this.mode === 'delete') && this.onNo) {
+                    this.onNo(); // Previous in edit/delete mode
                 }
             });
         }
@@ -751,8 +789,18 @@ class ObservationForm {
     }
     
     getFormData() {
+        // Validate required fields
+        if (!this.fields.kk.value || this.fields.kk.value === '') {
+            throw new Error('Observer code (KK) is required');
+        }
+        
+        const kk = parseInt(this.fields.kk.value);
+        if (isNaN(kk)) {
+            throw new Error('Invalid observer code (KK)');
+        }
+        
         return {
-            KK: parseInt(this.fields.kk.value),
+            KK: kk,
             O: parseInt(this.fields.o.value),
             JJ: parseInt(this.fields.jj.value),
             MM: parseInt(this.fields.mm.value),

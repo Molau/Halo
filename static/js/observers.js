@@ -9,9 +9,26 @@ let regionsList = [];
 let currentPage = 1;
 const pageSize = 50;  // Show 50 observers per page
 
+// Wait for i18nStrings to be loaded by main.js
+function waitForI18n() {
+    return new Promise((resolve) => {
+        if (typeof i18nStrings !== 'undefined' && Object.keys(i18nStrings).length > 0) {
+            resolve();
+        } else {
+            const checkInterval = setInterval(() => {
+                if (typeof i18nStrings !== 'undefined' && Object.keys(i18nStrings).length > 0) {
+                    clearInterval(checkInterval);
+                    resolve();
+                }
+            }, 50);
+        }
+    });
+}
+
 // Show filter dialog on page load
 document.addEventListener('DOMContentLoaded', () => {
     (async () => {
+        await waitForI18n();
         await loadDropdownData();
         showFilterDialog();
     })();

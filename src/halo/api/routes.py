@@ -585,7 +585,18 @@ def filter_observations() -> Dict[str, Any]:
             # Simple value match for other parameters (GG, O, EE, DD, N, C, H, F, V)
             value = int(params.get('value'))
             attr = filter_type
-            matching_obs = [obs for obs in observations if getattr(obs, attr, None) == value]
+            # DEBUG: Log filter matching
+            print(f"🔍 DEBUG: Filtering by {attr}={value}")
+            print(f"🔍 DEBUG: Total observations: {len(observations)}")
+            for obs in observations:
+                obs_value = getattr(obs, attr, None)
+                # DEBUG: Show first few observations
+                if len(matching_obs) < 5:
+                    print(f"🔍 DEBUG: obs.KK={obs.KK} obs.{attr}={obs_value} match={obs_value == value}")
+                if obs_value == value:
+                    matching_obs.append(obs)
+            # DEBUG: Summary
+            print(f"🔍 DEBUG: Found {len(matching_obs)} matching observations")
         
         # Apply action (keep or delete)
         if action == 'keep':
@@ -4348,19 +4359,15 @@ def update_observer(kk: str) -> Dict[str, Any]:
         if observations:
             obs_updated_count = 0
             for obs in observations:
-                # Observation format: KK,VName,NName,Object,Year,Month,Day,Location,...
-                if obs[0] == kk:
-                    obs[1] = first_updated[1]  # Update VName
-                    obs[2] = first_updated[2]  # Update NName
+                # Check if observation belongs to this observer
+                if getattr(obs, 'KK', None) == kk:
+                    obs.VName = first_updated[1]
+                    obs.NName = first_updated[2]
                     obs_updated_count += 1
             
-            # Save updated observations back to haloobs.csv (if any were updated)
+            # Mark as dirty if any observations were updated
             if obs_updated_count > 0:
-                haloobs_path = root_path / 'resources' / 'haloobs.csv'
-                with open(haloobs_path, 'w', encoding='utf-8', newline='') as f:
-                    writer = csv.writer(f)
-                    writer.writerows(observations)
-                current_app.config['OBSERVATIONS'] = observations
+                current_app.config['DIRTY'] = True
         
         return jsonify({
             'success': True,
