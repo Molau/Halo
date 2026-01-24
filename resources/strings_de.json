@@ -13,20 +13,6 @@
     "error": "Aktualisierung fehlgeschlagen: {error}",
     "manual_restart": "Aktualisierung abgeschlossen. Bitte beenden Sie die Anwendung und starten Sie sie manuell neu."
   },
-  "action": {
-    "select_month": "Monat auswählen",
-    "select_year": "Jahr auswählen"
-  },
-  "button": {
-    "cancel": "Abbrechen",
-    "ok": "OK",
-    "close": "Schließen",
-    "print": "Drucken",
-    "save": "Speichern",
-    "chart": "Grafik",
-    "line_chart": "Liniengrafik",
-    "bar_chart": "Balkengrafik"
-  },
   "welcome": {
     "title": "Willkommen beim HALO Auswerteprogramm",
     "subtitle": "Programm zur Erfassung und Auswertung von Halobeobachtungen"
@@ -40,7 +26,6 @@
     "deleted": "gelöscht",
     "ok": "OK",
     "cancel": "Abbrechen",
-    "close": "Schließen",
     "save": "Speichern",
     "print": "Drucken",
     "month": "Monat:",
@@ -52,7 +37,6 @@
     "minimum": "minimale",
     "mean": "mittlere",
     "maximum": "maximale",
-    "chart": "Grafik",
     "line_chart": "Liniengrafik",
     "bar_chart": "Balkengrafik",
     "next": "Weiter",
@@ -68,23 +52,12 @@
     "saving": "Speichern...",
     "no_file_loaded": "Keine Datei geladen!",
     "error_loading": "Fehler beim Laden",
-    "unknown_error": "Unbekannter Fehler",
-    "file": "Datei",
     "observations_count": "Beobachtungen",
     "error_loading_observers": "Fehler beim Laden der Beobachterliste",
     "select_observer": "Beobachter auswählen"
   },
   "menus": {
-    "main": {
-      "file": "Datei",
-      "observations": "Beobachtungen",
-      "analysis": "Auswertung",
-      "output": "Ausgabe",
-      "settings": "Einstellungen",
-      "help": "Hilfe"
-    },
     "file": {
-      "title": "Datei",
       "new_file": "neue Datei",
       "load": "Laden",
       "select": "Selektieren",
@@ -106,10 +79,6 @@
       "startup_file_question": "Soll beim Programmstart automatisch eine Datei geladen werden?",
       "startup_file_changed": "Startdatei wurde gespeichert.",
       "startup_file_disabled": "Automatisches Laden wurde deaktiviert.",
-      "data_dir": "Datenverzeichnis",
-      "observers": "Beobachterverwaltung",
-      "language": "Sprache",
-      "preferences": "Einstellungen",
       "date_default": "Datum",
       "date_setting_title": "Einstellung der Datumsvoreinstellung",
       "date_setting_question": "Welche Datumsvoreinstellung möchten Sie verwenden?",
@@ -118,27 +87,21 @@
       "date_previous_month": "Vormonat",
       "date_constant_month": "fester Monat",
       "date_select_month": "Monat und Jahr wählen:",
-      "date_setting_changed": "Datumsvoreinstellung wurde geändert.",
       "input_type": "Eingabeart",
       "input_mode_title": "Einstellung der Eingabeart",
       "input_mode_question": "Welche Eingabeart bevorzugen Sie?",
       "input_mode_menu": "Menüeingaben",
       "input_mode_number": "Zahleneingaben",
-      "input_mode_changed": "Eingabeart wurde geändert.",
       "output_type": "Ausgabeart",
       "output_type_title": "Einstellung der Ausgabeart",
       "output_type_question": "Welche Ausgabeart bevorzugen Sie?",
       "output_type_html": "HTML-Tabellen",
       "output_type_pseudo": "Pseudografik",
-      "output_type_markdown": "Markdown",
-      "output_type_changed": "Ausgabeart wurde geändert.",
-      "data_dir_prompt": "Geben Sie bitte das Datenverzeichnis ein:",
-      "data_dir_changed": "Datenverzeichnis wurde geändert."
+      "output_type_markdown": "Markdown"
     },
     "help": {
       "version": "Version",
       "whats_new": "Was ist neu",
-      "help_text": "HALO Hilfe\\n\\nDiese Anwendung ist eine Web-Version des HALO-Programms zur Verwaltung von Halo-Beobachtungen.",
       "version_dialog": {
         "title": "HALO 3.0",
         "date_label": "Datum",
@@ -170,6 +133,7 @@
     "warning_select_value": "Bitte wählen Sie einen Wert aus.",
     "table_kk": "KK",
     "table_name": "Name",
+    "table_active": "Aktiv",
     "table_since": "Seit",
     "table_primary_site": "Hauptbeobachtungsort",
     "table_secondary_site": "Nebenbeobachtungsort",
@@ -232,18 +196,6 @@
       "download_title": "Download"
   },
   "analysis_dialog": {
-    "dimension_title": "Auswertung",
-    "dimension_question": "Welche Art von Auswertung möchten Sie durchführen?",
-    "one_dimensional": "Auswertung mit einem Parameter",
-    "two_dimensional": "Auswertung mit zwei Parametern",
-    "first_param_prompt": "Geben Sie bitte den ersten Parameter ein!",
-    "second_param_prompt": "Geben Sie bitte den zweiten Parameter ein!",
-    "param_prompt": "Geben Sie bitte den gewünschten Parameter ein!",
-    "limit_question": "Soll dieser Parameter eingeschränkt werden?",
-    "limit_yes": "Ja, Parameter einschränken",
-    "limit_no": "Nein, voller Bereich",
-    "from_label": "Von:",
-    "to_label": "Bis:",
     "please_select": "-- Bitte wählen --",
     "param_names": {
       "JJ": "Jahr",
@@ -337,18 +289,12 @@
   "output": {
     "monthly_report": "Monatsmeldung",
     "monthly_stats": "Monatsstatistik",
-    "annual_stats": "Jahresstatistik",
-    "annual_stats_description": "Wählen Sie ein Jahr aus, um die Jahresstatistik anzuzeigen.",
     "yearly_stats": "Jahresstatistik"
   },
   "annual_stats": {
     "title": "Jahresstatistik",
-    "year_label": "Jahr:",
     "year_prompt": "Geben Sie bitte das gewünschte Jahr ein!",
-    "year_placeholder": "JJ (z.B. 96 oder 1996)",
     "error_year_required": "Bitte Jahr eingeben",
-    "error_invalid_year": "Ungültiges Jahr",
-    "error_invalid_year_range": "Ungültiges Jahr (50-99 oder 1950-2049)",
     "error_no_data": "Keine Daten für dieses Jahr",
     "error_fetching": "Fehler beim Laden der Statistik",
     "title_with_year": "Jahresstatistik {year}",
@@ -410,28 +356,12 @@
     "y_axis": "Aktivität"
   },
   "monthly_report": {
-    "title": "Monatsmeldung",
     "combined_prompt": "Bitte geben Sie den Beobachter und den gewünschten Monat ein!",
-    "report_title_template": "Halobeobachtungen von {observer} im {month} {year}",
-    "observer_label": "Beobachter:",
-    "observer_info": "Der aktive Beobachter wird automatisch vorausgewählt",
     "month_year_label": "Monat/Jahr:",
-    "month_year_placeholder": "MM JJ (z.B. 12 23)",
-    "month_year_info": "Format: MM JJ (Monat und Jahr, z.B. \"12 23\" für Dezember 2023)",
-    "error_no_observer": "Bitte wählen Sie einen Beobachter aus.",
-    "error_month_year_required": "Bitte geben Sie Monat und Jahr ein.",
-    "error_invalid_format": "Ungültiges Format. Bitte verwenden Sie \"MM JJ\" (z.B. \"12 23\").",
-    "error_invalid_month": "Ungültiger Monat. Bitte geben Sie eine Zahl zwischen 1 und 12 ein.",
-    "error_invalid_year": "Ungültiges Jahr. Bitte geben Sie eine zweistellige Jahreszahl ein (z.B. 23 für 2023).",
-    "print": "Drucken",
-    "save": "Speichern",
+    "report_title_template": "Halobeobachtungen von {observer} im {month} {year}",
     "sectors": "Sektoren",
-    "remarks": "Bemerkungen",
-    "main_location": "Hauptbeobachtungsort",
-    "secondary_location": "Nebenbeobachtungsort"
-  },
-  "errors": {
-    "unknown_observer": "Unbekannter Beobachtercode"
+    "error_no_observer": "Bitte wählen Sie einen Beobachter aus.",
+    "error_month_year_required": "Bitte geben Sie Monat und Jahr ein."
   },
   "dialogs": {
     "new_file": {
@@ -472,12 +402,10 @@
       "error": "Fehler beim Wiederherstellen"
     },
     "no_data": {
-      "title": "Keine Daten",
       "message": "Keine Daten geladen! Bitte laden Sie zuerst eine Datei."
     },
     "empty_filter_result": "Keine Beobachtungen entsprechen den Filterkriterien. Es würde eine leere Datei erstellt.",
-    "analysis_title": "Auswertung",
-    "chart_title": "Diagramm"
+    "analysis_title": "Auswertung"
   },
   "menu_titles": {
     "file": "Datei",
@@ -486,8 +414,7 @@
     "analysis": "Auswertung",
     "output": "Ausgabe",
     "settings": "Einstellungen",
-    "help": "Hilfe",
-    "exit": "Ende"
+    "help": "Hilfe"
   },
   "object_types": {
     "1": "Sonnenhalo",
@@ -729,28 +656,15 @@
   "fields": {
     "observer": "Beobachter",
     "object": "Objekt",
-    "sun": "Sonnenhalo",
-    "moon": "Mondhalo",
-    "planet": "Planetenhalo",
-    "star": "Sternhalo",
-    "artificial": "Halo um irdische Lichtquelle",
     "year": "Jahr",
     "month": "Monat",
     "day": "Tag",
     "observing_area": "Beobachtungsort",
     "primary_site": "Hauptbeobachtungsort",
-    "other_site": "Anderer Ort",
     "secondary_site": "Nebenbeobachtungsort",
     "hour": "Stunde",
     "minute": "Minute",
     "cirrus_density": "Dichte/Entstehungsort",
-    "very_thin_cirrus": "sehr dünner bis dünner Cirrus",
-    "normal_cirrus": "normaler Cirrus",
-    "thick_cirrus": "dichter bis sehr dichter Cirrus",
-    "frost": "Reif",
-    "snow": "Schneedecke",
-    "ice_fog": "Eisnebel/Polarschnee",
-    "virga": "Fallstreifen (virga)",
     "duration": "Dauer",
     "cloud_cover": "Himmelsbedeckung",
     "cirrus_type": "Cirrustyp",
@@ -771,9 +685,7 @@
     "not_applicable": "nicht zutreffend"
   },
   "analysis_results": {
-    "title": "Auswertung",
     "restriction": "Filter",
-    "restrictions": "Filter",
     "count": "Anzahl",
     "observations": "Beobachtungen",
     "observation_s": "Beobachtung(en)",

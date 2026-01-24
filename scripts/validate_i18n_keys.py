@@ -25,7 +25,13 @@ JS_STRING_METHODS = {
     'replace', 'padEnd', 'padStart', 'trim', 'trimStart', 'trimEnd',
     'toLowerCase', 'toUpperCase', 'slice', 'substring', 'substr',
     'charAt', 'indexOf', 'lastIndexOf', 'includes', 'startsWith', 'endsWith',
-    'split', 'join', 'repeat', 'concat', 'match', 'search', 'localeCompare'
+    'split', 'join', 'repeat', 'concat', 'match', 'search', 'localeCompare',
+    # Array/Object properties and methods
+    'length', 'push', 'pop', 'shift', 'unshift', 'forEach', 'map', 'filter',
+    'reduce', 'find', 'findIndex', 'some', 'every', 'sort', 'reverse',
+    # Common Python methods
+    'format', 'strip', 'lstrip', 'rstrip', 'upper', 'lower', 'title',
+    'capitalize', 'swapcase', 'count', 'find', 'rfind', 'index', 'rindex'
 }
 
 
@@ -160,9 +166,38 @@ def main():
             missing_keys[key] = code_references[key]
     
     # Find unused keys (defined but not used)
+    # IMPORTANT: Handle two cases:
+    # 1. If a parent object is referenced (e.g., i18nStrings.brightness),
+    #    mark ALL its children as used (brightness.0, brightness.1, etc.)
+    #    This handles dynamic array access: i18nStrings.brightness[i.toString()]
+    # 2. If a child is referenced (e.g., dialogs.error.title),
+    #    mark ALL its parents as used (dialogs, dialogs.error)
+    #    Parent objects must exist for child access to work
     unused_keys = set()
     for key in defined_keys:
-        if key not in code_references:
+        # Check if key is directly referenced
+        if key in code_references:
+            continue
+        
+        # Check if any parent of this key is referenced (dynamic array access)
+        # Example: brightness.0 is used if "brightness" is referenced
+        is_child_of_referenced = False
+        parts = key.split('.')
+        for i in range(1, len(parts)):
+            parent_key = '.'.join(parts[:i])
+            if parent_key in code_references:
+                is_child_of_referenced = True
+                break
+        
+        # Check if any child of this key is referenced (parent objects)
+        # Example: dialogs.error is used if "dialogs.error.title" is referenced
+        is_parent_of_referenced = False
+        for ref_key in code_references.keys():
+            if ref_key.startswith(key + '.'):
+                is_parent_of_referenced = True
+                break
+        
+        if not is_child_of_referenced and not is_parent_of_referenced:
             unused_keys.add(key)
     
     # Generate report

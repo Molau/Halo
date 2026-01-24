@@ -1815,6 +1815,7 @@ function updateMenuText() {
     updateDropdownItem('new-file', i18nStrings.menus.file.new_file);
     updateDropdownItem('load', i18nStrings.menus.file.load);
     updateDropdownItem('select', i18nStrings.menus.file.select);
+    updateDropdownItem('merge', i18nStrings.menus.file.merge);
     updateDropdownItem('save', i18nStrings.menus.file.save);
     updateDropdownItem('save-as', i18nStrings.menus.file.save_as);
     updateDropdownItem('upload', i18nStrings.menus.file.upload);
@@ -4722,13 +4723,13 @@ async function showUploadDialog() {
         const count = status.count || 0;
         
         // Show confirmation dialog
-        const confirmMessage = i18nStrings.upload_download.download_success.replace('{0}', count);
+        const confirmMessage = i18nStrings.upload_download.upload_confirm.replace('{0}', count);
         
-        showConfirmDialog(i18nStrings.upload_download.download_title, confirmMessage, async () => {
+        showConfirmDialog(i18nStrings.upload_download.upload_title, confirmMessage, async () => {
             // User confirmed - proceed with upload
             
             // Show progress spinner
-            showSpinner(i18nStrings.upload_download.download_progress);
+            showSpinner(i18nStrings.upload_download.upload_progress);
             
             try {
                 // Upload to halo.online API
@@ -4749,7 +4750,7 @@ async function showUploadDialog() {
                 
                 if (response.ok && result.success) {
                     // Success - show toast notification
-                    const successMessage = i18nStrings.upload_download.download_success.replace('{0}', result.count);
+                    const successMessage = i18nStrings.upload_download.upload_success.replace('{0}', result.count);
                     showNotification(successMessage, 'success');
                 } else {
                     showErrorDialog(i18nStrings.common.error + ': ' + (result.error));

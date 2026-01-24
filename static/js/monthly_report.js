@@ -456,7 +456,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         html += '<table class="table table-bordered analysis-table">';
         html += '<thead>';
         html += '<tr>';
-        html += '<th class="monthly-report-header" style="font-family: monospace; white-space: pre;">KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18nStrings.monthly_report.sectors + ' ' + i18nStrings.monthly_report.remarks + '</th>';
+        html += '<th class="monthly-report-header" style="font-family: monospace; white-space: pre;">KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18nStrings.monthly_report.sectors + ' ' + i18nStrings.fields.remarks + '</th>';
         html += '</tr>';
         html += '</thead>';
         html += '<tbody>';
@@ -478,8 +478,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         html += '<tfoot>';
         html += '<tr>';
         html += `<td style="text-align: center; padding: 10px;">`;
-        html += `<strong>${i18nStrings.monthly_report.main_location}:</strong> ${data.observer_hbort}<br>`;
-        html += `<strong>${i18nStrings.monthly_report.secondary_location}:</strong> ${data.observer_nbort}`;
+        html += `<strong>${i18nStrings.fields.primary_site}:</strong> ${data.observer_hbort}<br>`;
+        html += `<strong>${i18nStrings.fields.secondary_site}:</strong> ${data.observer_nbort}`;
         html += `</td>`;
         html += '</tr>';
         html += '</tfoot>';
@@ -512,7 +512,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Markdown format
             text += `# ${title}\n\n`;
             text += '```\n';
-            text += 'KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18nStrings.monthly_report.sectors + ' ' + i18nStrings.monthly_report.remarks + '\n';
+            text += 'KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18nStrings.monthly_report.sectors + ' ' + i18nStrings.fields.remarks + '\n';
             text += '```\n\n';
             
             if (data.observations.length === 0) {
@@ -531,15 +531,15 @@ document.addEventListener('DOMContentLoaded', async function() {
                 text += '```\n\n';
             }
             
-            text += `## ${i18nStrings.monthly_report.main_location}\n`;
+            text += `## ${i18nStrings.fields.primary_site}\n`;
             text += `${data.observer_hbort}\n\n`;
-            text += `## ${i18nStrings.monthly_report.secondary_location}\n`;
+            text += `## ${i18nStrings.fields.secondary_site}\n`;
             text += `${data.observer_nbort}\n`;
         } else if (outputMode === 'H') {
             // HTML format - return as plain monospace text
             text += title + '\n';
             text += '═'.repeat(title.length) + '\n\n';
-            text += 'KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18nStrings.monthly_report.sectors + ' ' + i18nStrings.monthly_report.remarks + '\n';
+            text += 'KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18nStrings.monthly_report.sectors + ' ' + i18nStrings.fields.remarks + '\n';
             text += '─'.repeat(120) + '\n';
             
             if (data.observations.length === 0) {
@@ -557,8 +557,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
             
             text += '─'.repeat(120) + '\n';
-            text += `${i18nStrings.monthly_report.main_location}: ${data.observer_hbort}\n`;
-            text += `${i18nStrings.monthly_report.secondary_location}: ${data.observer_nbort}\n`;
+            text += `${i18nStrings.fields.primary_site}: ${data.observer_hbort}\n`;
+            text += `${i18nStrings.fields.secondary_site}: ${data.observer_nbort}\n`;
         } else {
             // Pseudografik format (original)
             text = '';
@@ -569,7 +569,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             text += ' '.repeat(titlePadLeft) + '═'.repeat(title.length) + '\n\n';
             text += '╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗\n';
             const sectors = i18nStrings.monthly_report.sectors;
-            const remarks = i18nStrings.monthly_report.remarks;
+            const remarks = i18nStrings.fields.remarks;
             const headerLine = `KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ${sectors.padEnd(15)} ${remarks.padEnd(47)}`;
             text += '║ ' + headerLine.substring(0, 118).padEnd(118) + ' ║\n';
             text += '╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣\n';
@@ -600,8 +600,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             // Footer
             text += '╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣\n';
-            let hbLine = i18nStrings.monthly_report.main_location + ': ' + data.observer_hbort;
-            let nbLine = i18nStrings.monthly_report.secondary_location + ': ' + data.observer_nbort;
+            let hbLine = i18nStrings.fields.primary_site + ': ' + data.observer_hbort;
+            let nbLine = i18nStrings.fields.secondary_site + ': ' + data.observer_nbort;
             const hbPadLeft = Math.floor((122 - hbLine.length) / 2);
             hbLine = ' '.repeat(hbPadLeft) + hbLine;
             nbLine = ' '.repeat(hbPadLeft) + nbLine;

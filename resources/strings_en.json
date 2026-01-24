@@ -13,20 +13,6 @@
     "error": "Update failed: {error}",
     "manual_restart": "Update complete. Please exit the application and restart it manually."
   },
-  "action": {
-    "select_month": "Select Month",
-    "select_year": "Select Year"
-  },
-  "button": {
-    "cancel": "Cancel",
-    "ok": "OK",
-    "close": "Close",
-    "print": "Print",
-    "save": "Save",
-    "chart": "Chart",
-    "line_chart": "Line Chart",
-    "bar_chart": "Bar Chart"
-  },
   "welcome": {
     "title": "Welcome to HALO Analysis Program",
     "subtitle": "Program for the collection and analysis of halo observations"
@@ -40,7 +26,6 @@
     "deleted": "deleted",
     "ok": "OK",
     "cancel": "Cancel",
-    "close": "Close",
     "save": "Save",
     "print": "Print",
     "month": "Month:",
@@ -52,7 +37,6 @@
     "minimum": "minimum",
     "mean": "mean",
     "maximum": "maximum",
-    "chart": "Chart",
     "line_chart": "Line Chart",
     "bar_chart": "Bar Chart",
     "next": "Next",
@@ -68,23 +52,12 @@
     "saving": "Saving...",
     "no_file_loaded": "No file loaded!",
     "error_loading": "Error loading",
-    "unknown_error": "Unknown error",
-    "file": "File",
     "observations_count": "observations",
     "error_loading_observers": "Error loading observer list",
     "select_observer": "Select Observer"
   },
   "menus": {
-    "main": {
-      "file": "File",
-      "observations": "Observations",
-      "analysis": "Analysis",
-      "output": "Output",
-      "settings": "Settings",
-      "help": "Help"
-    },
     "file": {
-      "title": "File",
       "new_file": "New File",
       "load": "Load",
       "select": "Select",
@@ -106,10 +79,6 @@
       "startup_file_question": "Shall a file be loaded automatically on program start?",
       "startup_file_changed": "Startup file has been saved.",
       "startup_file_disabled": "Automatic loading has been disabled.",
-      "data_dir": "Data Path",
-      "observers": "Observer Management",
-      "language": "Language",
-      "preferences": "Preferences",
       "date_default": "Date",
       "date_setting_title": "Date Default Setting",
       "date_setting_question": "Which date default would you like to use?",
@@ -118,27 +87,21 @@
       "date_previous_month": "previous month",
       "date_constant_month": "fixed month",
       "date_select_month": "Select month and year:",
-      "date_setting_changed": "Date default setting changed.",
       "input_type": "Input Format",
       "input_mode_title": "Input Mode Setting",
       "input_mode_question": "Which input mode do you prefer?",
       "input_mode_menu": "Menu inputs",
       "input_mode_number": "Number inputs",
-      "input_mode_changed": "Input mode has been changed.",
       "output_type": "Output Format",
       "output_type_title": "Output Format Setting",
       "output_type_question": "Which output format do you prefer?",
       "output_type_html": "HTML Tables",
       "output_type_pseudo": "Pseudographics",
-      "output_type_markdown": "Markdown",
-      "output_type_changed": "Output format has been changed.",
-      "data_dir_prompt": "Please enter the data directory:",
-      "data_dir_changed": "Data directory has been changed."
+      "output_type_markdown": "Markdown"
     },
     "help": {
       "version": "Version",
       "whats_new": "What's New",
-      "help_text": "HALO Help\\n\\nThis application is a web version of the HALO program for managing halo observations.",
       "version_dialog": {
         "title": "HALO 3.0",
         "date_label": "Date",
@@ -170,6 +133,7 @@
     "warning_select_value": "Please choose a value.",
     "table_kk": "KK",
     "table_name": "Name",
+    "table_active": "Active",
     "table_since": "Since",
     "table_primary_site": "Primary Site",
     "table_secondary_site": "Secondary Site",
@@ -232,18 +196,6 @@
       "download_title": "Download"
   },
   "analysis_dialog": {
-    "dimension_title": "Analysis",
-    "dimension_question": "Which type of analysis would you like to perform?",
-    "one_dimensional": "Analysis with one parameter",
-    "two_dimensional": "Analysis with two parameters",
-    "first_param_prompt": "Please enter the first parameter!",
-    "second_param_prompt": "Please enter the second parameter!",
-    "param_prompt": "Please enter the desired parameter!",
-    "limit_question": "Shall this parameter be limited?",
-    "limit_yes": "Yes, limit parameter",
-    "limit_no": "No, full range",
-    "from_label": "From:",
-    "to_label": "To:",
     "please_select": "-- Please select --",
     "param_names": {
       "JJ": "Year",
@@ -337,18 +289,10 @@
   "output": {
     "monthly_report": "Monthly Report",
     "monthly_stats": "Monthly Statistics",
-    "annual_stats": "Annual Statistics",
-    "annual_stats_description": "Select a year to view annual statistics.",
     "yearly_stats": "Annual Statistics"
   },
   "annual_stats": {
-    "title": "Annual Statistics",
-    "year_label": "Year:",
-    "year_prompt": "Please enter the year!",
-    "year_placeholder": "YY (e.g. 96 or 1996)",
-    "error_year_required": "Please enter year",
-    "error_invalid_year": "Invalid year",
-    "error_invalid_year_range": "Invalid year (50-99 or 1950-2049)",
+    "title": "Annual Statistics",    "year_prompt": "Please enter the year!",    "error_year_required": "Please enter year",
     "error_no_data": "No data for this year",
     "error_fetching": "Error fetching statistics",
     "title_with_year": "Annual Statistics {year}",
@@ -410,28 +354,12 @@
     "y_axis": "Activity"
   },
   "monthly_report": {
-    "title": "Monthly Report",
     "combined_prompt": "Please enter the observer and the month!",
-    "report_title_template": "Halo observations by {observer} in {month} {year}",
-    "observer_label": "Observer:",
-    "observer_info": "The active observer will be pre-selected automatically",
     "month_year_label": "Month/Year:",
-    "month_year_placeholder": "MM YY (e.g. 12 23)",
-    "month_year_info": "Format: MM YY (Month and Year, e.g. \"12 23\" for December 2023)",
-    "error_no_observer": "Please select an observer.",
-    "error_month_year_required": "Please enter month and year.",
-    "error_invalid_format": "Invalid format. Please use \"MM YY\" (e.g. \"12 23\").",
-    "error_invalid_month": "Invalid month. Please enter a number between 1 and 12.",
-    "error_invalid_year": "Invalid year. Please enter a two-digit year (e.g. 23 for 2023).",
-    "print": "Print",
-    "save": "Save",
+    "report_title_template": "Halo observations by {observer} in {month} {year}",
     "sectors": "Sectors",
-    "remarks": "Remarks",
-    "main_location": "Main Observation Site",
-    "secondary_location": "Secondary Observation Site"
-  },
-  "errors": {
-    "unknown_observer": "Unknown observer code"
+    "error_no_observer": "Please select an observer.",
+    "error_month_year_required": "Please enter month and year."
   },
   "dialogs": {
     "new_file": {
@@ -472,12 +400,10 @@
       "error": "Error restoring"
     },
     "no_data": {
-      "title": "No Data",
       "message": "No data loaded! Please load a file first."
     },
     "empty_filter_result": "No observations match the filter criteria. This would create an empty file.",
-    "analysis_title": "Analysis",
-    "chart_title": "Chart"
+    "analysis_title": "Analysis"
   },
   "menu_titles": {
     "file": "File",
@@ -486,8 +412,7 @@
     "analysis": "Analysis",
     "output": "Output",
     "settings": "Settings",
-    "help": "Help",
-    "exit": "Exit"
+    "help": "Help"
   },
   "object_types": {
     "1": "Sun",
@@ -729,28 +654,15 @@
   "fields": {
     "observer": "Observer",
     "object": "Object",
-    "sun": "Sun",
-    "moon": "Moon",
-    "planet": "Planet",
-    "star": "Star",
-    "artificial": "Artificial light source",
     "year": "Year",
     "month": "Month",
     "day": "Day",
     "observing_area": "Observing Area",
     "primary_site": "Primary Site",
-    "other_site": "Other Location",
     "secondary_site": "Secondary Site",
     "hour": "Hour",
     "minute": "Minute",
     "cirrus_density": "Cirrus Density/Origin",
-    "very_thin_cirrus": "very thin to thin cirrus",
-    "normal_cirrus": "normal cirrus",
-    "thick_cirrus": "thick to very thick cirrus",
-    "frost": "white frost",
-    "snow": "snow cover",
-    "ice_fog": "ice nebulae/polar snow",
-    "virga": "virga",
     "duration": "Duration",
     "cloud_cover": "Cloud Cover",
     "cirrus_type": "Cirrus Type",
@@ -771,9 +683,7 @@
     "not_applicable": "not applicable"
   },
   "analysis_results": {
-    "title": "Analysis",
     "restriction": "Restriction",
-    "restrictions": "Restrictions",
     "count": "Count",
     "observations": "Observations",
     "observation_s": "Observation(s)",

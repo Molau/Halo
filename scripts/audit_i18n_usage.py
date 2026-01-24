@@ -39,6 +39,8 @@ PATTERNS = {
         # {% trans 'key' %}, {{ _('key') }}
         r'\{%\s*trans\s+(["\'])([a-zA-Z_][a-zA-Z0-9_\.]*)\1\s*%\}',
         r'\{\{\s*_\((["\'])([a-zA-Z_][a-zA-Z0-9_\.]*)\1\)\s*\}\}',
+        # {{ g.i18n.get('key') }} - Flask template pattern
+        r"g\.i18n\.get\(['\"]([a-zA-Z_][a-zA-Z0-9_\.]*)['\"]\)",
     ]
 }
 

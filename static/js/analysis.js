@@ -1652,7 +1652,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         <div class="modal-body" id="resultModalBody" style="overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 250px);">
                         </div>
                         <div class="modal-footer d-flex justify-content-end gap-2">
-                            <button type="button" id="btn-result-bar-chart" class="btn btn-secondary btn-sm px-3">${i18nStrings.button.bar_chart}</button>
+                            <button type="button" id="btn-result-bar-chart" class="btn btn-secondary btn-sm px-3">${i18nStrings.common.bar_chart}</button>
                             <button type="button" id="btn-result-line-chart" class="btn btn-secondary btn-sm px-3">${i18nStrings.common.line_chart}</button>
                             <button type="button" id="btn-result-print" class="btn btn-secondary btn-sm px-3">${i18nStrings.common.print}</button>
                             <button type="button" id="btn-result-save" class="btn btn-secondary btn-sm px-3">${i18nStrings.common.save}</button>
