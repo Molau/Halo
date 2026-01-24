@@ -732,9 +732,9 @@ def new_file() -> Dict[str, Any]:
         return jsonify({'error': str(e)}), 500
 
 
-@api_blueprint.route('/file/upload', methods=['POST'])
-def upload_file() -> Dict[str, Any]:
-    """Upload and load a file from user's filesystem directly into memory."""
+@api_blueprint.route('/file/load', methods=['POST'])
+def load_file_from_browser() -> Dict[str, Any]:
+    """Load a file from user's filesystem directly into memory."""
     from flask import current_app
     from io import StringIO
     import csv
@@ -939,6 +939,129 @@ def save_file_as() -> Dict[str, Any]:
             'count': len(observations),
             'message': f'{len(observations)} Beobachtungen gespeichert!'
         })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@api_blueprint.route('/file/upload', methods=['POST'])
+def upload_file() -> Dict[str, Any]:
+    """Upload current file to halo.online - implements 'Datei -> Upload'"""
+    from flask import current_app
+    import requests
+    
+    filename = current_app.config.get('LOADED_FILE')
+    if not filename:
+        return jsonify({'error': 'No file loaded'}), 400
+    
+    observations = current_app.config.get('OBSERVATIONS', [])
+    
+    if not observations:
+        return jsonify({'error': 'No observations to upload'}), 400
+    
+    data_to_upload = request.get_json()
+    target_url = data_to_upload.get('targetUrl', 'https://halo.online/api/upload')
+    
+    try:
+        # Prepare data for upload
+        upload_data = {
+            'filename': filename,
+            'observations': observations,
+            'count': len(observations)
+        }
+        
+        # TODO: Implement actual upload to halo.online API
+        # For now, this is a placeholder that simulates successful upload
+        # Replace with actual implementation once API endpoint is defined
+        
+        # Example implementation (commented out until API is ready):
+        # response = requests.post(
+        #     target_url,
+        #     json=upload_data,
+        #     headers={'Content-Type': 'application/json'},
+        #     timeout=30
+        # )
+        # 
+        # if response.status_code == 200:
+        #     result = response.json()
+        #     return jsonify({
+        #         'success': True,
+        #         'count': len(observations),
+        #         'message': f'Successfully uploaded {len(observations)} observations'
+        #     })
+        # else:
+        #     return jsonify({'error': f'Upload failed with status {response.status_code}'}), 500
+        
+        # Placeholder response (remove when implementing actual upload)
+        return jsonify({
+            'success': True,
+            'count': len(observations),
+            'message': f'Upload von {len(observations)} Beobachtungen erfolgreich (Placeholder)'
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@api_blueprint.route('/file/download', methods=['POST'])
+def download_file() -> Dict[str, Any]:
+    """Download observations from halo.online - implements 'Datei -> Download'"""
+    from flask import current_app
+    import requests
+    
+    data = request.get_json()
+    filename = data.get('filename', 'downloaded')
+    source_url = data.get('sourceUrl', 'https://halo.online/api/download')
+    
+    # Ensure .CSV extension
+    if not filename.endswith('.CSV') and not filename.endswith('.csv'):
+        filename += '.CSV'
+    
+    try:
+        # TODO: Implement actual download from halo.online API
+        # For now, this is a placeholder that simulates successful download
+        # Replace with actual implementation once API endpoint is defined
+        
+        # Example implementation (commented out until API is ready):
+        # response = requests.get(
+        #     source_url,
+        #     timeout=30
+        # )
+        # 
+        # if response.status_code == 200:
+        #     result = response.json()
+        #     observations = result.get('observations', [])
+        #     
+        #     # Store in app config
+        #     current_app.config['OBSERVATIONS'] = observations
+        #     current_app.config['LOADED_FILE'] = filename
+        #     current_app.config['DIRTY'] = True
+        #     
+        #     return jsonify({
+        #         'success': True,
+        #         'filename': filename,
+        #         'count': len(observations),
+        #         'observations': observations,
+        #         'message': f'Downloaded {len(observations)} observations'
+        #     })
+        # else:
+        #     return jsonify({'error': f'Download failed with status {response.status_code}'}), 500
+        
+        # Placeholder response (remove when implementing actual download)
+        # For now, return empty observations list
+        observations = []
+        
+        current_app.config['OBSERVATIONS'] = observations
+        current_app.config['LOADED_FILE'] = filename
+        current_app.config['DIRTY'] = True
+        
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'count': len(observations),
+            'observations': observations,
+            'message': f'Download von {len(observations)} Beobachtungen erfolgreich (Placeholder)'
+        })
+        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

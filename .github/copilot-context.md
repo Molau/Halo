@@ -162,6 +162,35 @@
   - Creating new validation logic for data already validated elsewhere
   - Writing custom formatters for standardized fields
 
+### 6a. i18n Changes Require Source Code Audit - Decision #022
+- **Date**: 2026-01-18
+- **Status**: ✓ Approved
+- **Core Rule**: ANY change to i18n files (strings_de.json, strings_en.json) MUST be immediately followed by a complete source code audit
+- **Rationale**:
+  - i18n keys are referenced throughout JavaScript, templates, and Python code
+  - Renaming or removing an i18n key will cause undefined key errors at runtime
+  - Silent failures can occur if code references non-existent keys
+- **Procedure When Changing i18n**:
+  1. **Before** making ANY change to i18n files:
+     - Document the old key name
+     - Plan which source files need updates
+  2. **After** making i18n changes:
+     - Search entire codebase for references to changed keys:
+       - `static/js/**/*.js` - JavaScript files
+       - `templates/**/*.html` - HTML templates  
+       - `src/**/*.py` - Python backend
+       - `src/halo/**` - All application code
+     - Update ALL references to match new key names
+     - Test application to verify no errors in console or UI
+  3. **Tools**:
+     - Use `grep_search` with regex to find all references: `i18n(Strings)?\.old_key_name`
+     - Search both English and German keys consistently
+- **Examples of Breaking Changes**:
+  - Removing `analysis_results.restrictions` without updating 6 JavaScript references = 6 broken UI elements
+  - Renaming `common.year` to `common.jahr` in just one file = runtime errors in other file
+- **Critical**: This is NOT optional. Missing references will cause bugs that only appear at runtime.
+- **Related**: Decision #021 (lockstep DE/EN maintenance), Decision #015 (fail fast principle)
+
 ### 7. No Fallback Values - Fail Fast
 - **Decision #015**: Never use fallback values or default data - fail explicitly when data is missing
 - **Date**: 2026-01-04
@@ -186,6 +215,33 @@
   - Missing API fields cause immediate errors that get fixed
   - No silent degradation of functionality
   - Code is cleaner without fallback logic everywhere
+- **Status**: Active principle
+
+### 8. Direct i18n Usage - No Intermediate Constants
+- **Decision #023**: Use i18n strings directly, never store in intermediate constants
+- **Date**: 2026-01-24
+- **Status**: ✓ Approved
+- **Rationale**:
+  - Reduces unnecessary variable declarations
+  - Makes code more readable and maintainable
+  - Clearer what string is being used at point of use
+  - Prevents confusion about whether variable has been modified
+  - Consistent with fail-fast principle (Decision #015)
+- **Core Rules**:
+  1. ✗ **NEVER** store i18n strings in intermediate variables: `const msgTpl = i18nStrings.update.message;`
+  2. ✓ **ALWAYS** use i18n strings directly: `i18nStrings.update.message.replace(...)`
+  3. ✗ **NEVER** create constants that just reference other i18n constants
+  4. ✓ **ONLY** exception: When the same complex i18n path is used multiple times in tight scope
+- **Examples**:
+  - ✗ Wrong: `const msgTpl = i18nStrings.update.message; showDialog(title, msgTpl.replace(...))`
+  - ✓ Correct: `showDialog(title, i18nStrings.update.message.replace('{latest}', latest))`
+  - ✗ Wrong: `const title = i18nStrings.dialogs.confirm.title; const msg = i18nStrings.dialogs.confirm.message;`
+  - ✓ Correct: `showConfirmDialog(i18nStrings.dialogs.confirm.title, i18nStrings.dialogs.confirm.message)`
+- **Benefits**:
+  - Cleaner code with fewer variable declarations
+  - Obvious what string is being used without looking up variable definition
+  - No risk of accidentally using wrong variable name
+  - Easier to search for i18n key usage in codebase
 - **Status**: Active principle
 
 ---
@@ -810,6 +866,118 @@ showNotification('⚠ Wichtiger Hinweis', 'warning', 0);
 - File operations (save, load): Success notifications
 - Data modifications (add, delete observations): Success notifications
 - Errors: Danger notifications via `showErrorDialog()` (modal, not toast)
+
+---
+
+## i18n Structure Standards - Decision #020
+
+- **Date**: 2026-01-18
+- **Status**: ✓ Approved
+- **Scope**: All internationalization strings in resources/strings_*.json
+
+### Hierarchical Structure
+
+All i18n strings follow a strict feature-based hierarchy to prevent confusion and ensure maintainability:
+
+```
+common.*          - Wiederverwendbare UI-Elemente (ok, cancel, yes, no, save, print, etc.)
+menus.*           - NUR Menü-Items (Datei → Laden, Beobachtungen → Anzeigen, etc.)
+observations.*    - ALLES rund um Beobachtungen (Dialoge, Formulare, Meldungen, Titel)
+observers.*       - ALLES rund um Beobachter (Dialoge, Formulare, Meldungen, Titel)
+analysis.*        - ALLES rund um Analysen
+output.*          - ALLES rund um Ausgaben (Monatsstatistik, Jahresstatistik, etc.)
+settings.*        - ALLES rund um Einstellungen
+dialogs.*         - Generische Dialoge (no_data, confirm, error, etc.)
+errors.*          - Fehlermeldungen (allgemein)
+messages.*        - Informationsmeldungen (allgemein)
+app.*             - Anwendungsmetadaten (version, title, etc.)
+```
+
+### Core Principle
+
+**Feature-bezogene Texte gehören zur Feature-Kategorie, nicht zu menus/dialogs/buttons!**
+
+### Examples
+
+**✅ CORRECT**:
+```json
+"observations": {
+  "display": "Anzeigen",                          // Menü-Text
+  "display_title": "Beobachtungen anzeigen",      // Dialog-Titel
+  "modify_type_title": "Beobachtungen ändern",    // Dialog-Titel
+  "modify_single": "Einzelbeobachtungen",         // Dialog-Option
+  "no_observations": "Keine Beobachtungen gefunden" // Feature-spezifische Meldung
+}
+```
+
+**✗ WRONG**:
+```json
+"menus": {
+  "observations": {
+    "modify_type_title": "..."  // ✗ Gehört zu observations.*, nicht menus.*
+  }
+}
+
+"dialogs": {
+  "observations": {
+    "modify_title": "..."       // ✗ Gehört zu observations.*, nicht dialogs.*
+  }
+}
+```
+
+### Rationale
+
+- **Predictable**: Feature-Entwickler wissen sofort wo Strings liegen
+- **Maintainable**: Alle Texte einer Feature-Gruppe an einem Ort
+- **No Duplication**: Verhindert dass gleiche Texte an mehreren Stellen definiert werden
+- **Fail Fast**: Missing keys sofort erkennbar (Decision #015)
+
+### Implementation Rules
+
+1. ✓ **ALWAYS** place feature-specific strings in the feature namespace
+2. ✓ **ONLY** use `menus.*` for actual menu item text
+3. ✓ **ONLY** use `common.*` for truly reusable UI elements
+4. ✓ **NEVER** nest feature strings under `dialogs.*` or `buttons.*`
+5. ✓ **ALWAYS** check existing structure before adding new keys
+
+### Migration Note
+
+Existing i18n files may contain legacy structure violations. When encountering incorrect placement:
+1. Move strings to correct namespace
+2. Update all JavaScript references
+3. Test thoroughly before committing
+
+---
+
+## Dual-Language i18n Maintenance - Decision #021
+
+- **Date**: 2026-01-18
+- **Status**: ✓ Approved
+- **Scope**: Changes to resources/strings_de.json and resources/strings_en.json
+
+### Core Rule
+
+Whenever the i18n resources are modified, both language files MUST be updated in lockstep — in exactly the same manner, in the same section, and at the same line position. The structure and key order must remain identical between DE and EN.
+
+### Rationale
+- **Consistency**: Prevents divergence that breaks Decision #015 (fail fast) and complicates maintenance
+- **Predictability**: Ensures 1:1 mapping of keys for all features
+- **Quality**: Avoids undefined keys and mismatched translations during development
+
+### Implementation Rules
+- ✓ Mirror every addition, deletion, or move in both files simultaneously
+- ✓ Preserve identical hierarchy, key names, and ordering across DE and EN
+- ✓ Maintain equal line counts after edits (structural alignment)
+- ✓ When relocating strings (e.g., from `observers.*` to `observations.*`), apply the move to both files in the same section and line
+- ✗ Do not introduce keys in only one language file
+- ✗ Do not change ordering in one file without changing the other
+
+### Workflow Guidance
+- Use the existing `sync_i18n.py` helper to regenerate EN structure from DE when broad structural changes occur; immediately replace placeholders with real translations to comply with Decision #015 at runtime
+- Before merging, verify alignment via quick checks (line counts and grep for moved/removed keys)
+
+### Enforcement
+- Code review/CI should reject PRs where DE/EN i18n structures or line counts diverge, or where edits are applied to only one language file
 
 ---
 

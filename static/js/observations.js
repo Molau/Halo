@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let filteredObservations = [];
     let displayMode = 'kurz';  // Default to compact mode (Eingabeart = 'Z')
     let currentDetailIndex = 0;
-    let i18n = null;
     
     // Filter state (matching Pascal auswahl, auswahl2)
     let filterCriterion1 = 'none';  // auswahl: none, observer, region
@@ -93,7 +92,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize
     async function initialize() {
-        await loadI18n();
         await loadObserversData();  // Load observers early for dropdown
         
         // Check if data is already loaded on the server
@@ -146,10 +144,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Pagination event listeners
-    btnFirstPage?.addEventListener('click', () => goToPage(1));
-    btnPrevPage?.addEventListener('click', () => goToPage(currentPage - 1));
-    btnNextPage?.addEventListener('click', () => goToPage(currentPage + 1));
-    btnLastPage?.addEventListener('click', () => {
+    btnFirstPage.addEventListener('click', () => goToPage(1));
+    btnPrevPage.addEventListener('click', () => goToPage(currentPage - 1));
+    btnNextPage.addEventListener('click', () => goToPage(currentPage + 1));
+    btnLastPage.addEventListener('click', () => {
         const maxPage = Math.ceil(filteredObservations.length / pageSize);
         goToPage(maxPage);
     });
@@ -179,16 +177,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('btn-prev-detail').addEventListener('click', () => navigateDetail(-1));
     document.getElementById('btn-next-detail').addEventListener('click', () => navigateDetail(1));
     
-    async function loadI18n() {
-        try {
-            const response = await fetch(`/api/i18n/${window.currentLanguage || 'de'}`);
-            i18n = await response.json();
-            updateFilterDialogText();
-        } catch (error) {
-            console.error('Error loading i18n:', error);
-        }
-    }
-    
     async function loadObserversData() {
         try {
             const response = await fetch('/api/observers');
@@ -207,50 +195,48 @@ document.addEventListener('DOMContentLoaded', function() {
     window.reloadObservationsI18n = loadI18n;
     
     function updateFilterDialogText() {
-        if (!i18n || !i18n.ui) return;
-        
-        const ui = i18n.ui;
-        
+        if (!i18nStrings) return;
+                
         // Modal title
-        document.getElementById('filterDialogLabel').textContent = ui.filter_dialog.title;
+        document.getElementById('filterDialogLabel').textContent = i18nStrings.ui.filter_dialog.title;
         
         // Filter 1 label and options
-        document.querySelector('#filter-criterion-1').previousElementSibling.textContent = '1. ' + ui.filter_dialog.question_1;
+        document.querySelector('#filter-criterion-1').previousElementSibling.textContent = '1. ' + i18nStrings.ui.filter_dialog.question_1;
         const filter1Select = document.getElementById('filter-criterion-1');
-        filter1Select.options[0].textContent = ui.filter_dialog.no_criterion;
-        filter1Select.options[1].textContent = ui.filter_dialog.observer_name || ui.filter_dialog.observer_code;
-        filter1Select.options[2].textContent = ui.filter_dialog.region;
+        filter1Select.options[0].textContent = i18nStrings.ui.filter_dialog.no_criterion;
+        filter1Select.options[1].textContent = i18nStrings.ui.filter_dialog.observer_name || i18nStrings.ui.filter_dialog.observer_code;
+        filter1Select.options[2].textContent = i18nStrings.ui.filter_dialog.region;
         
         // Filter 2 label and options
-        document.querySelector('#filter-criterion-2').previousElementSibling.textContent = '2. ' + ui.filter_dialog.question_2;
+        document.querySelector('#filter-criterion-2').previousElementSibling.textContent = '2. ' + i18nStrings.ui.filter_dialog.question_2;
         if (filterCriterion2Select && filterCriterion2Select.options.length >= 5) {
             const opt = filterCriterion2Select.options;
-            opt[0].textContent = ui.filter_dialog.no_criterion;
-            opt[1].textContent = ui.filter_dialog.date;
-            opt[2].textContent = ui.filter_dialog.month;
-            opt[3].textContent = ui.filter_dialog.year;
-            opt[4].textContent = ui.filter_dialog.halo_type;
+            opt[0].textContent = i18nStrings.ui.filter_dialog.no_criterion;
+            opt[1].textContent = i18nStrings.ui.filter_dialog.date;
+            opt[2].textContent = i18nStrings.ui.filter_dialog.month;
+            opt[3].textContent = i18nStrings.ui.filter_dialog.year;
+            opt[4].textContent = i18nStrings.ui.filter_dialog.halo_type;
         }
         
         // Buttons
-        document.getElementById('btn-cancel-filter').textContent = ui.buttons.cancel;
+        document.getElementById('btn-cancel-filter').textContent = i18nStrings.common.cancel;
         const applyBtn = document.getElementById('btn-apply-filter');
-        applyBtn.childNodes[applyBtn.childNodes.length - 1].textContent = ui.buttons.apply;
+        applyBtn.childNodes[applyBtn.childNodes.length - 1].textContent = i18nStrings.ui.buttons.apply;
         
         // Loading text
         const loadingText = document.querySelector('#loading-spinner p');
-        if (loadingText) loadingText.textContent = ui.messages.loading;
+        if (loadingText) loadingText.textContent = i18nStrings.ui.messages.loading;
         
         // Update placeholders if visible
         const criterion1 = filterCriterion1Select.value;
 
         const criterion2 = filterCriterion2Select.value;
         if (criterion2 === 'date' && filter2Value.placeholder) {
-            filter2Value.placeholder = ui.placeholders.date;
+            filter2Value.placeholder = i18nStrings.ui.placeholders.date;
         } else if (criterion2 === 'month' && filter2Value.placeholder) {
-            filter2Value.placeholder = ui.placeholders.month;
+            filter2Value.placeholder = i18nStrings.ui.placeholders.month;
         } else if (criterion2 === 'year' && filter2Value.placeholder) {
-            filter2Value.placeholder = ui.placeholders.year;
+            filter2Value.placeholder = i18nStrings.ui.placeholders.year;
         }
         
         // Update dropdowns if populated
@@ -267,26 +253,24 @@ document.addEventListener('DOMContentLoaded', function() {
         if (filteredObservations.length > 0) {
             const startIndex = (currentPage - 1) * pageSize;
             const endIndex = Math.min(startIndex + pageSize, filteredObservations.length);
-            const rowText = ui.messages.row;
-            const ofText = ui.messages.of;
-            pageInfo.textContent = `${rowText} ${startIndex + 1}-${endIndex} ${ofText} ${filteredObservations.length}`;
+            pageInfo.textContent = `${i18nStrings.ui.messages.row} ${startIndex + 1}-${endIndex} ${i18nStrings.ui.messages.of} ${filteredObservations.length}`;
         }
         
         // Update record count if displayed
         if (recordCount && filteredObservations.length > 0) {
-            recordCount.textContent = `${filteredObservations.length} ${ui.file_info.observations_count}`;
+            recordCount.textContent = `${filteredObservations.length} ${i18nStrings.common.observations_count}`;
         }
         
         // Update exit button text
         const exitText = document.getElementById('exit-text');
         if (exitText) {
-            exitText.textContent = ui.buttons.exit;
+            exitText.textContent = i18nStrings.ui.buttons.exit;
         }
     }
     
     async function loadObservations() {
         try {
-            compactTbody.textContent = i18n && i18n.ui ? i18n.ui.messages.loading_short : 'Loading...';
+            compactTbody.textContent = i18n && i18n.ui ? i18n.i18nStrings.ui.messages.loading_short : 'Loading...';
             
             // Load observations
             const obsResponse = await fetch('/api/observations?limit=200000');
@@ -319,7 +303,7 @@ document.addEventListener('DOMContentLoaded', function() {
             updateFileInfo(obsData.file, allObservations.length);
         } catch (error) {
             console.error('Error loading observations:', error);
-            compactTbody.textContent = i18n.ui.messages.error_loading;
+            compactTbody.textContent = i18n.i18nStrings.ui.messages.error_loading;
         }
     }
     
@@ -330,7 +314,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (fileInfo && fileNameElem && obsCountElem && i18n && i18n.ui) {
             fileNameElem.textContent = fileName;
-            const countText = i18n.ui.file_info.observations_count;
+            const countText = i18n.i18nStrings.common.observations_count;
             obsCountElem.textContent = `${count} ${countText}`;
             fileInfo.style.display = 'flex';
         }
@@ -339,7 +323,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Expose function globally so it can be called when language switches
     window.updateFileInfoLanguage = function() {
         if (allObservations.length > 0) {
-            const fileName = document.getElementById('file-name')?.textContent;
+            const fileName = document.getElementById('file-name').textContent;
             updateFileInfo(fileName, allObservations.length);
         }
     };
@@ -377,19 +361,19 @@ document.addEventListener('DOMContentLoaded', function() {
             filter2Input.style.display = 'block';
             filter2Value.style.display = 'block';
             filter2SelectElem.style.display = 'none';
-            filter2Value.placeholder = i18n && i18n.ui ? i18n.ui.placeholders.date : '';
+            filter2Value.placeholder = i18n && i18n.ui ? i18n.i18nStrings.ui.placeholders.date : '';
             setTimeout(() => filter2Value.focus(), 50);
         } else if (value === 'month') {
             filter2Input.style.display = 'block';
             filter2Value.style.display = 'block';
             filter2SelectElem.style.display = 'none';
-            filter2Value.placeholder = i18n && i18n.ui ? i18n.ui.placeholders.month : '';
+            filter2Value.placeholder = i18n && i18n.ui ? i18n.i18nStrings.ui.placeholders.month : '';
             setTimeout(() => filter2Value.focus(), 50);
         } else if (value === 'year') {
             filter2Input.style.display = 'block';
             filter2Value.style.display = 'block';
             filter2SelectElem.style.display = 'none';
-            filter2Value.placeholder = i18n && i18n.ui ? i18n.ui.placeholders.year : '';
+            filter2Value.placeholder = i18n && i18n.ui ? i18n.i18nStrings.ui.placeholders.year : '';
             setTimeout(() => filter2Value.focus(), 50);
         } else if (value === 'halo-type') {
             filter2Input.style.display = 'block';
@@ -444,7 +428,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function populateHaloTypeSelect() {
-        const unknown = i18n.ui.filter_dialog.unknown;
+        const unknown = i18n.i18nStrings.ui.filter_dialog.unknown;
         filter2SelectElem.innerHTML = '';
         if (i18n && i18n.halo_types) {
             for (let i = 1; i <= 99; i++) {
@@ -496,12 +480,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (filterCriterion1 !== 'none') {
             if (filterCriterion1 === 'observer') {
                 if (!filter1SelectElem.value || filter1SelectElem.value === '') {
-                    showWarning(i18n.ui.messages.filter_value_required);
+                    showWarning(i18n.i18nStrings.ui.messages.filter_value_required);
                     return;
                 }
             } else if (filterCriterion1 === 'region') {
                 if (!filter1SelectElem.value || filter1SelectElem.value === '') {
-                    showWarning(i18n.ui.messages.filter_value_required);
+                    showWarning(i18n.i18nStrings.ui.messages.filter_value_required);
                     return;
                 }
             }
@@ -511,12 +495,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (filterCriterion2 !== 'none') {
             if (filterCriterion2 === 'date' || filterCriterion2 === 'month' || filterCriterion2 === 'year') {
                 if (!filter2Value.value.trim()) {
-                    showWarning(i18n.ui.messages.filter_value_required);
+                    showWarning(i18n.i18nStrings.ui.messages.filter_value_required);
                     return;
                 }
             } else if (filterCriterion2 === 'halo-type') {
                 if (!filter2SelectElem.value || filter2SelectElem.value === '') {
-                    showWarning(i18n.ui.messages.filter_value_required);
+                    showWarning(i18n.i18nStrings.ui.messages.filter_value_required);
                     return;
                 }
             }
@@ -579,7 +563,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Remove listener after it fires once
                 filterDialog.removeEventListener('hidden.bs.modal', onModalHidden);
                 
-                const overlay = showLoadingOverlay(i18n && i18n.ui ? i18n.ui.messages.loading : 'Daten werden geladen...');
+                const overlay = showLoadingOverlay(i18n && i18n.ui ? i18n.i18nStrings.ui.messages.loading : 'Daten werden geladen...');
                 
                 // Process filters after modal is fully hidden
                 setTimeout(async () => {
@@ -612,7 +596,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             modal.hide();
         } else {
-            const overlay = showLoadingOverlay(i18n && i18n.ui ? i18n.ui.messages.loading : 'Daten werden geladen...');
+            const overlay = showLoadingOverlay(i18n && i18n.ui ? i18n.i18nStrings.ui.messages.loading : 'Daten werden geladen...');
             
             setTimeout(async () => {
                 try {
@@ -665,7 +649,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     async function applyFiltersInternal() {
         filteredObservations = allObservations.filter(checkelem);
-        const obsText = i18n && i18n.ui ? i18n.ui.messages.observations : 'Observations';
+        const obsText = i18n && i18n.ui ? i18n.i18nStrings.ui.messages.observations : 'Observations';
         recordCount.textContent = `${filteredObservations.length} ${obsText}`;
         currentPage = 1;
         
@@ -887,7 +871,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const maxPage = Math.ceil(filteredObservations.length / pageSize);
         
         if (pageData.length === 0) {
-            compactTbody.textContent = i18n && i18n.ui ? i18n.ui.messages.no_observations : 'No observations found';
+            compactTbody.textContent = i18n && i18n.ui ? i18n.i18nStrings.ui.messages.no_observations : 'No observations found';
             btnExitObservations.style.display = 'block';
             // Hide pagination controls
             btnFirstPage.style.display = 'none';
@@ -903,8 +887,8 @@ document.addEventListener('DOMContentLoaded', function() {
         compactTbody.textContent = lines.join('\n');
         
         // Update pagination info
-        const pageText = i18n.ui.messages.page;
-        const ofText = i18n.ui.messages.of;
+        const pageText = i18n.i18nStrings.ui.messages.page;
+        const ofText = i18n.i18nStrings.ui.messages.of;
         compactPageInfo.textContent = `${pageText} ${currentPage} ${ofText} ${maxPage}`;
         
         // Update button states
@@ -914,7 +898,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btnLastPage.disabled = currentPage === maxPage;
         
         // Update record count at bottom
-        const rowText = i18n.ui.messages.row;
+        const rowText = i18n.i18nStrings.ui.messages.row;
         pageInfo.textContent = `${rowText} ${startIndex + 1}-${endIndex} ${ofText} ${filteredObservations.length}`;
     }
     
@@ -924,8 +908,8 @@ document.addEventListener('DOMContentLoaded', function() {
         btnExitObservations.style.display = 'block';
         
         if (filteredObservations.length === 0) {
-            const noObs = i18n && i18n.ui ? i18n.ui.messages.no_observations : 'No observations found';
-            const ofText = i18n && i18n.ui ? i18n.ui.messages.of : 'of';
+            const noObs = i18n && i18n.ui ? i18n.i18nStrings.ui.messages.no_observations : 'No observations found';
+            const ofText = i18n && i18n.ui ? i18n.i18nStrings.ui.messages.of : 'of';
             detailContent.textContent = noObs;
             document.getElementById('detail-counter').textContent = `0 ${ofText} 0`;
             return;
@@ -934,17 +918,7 @@ document.addEventListener('DOMContentLoaded', function() {
         currentDetailIndex = (currentPage - 1) * pageSize;
         showDetailRecord();
     }
-    
-    
-    function showDetailRecord() {
-        // This fallback display is removed - use showObservationFormForView() instead for modal display
-        // See main.js showDisplaySingleObservations() for proper implementation
-    }
-    
-    function navigateDetail(direction) {
-        // Navigation is handled by showObservationFormForView() in main.js
-    }
-    
+        
     async function goToPage(page) {
         const maxPage = Math.ceil(filteredObservations.length / pageSize);
         if (page >= 1 && page <= maxPage) {

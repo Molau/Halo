@@ -1,25 +1,8 @@
 // Annual Statistics (Jahresstatistik) functionality
 document.addEventListener('DOMContentLoaded', async function() {
 
-
-    let i18n = null;
+    // Use global i18n from main.js
     let currentStatsData = null; // Store current stats data for save/print
-
-    // Default fallback i18n structure with statistics section
-    const defaultI18n = {
-        monthly_stats: {},
-        ui: { messages: {} },
-        statistics: {
-            footnote_ee_days: '1) = EE (Sonne) &nbsp; 2) = Tage (Sonne) &nbsp; 3) = Tage (Mond) &nbsp; 4) = Tage (gesamt)',
-            table_day: 'Tag',
-            table_ee_sun: 'EE(Sonne)',
-            table_days_sun: 'Tage(Sonne)',
-            table_days_moon: 'Tage(Mond)',
-            table_days_total: 'Tage(gesamt)',
-            box_days_1_15: '║  1.   2.   3.   4.   5.║  6.   7.   8.   9.  10.║ 11.  12.  13.  14.  15.║ 16. ║',
-            box_days_16_31: '║ 17.  18.  19.  20.║ 21.  22.  23.  24.  25.║ 26.  27.  28.  29.  30.║ 31.║ ges ║'
-        }
-    };
 
     // Helper function to escape HTML
     function escapeHtml(text) {
@@ -35,32 +18,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     const btnCancel = document.getElementById('btn-cancel-filter');
     const btnApply = document.getElementById('btn-apply-filter');
     const applySpinner = document.getElementById('apply-spinner');
-
-    // Load i18n strings
-    async function loadI18n() {
-        try {
-            const langResponse = await fetch('/api/language');
-            const langData = await langResponse.json();
-            const lang = langData.language || 'de';
-
-            const i18nResponse = await fetch(`/api/i18n/${lang}`);
-            const loadedI18n = await i18nResponse.json();
-            
-            // Merge loaded i18n with defaults to ensure statistics section exists
-            i18n = {
-                ...defaultI18n,
-                ...loadedI18n,
-                statistics: {
-                    ...defaultI18n.statistics,
-                    ...(loadedI18n.statistics || {})
-                }
-            };
-
-        } catch (error) {
-            console.error('Error loading i18n:', error);
-            i18n = JSON.parse(JSON.stringify(defaultI18n)); // Deep copy
-        }
-    }
     
     // Show warning modal (same style as main.js)
     function showWarningModal(message) {
@@ -69,14 +26,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">${i18n.common.warning}</h5>
+                            <h5 class="modal-title">${i18nStrings.common.warning}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
                             <p>${message}</p>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">${i18n.common.ok}</button>
+                            <button type="button" class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.ok}</button>
                         </div>
                     </div>
                 </div>
@@ -97,7 +54,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const startYear = 1950;
         const endYear = 2049;
         if (!yearSelect) return;
-        yearSelect.innerHTML = `<option value="">-- ${i18n.fields?.select || 'Select'} --</option>`;
+        yearSelect.innerHTML = `<option value="">-- ${i18nStrings.fields.select} --</option>`;
         for (let year = startYear; year <= endYear; year++) {
             const yy = String(year % 100).padStart(2, '0');
             const option = document.createElement('option');
@@ -134,7 +91,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         // No data loaded - show same warning as monthly_report
-        const msg = i18n.dialogs.no_data.message;
+        const msg = i18nStrings.dialogs.no_data.message;
         showWarningModal(msg);
         return false;
     }
@@ -148,7 +105,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const jj = yearSelect.value;
         if (!jj) {
             if (yearError) {
-                yearError.textContent = i18n.annual_stats.error_year_required;
+                yearError.textContent = i18nStrings.annual_stats.error_year_required;
                 yearError.style.display = 'block';
             }
             return null;
@@ -177,7 +134,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             if (!response.ok) {
                 if (yearError) {
-                    yearError.textContent = i18n.annual_stats.error_fetching;
+                    yearError.textContent = i18nStrings.annual_stats.error_fetching;
                     yearError.style.display = 'block';
                 }
                 return;
@@ -185,7 +142,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             if (data.activity_count === 0) {
                 if (yearError) {
-                    yearError.textContent = i18n.annual_stats.error_no_data;
+                    yearError.textContent = i18nStrings.annual_stats.error_no_data;
                     yearError.style.display = 'block';
                 }
                 return;
@@ -199,7 +156,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             // Close filter dialog
             const modal = bootstrap.Modal.getInstance(filterDialog);
-            modal?.hide();
+            modal.hide();
             
             // Show results
             showStatistics(data);
@@ -207,7 +164,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         } catch (error) {
             console.error('Error fetching statistics:', error);
             if (yearError) {
-                yearError.textContent = i18n.annual_stats.error_fetching;
+                yearError.textContent = i18nStrings.annual_stats.error_fetching;
                 yearError.style.display = 'block';
             }
         } finally {
@@ -239,7 +196,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Set title
         const resultsTitle = document.getElementById('results-modal-title');
         if (resultsTitle) {
-            resultsTitle.textContent = i18n.annual_stats.title;
+            resultsTitle.textContent = i18nStrings.annual_stats.title;
         }
         
         // Fetch formatted statistics from server
@@ -303,7 +260,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         let html = '';
         
         // Title
-        const titleLine = i18n.annual_stats.observer_dist_title;
+        const titleLine = i18nStrings.annual_stats.observer_dist_title;
         const titlePadding = Math.max(0, Math.floor((73 - titleLine.length) / 2));
         html += ' '.repeat(titlePadding) + titleLine + '\n';
         html += ' '.repeat(titlePadding) + '═'.repeat(titleLine.length) + '\n';
@@ -312,18 +269,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         html += '╔══╦═════╦══════╦═════╦══════╦═════╦══════╦═════╦══════╦═════╦═════╦══════╗\n';
         
         // Header row
-        html += '║' + i18n.annual_stats.observer_dist_kk + '║';
-        html += i18n.annual_stats.observer_dist_ee01 + '║';
-        html += '   ' + i18n.annual_stats.observer_dist_percent.padEnd(3) + '║';
-        html += i18n.annual_stats.observer_dist_ee02 + '║';
-        html += '   ' + i18n.annual_stats.observer_dist_percent.padEnd(3) + '║';
-        html += i18n.annual_stats.observer_dist_ee03 + '║';
-        html += '   ' + i18n.annual_stats.observer_dist_percent.padEnd(3) + '║';
-        html += i18n.annual_stats.observer_dist_ee567 + '║';
-        html += '   ' + i18n.annual_stats.observer_dist_percent.padEnd(3) + '║';
-        html += i18n.annual_stats.observer_dist_ee17 + '║';
-        html += i18n.annual_stats.observer_dist_ee_so + '║';
-        html += i18n.annual_stats.observer_dist_ht_ges + '║\n';
+        html += '║' + i18nStrings.annual_stats.observer_dist_kk + '║';
+        html += i18nStrings.annual_stats.observer_dist_ee01 + '║';
+        html += '   ' + i18nStrings.annual_stats.observer_dist_percent.padEnd(3) + '║';
+        html += i18nStrings.annual_stats.observer_dist_ee02 + '║';
+        html += '   ' + i18nStrings.annual_stats.observer_dist_percent.padEnd(3) + '║';
+        html += i18nStrings.annual_stats.observer_dist_ee03 + '║';
+        html += '   ' + i18nStrings.annual_stats.observer_dist_percent.padEnd(3) + '║';
+        html += i18nStrings.annual_stats.observer_dist_ee567 + '║';
+        html += '   ' + i18nStrings.annual_stats.observer_dist_percent.padEnd(3) + '║';
+        html += i18nStrings.annual_stats.observer_dist_ee17 + '║';
+        html += i18nStrings.annual_stats.observer_dist_ee_so + '║';
+        html += i18nStrings.annual_stats.observer_dist_ht_ges + '║\n';
         
         // Header separator
         html += '╠══╬═════╬══════╬═════╬══════╬═════╬══════╬═════╬══════╬═════╬═════╬══════╣\n';
@@ -363,20 +320,20 @@ document.addEventListener('DOMContentLoaded', async function() {
         let html = '';
         
         // Title
-        const titleLine = i18n.annual_stats.ee_observed_title;
+        const titleLine = i18nStrings.annual_stats.ee_observed_title;
         const titlePadding = Math.max(0, Math.floor((73 - titleLine.length) / 2));
         html += ' '.repeat(titlePadding) + titleLine + '\n';
         html += ' '.repeat(titlePadding) + '═'.repeat(titleLine.length) + '\n\n';
         
         // Sun halos table
         if (sunCounts && Object.keys(sunCounts).length > 0) {
-            html += renderEETable(i18n.annual_stats.ee_sun_label, sunCounts);
+            html += renderEETable(i18nStrings.annual_stats.ee_sun_label, sunCounts);
             html += '\n\n';
         }
         
         // Moon halos table
         if (moonCounts && Object.keys(moonCounts).length > 0) {
-            html += renderEETable(i18n.annual_stats.ee_moon_label, moonCounts);
+            html += renderEETable(i18nStrings.annual_stats.ee_moon_label, moonCounts);
             html += '\n\n';
         }
         
@@ -425,7 +382,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             html += '\n';
 
             // Counts
-            html += '   ║      ' + i18n.annual_stats.ee_count_label.padEnd(7) + '║';
+            html += '   ║      ' + i18nStrings.annual_stats.ee_count_label.padEnd(7) + '║';
             for (const ee of rowEEs) {
                 const count = eeCounts[ee] || 0;
                 html += count.toString().padStart(4) + ' ║';
@@ -455,18 +412,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!phenomenaList || phenomenaList.length === 0) {
             // No phenomena observed
             let html = '\n\n';
-            const titleLine = i18n.annual_stats.phenomena_title;
+            const titleLine = i18nStrings.annual_stats.phenomena_title;
             const titlePadding = Math.max(0, Math.floor((74 - titleLine.length) / 2));
             html += ' '.repeat(titlePadding) + titleLine + '\n';
             html += ' '.repeat(titlePadding) + '═'.repeat(titleLine.length) + '\n\n';
-            const phenomenaNoneText = i18n.annual_stats.phenomena_none;
+            const phenomenaNoneText = i18nStrings.annual_stats.phenomena_none;
             const phenomenaPadding = Math.max(0, Math.floor((74 - phenomenaNoneText.length) / 2));
             html += ' '.repeat(phenomenaPadding) + phenomenaNoneText + '\n';
             return html;
         }
         
         let html = '\n\n';
-        const titleLine = i18n.annual_stats.phenomena_title;
+        const titleLine = i18nStrings.annual_stats.phenomena_title;
         const titlePadding = Math.max(0, Math.floor((74 - titleLine.length) / 2));
         html += ' '.repeat(titlePadding) + titleLine + '\n';
         html += ' '.repeat(titlePadding) + '═'.repeat(titleLine.length) + '\n';
@@ -474,9 +431,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Header row
         html += '║ ';
-        html += i18n.annual_stats.phenomena_date.padEnd(5) + ' ║ KK GG ║ ';
-        html += i18n.annual_stats.phenomena_time.padEnd(4) + ' ║ O ║ ';
-        html += '01 02 03 05 06 07 08 09 11 12 ' + i18n.annual_stats.phenomena_other_ee;
+        html += i18nStrings.annual_stats.phenomena_date.padEnd(5) + ' ║ KK GG ║ ';
+        html += i18nStrings.annual_stats.phenomena_time.padEnd(4) + ' ║ O ║ ';
+        html += '01 02 03 05 06 07 08 09 11 12 ' + i18nStrings.annual_stats.phenomena_other_ee;
         
         // Pad header to 76 characters (total line 74 with borders)
         while (html.length < html.lastIndexOf('\n') + 74) {
@@ -576,8 +533,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Table header with box drawing characters
         html += '╔═══════════╦══════════════╦══════════════╦══════════════╦══════════════╗\n';
-        html += '║           ║     ' + i18n.annual_stats.table_sun.padEnd(9) + '║     ' + i18n.annual_stats.table_moon.padEnd(9) + '║    ' + i18n.annual_stats.table_total.padEnd(10) + '║   ' + i18n.annual_stats.table_activity.padEnd(11) + '║\n';
-        html += '║   ' + i18n.annual_stats.table_month.padEnd(8) + '║   ' + i18n.annual_stats.table_ee + '   ' + i18n.annual_stats.table_days + '  ║   ' + i18n.annual_stats.table_ee + '   ' + i18n.annual_stats.table_days + '  ║   ' + i18n.annual_stats.table_ee + '   ' + i18n.annual_stats.table_days + '  ║   ' + i18n.annual_stats.table_real.padEnd(6) + i18n.annual_stats.table_relative.padEnd(5) + '║\n';
+        html += '║           ║     ' + i18nStrings.annual_stats.table_sun.padEnd(9) + '║     ' + i18nStrings.annual_stats.table_moon.padEnd(9) + '║    ' + i18nStrings.annual_stats.table_total.padEnd(10) + '║   ' + i18nStrings.annual_stats.table_activity.padEnd(11) + '║\n';
+        html += '║   ' + i18nStrings.annual_stats.table_month.padEnd(8) + '║   ' + i18nStrings.annual_stats.table_ee + '   ' + i18nStrings.annual_stats.table_days + '  ║   ' + i18nStrings.annual_stats.table_ee + '   ' + i18nStrings.annual_stats.table_days + '  ║   ' + i18nStrings.annual_stats.table_ee + '   ' + i18nStrings.annual_stats.table_days + '  ║   ' + i18nStrings.annual_stats.table_real.padEnd(6) + i18nStrings.annual_stats.table_relative.padEnd(5) + '║\n';
         html += '╠═══════════╬══════════════╬══════════════╬══════════════╬══════════════╣\n';
         
         // Data rows (one month per row)
@@ -586,7 +543,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const monthData = monthlyStats[mmStr] || {};
             
             html += '║ ';
-            html += i18n.months[mmStr].padEnd(9);  // Month name (9 chars)
+            html += i18nStrings.months[mmStr].padEnd(9);  // Month name (9 chars)
             html += ' ║ ';
             html += (monthData.sun_ee || 0).toString().padStart(4);
             html += '   ';
@@ -608,7 +565,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Totals row
         html += '╠═══════════╬══════════════╬══════════════╬══════════════╬══════════════╣\n';
-        html += '║ ' + i18n.annual_stats.table_total.padEnd(9) + ' ║ ';
+        html += '║ ' + i18nStrings.annual_stats.table_total.padEnd(9) + ' ║ ';
         html += (totals.sun_ee || 0).toString().padStart(4);
         html += '   ';
         html += (totals.sun_days || 0).toString().padStart(3);
@@ -637,7 +594,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (btnOk) {
             btnOk.onclick = () => {
                 const resultsModal = bootstrap.Modal.getInstance(document.getElementById('results-modal'));
-                resultsModal?.hide();
+                resultsModal.hide();
                 window.location.href = '/';
             };
             
@@ -704,24 +661,24 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Set chart title
         const chartTitle = document.getElementById('chart-printable-title-line');
         if (chartTitle) {
-            chartTitle.textContent = i18n.annual_stats.chart_title.replace('{year}', year);
+            chartTitle.textContent = i18nStrings.annual_stats.chart_title.replace('{year}', year);
             chartTitle.style.display = 'block';
         }
         
         // Set chart subtitle with observation count
         const chartSubtitle = document.getElementById('chart-subtitle-line');
         if (chartSubtitle) {
-            const totalEE = currentStatsData?.totals?.total_ee || 0;
-            chartSubtitle.textContent = `berechnet aus ${totalEE} Einzelbeobachtungen`;
+            const totalEE = currentStatsData.totals.total_ee || 0;
+            chartSubtitle.textContent = i18nStrings.annual_stats.chart_subtitle.replace('{count}', totalEE);
         }
         
         // Prepare chart data
-        const monthLabels = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+        const monthLabels = Object.values(i18nStrings.months_short);
         const months = Array.from({length: 12}, (_, i) => i + 1);
         
         // Extract real and relative activity from monthly_stats
-        const realData = months.map(mm => currentStatsData.monthly_stats?.[mm.toString()]?.real || 0);
-        const relativeData = months.map(mm => currentStatsData.monthly_stats?.[mm.toString()]?.relative || 0);
+        const realData = months.map(mm => currentStatsData.monthly_stats.[mm.toString()].real || 0);
+        const relativeData = months.map(mm => currentStatsData.monthly_stats.[mm.toString()].relative || 0);
         
         // Create chart
         const canvas = document.getElementById('activity-chart-line');
@@ -738,7 +695,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 labels: monthLabels,
                 datasets: [
                     {
-                        label: i18n.annual_stats.chart_real,
+                        label: i18nStrings.annual_stats.chart_real,
                         data: realData,
                         borderColor: '#dc3545',  // Red
                         backgroundColor: 'rgba(220, 53, 69, 0.1)',
@@ -750,7 +707,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         pointBackgroundColor: '#dc3545'
                     },
                     {
-                        label: i18n.annual_stats.chart_relative,
+                        label: i18nStrings.annual_stats.chart_relative,
                         data: relativeData,
                         borderColor: '#28a745',  // Green
                         backgroundColor: 'rgba(40, 167, 69, 0.1)',
@@ -782,14 +739,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                     x: {
                         title: {
                             display: true,
-                            text: i18n.annual_stats.chart_x_axis,
+                            text: i18nStrings.annual_stats.chart_x_axis,
                             font: { size: 12, weight: 'bold' }
                         }
                     },
                     y: {
                         title: {
                             display: true,
-                            text: i18n.annual_stats.chart_y_axis,
+                            text: i18nStrings.annual_stats.chart_y_axis,
                             font: { size: 12, weight: 'bold' }
                         },
                         beginAtZero: true
@@ -824,23 +781,23 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Set chart title
         const chartTitle = document.getElementById('chart-printable-title-bar');
         if (chartTitle) {
-            chartTitle.textContent = i18n.annual_stats.chart_title.replace('{year}', year);
+            chartTitle.textContent = i18nStrings.annual_stats.chart_title.replace('{year}', year);
             chartTitle.style.display = 'block';
         }
         
         // Set chart subtitle
         const chartSubtitle = document.getElementById('chart-subtitle-bar');
         if (chartSubtitle) {
-            const totalEE = currentStatsData?.totals?.total_ee || 0;
-            chartSubtitle.textContent = `berechnet aus ${totalEE} Einzelbeobachtungen`;
+            const totalEE = currentStatsData.totals.total_ee || 0;
+            chartSubtitle.textContent = i18nStrings.annual_stats.chart_subtitle.replace('{count}', totalEE);
         }
         
         // Prepare chart data - months 1-12
-        const monthLabels = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+        const monthLabels = Object.values(i18nStrings.months_short);
         const months = Array.from({length: 12}, (_, i) => i + 1);
         
-        const realData = months.map(mm => currentStatsData.monthly_stats?.[mm.toString()]?.real || 0);
-        const relativeData = months.map(mm => currentStatsData.monthly_stats?.[mm.toString()]?.relative || 0);
+        const realData = months.map(mm => currentStatsData.monthly_stats.[mm.toString()].real || 0);
+        const relativeData = months.map(mm => currentStatsData.monthly_stats.[mm.toString()].relative || 0);
         
         // Create chart
         const canvas = document.getElementById('activity-chart-bar');
@@ -857,7 +814,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 labels: monthLabels,
                 datasets: [
                     {
-                        label: i18n.annual_stats?.chart_real,
+                        label: i18nStrings.annual_stats.chart_real,
                         data: realData,
                         backgroundColor: '#dc3545',  // Red
                         borderColor: '#dc3545',
@@ -866,7 +823,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         categoryPercentage: 0.9
                     },
                     {
-                        label: i18n.annual_stats?.chart_relative,
+                        label: i18nStrings.annual_stats.chart_relative,
                         data: relativeData,
                         backgroundColor: '#28a745',  // Green
                         borderColor: '#28a745',
@@ -895,7 +852,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     x: {
                         title: {
                             display: true,
-                            text: i18n.annual_stats?.chart_x_axis,
+                            text: i18nStrings.annual_stats.chart_x_axis,
                             font: { size: 12, weight: 'bold' }
                         },
                         stacked: false
@@ -903,7 +860,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     y: {
                         title: {
                             display: true,
-                            text: i18n.annual_stats?.chart_y_axis,
+                            text: i18nStrings.annual_stats.chart_y_axis,
                             font: { size: 12, weight: 'bold' }
                         },
                         beginAtZero: true,
@@ -1100,22 +1057,22 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Table 1: Monthly Activity
         if (data.monthly_stats && data.totals) {
-            csv += `"${i18n.annual_stats.title_with_year.replace('{year}', year)}"\n`;
-            csv += i18n.annual_stats.table_month;
-            csv += ',,' + i18n.annual_stats.table_sun;
-            csv += ',,' + i18n.annual_stats.table_moon;
-            csv += ',,' + i18n.annual_stats.table_total;
-            csv += ',,' + i18n.annual_stats.table_activity + '\n';
+            csv += `"${i18nStrings.annual_stats.title_with_year.replace('{year}', year)}"\n`;
+            csv += i18nStrings.annual_stats.table_month;
+            csv += ',,' + i18nStrings.annual_stats.table_sun;
+            csv += ',,' + i18nStrings.annual_stats.table_moon;
+            csv += ',,' + i18nStrings.annual_stats.table_total;
+            csv += ',,' + i18nStrings.annual_stats.table_activity + '\n';
             csv += ',';
-            csv += i18n.annual_stats.table_ee + ',' + i18n.annual_stats.table_days;
-            csv += ',' + i18n.annual_stats.table_ee + ',' + i18n.annual_stats.table_days;
-            csv += ',' + i18n.annual_stats.table_ee + ',' + i18n.annual_stats.table_days;
-            csv += ',' + i18n.annual_stats.table_real + ',' + i18n.annual_stats.table_relative + '\n';
+            csv += i18nStrings.annual_stats.table_ee + ',' + i18nStrings.annual_stats.table_days;
+            csv += ',' + i18nStrings.annual_stats.table_ee + ',' + i18nStrings.annual_stats.table_days;
+            csv += ',' + i18nStrings.annual_stats.table_ee + ',' + i18nStrings.annual_stats.table_days;
+            csv += ',' + i18nStrings.annual_stats.table_real + ',' + i18nStrings.annual_stats.table_relative + '\n';
             
             for (let mm = 1; mm <= 12; mm++) {
                 const mmStr = mm.toString();
                 const monthData = data.monthly_stats[mmStr] || {};
-                csv += i18n.months[mmStr] + ',';
+                csv += i18nStrings.months[mmStr] + ',';
                 csv += (monthData.sun_ee || 0) + ',' + (monthData.sun_days || 0) + ',';
                 csv += (monthData.moon_ee || 0) + ',' + (monthData.moon_days || 0) + ',';
                 csv += (monthData.total_ee || 0) + ',' + (monthData.total_days || 0) + ',';
@@ -1123,7 +1080,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
             
             // Totals
-            csv += i18n.annual_stats.table_total + ',';
+            csv += i18nStrings.annual_stats.table_total + ',';
             csv += (data.totals.sun_ee || 0) + ',' + (data.totals.sun_days || 0) + ',';
             csv += (data.totals.moon_ee || 0) + ',' + (data.totals.moon_days || 0) + ',';
             csv += (data.totals.total_ee || 0) + ',' + (data.totals.total_days || 0) + ',';
@@ -1132,14 +1089,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Table 2: EE Observations - Sun
         if (data.sun_ee_counts && Object.keys(data.sun_ee_counts).length > 0) {
-            csv += `"${i18n.annual_stats.ee_observed_title}"\n`;
-            csv += `"${i18n.annual_stats.ee_sun_label}"\n`;
+            csv += `"${i18nStrings.annual_stats.ee_observed_title}"\n`;
+            csv += `"${i18nStrings.annual_stats.ee_sun_label}"\n`;
             csv += 'EE';
             const sunEEs = Object.keys(data.sun_ee_counts).map(Number).sort((a, b) => a - b);
             for (const ee of sunEEs) {
                 csv += ',' + ee.toString().padStart(2, '0');
             }
-            csv += '\n' + i18n.annual_stats.ee_count_label;
+            csv += '\n' + i18nStrings.annual_stats.ee_count_label;
             for (const ee of sunEEs) {
                 csv += ',' + (data.sun_ee_counts[ee] || 0);
             }
@@ -1148,13 +1105,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Table 2: EE Observations - Moon
         if (data.moon_ee_counts && Object.keys(data.moon_ee_counts).length > 0) {
-            csv += `"${i18n.annual_stats.ee_moon_label}"\n`;
+            csv += `"${i18nStrings.annual_stats.ee_moon_label}"\n`;
             csv += 'EE';
             const moonEEs = Object.keys(data.moon_ee_counts).map(Number).sort((a, b) => a - b);
             for (const ee of moonEEs) {
                 csv += ',' + ee.toString().padStart(2, '0');
             }
-            csv += '\n' + i18n.annual_stats.ee_count_label;
+            csv += '\n' + i18nStrings.annual_stats.ee_count_label;
             for (const ee of moonEEs) {
                 csv += ',' + (data.moon_ee_counts[ee] || 0);
             }
@@ -1163,15 +1120,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Table 3: Observer Distribution
         if (data.observer_distribution && data.observer_distribution.length > 0) {
-            csv += `"${i18n.annual_stats.observer_dist_title}"\n`;
-            csv += i18n.annual_stats.observer_dist_kk + ',';
-            csv += i18n.annual_stats.observer_dist_ee01 + ',' + i18n.annual_stats.observer_dist_percent + ',';
-            csv += i18n.annual_stats.observer_dist_ee02 + ',' + i18n.annual_stats.observer_dist_percent + ',';
-            csv += i18n.annual_stats.observer_dist_ee03 + ',' + i18n.annual_stats.observer_dist_percent + ',';
-            csv += i18n.annual_stats.observer_dist_ee567 + ',' + i18n.annual_stats.observer_dist_percent + ',';
-            csv += i18n.annual_stats.observer_dist_ee17 + ',';
-            csv += i18n.annual_stats.observer_dist_ee_so + ',';
-            csv += i18n.annual_stats.observer_dist_ht_ges + '\n';
+            csv += `"${i18nStrings.annual_stats.observer_dist_title}"\n`;
+            csv += i18nStrings.annual_stats.observer_dist_kk + ',';
+            csv += i18nStrings.annual_stats.observer_dist_ee01 + ',' + i18nStrings.annual_stats.observer_dist_percent + ',';
+            csv += i18nStrings.annual_stats.observer_dist_ee02 + ',' + i18nStrings.annual_stats.observer_dist_percent + ',';
+            csv += i18nStrings.annual_stats.observer_dist_ee03 + ',' + i18nStrings.annual_stats.observer_dist_percent + ',';
+            csv += i18nStrings.annual_stats.observer_dist_ee567 + ',' + i18nStrings.annual_stats.observer_dist_percent + ',';
+            csv += i18nStrings.annual_stats.observer_dist_ee17 + ',';
+            csv += i18nStrings.annual_stats.observer_dist_ee_so + ',';
+            csv += i18nStrings.annual_stats.observer_dist_ht_ges + '\n';
             
             for (const obs of data.observer_distribution) {
                 csv += obs.kk.toString().padStart(2, '0') + ',';
@@ -1186,13 +1143,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Table 4: Phenomena
         if (data.phenomena && data.phenomena.length > 0) {
-            csv += `"${i18n.annual_stats.phenomena_title}"\n`;
-            csv += i18n.annual_stats.phenomena_date + ',KK,GG,' + i18n.annual_stats.phenomena_time + ',O,';
+            csv += `"${i18nStrings.annual_stats.phenomena_title}"\n`;
+            csv += i18nStrings.annual_stats.phenomena_date + ',KK,GG,' + i18nStrings.annual_stats.phenomena_time + ',O,';
             const eeColumns = [1, 2, 3, 5, 6, 7, 8, 9, 11, 12];
             for (const ee of eeColumns) {
                 csv += ee.toString().padStart(2, '0') + ',';
             }
-            csv += i18n.annual_stats.phenomena_other_ee + '\n';
+            csv += i18nStrings.annual_stats.phenomena_other_ee + '\n';
             
             for (const phenom of data.phenomena) {
                 csv += phenom.tt.toString().padStart(2, '0') + '.' + phenom.mm.toString().padStart(2, '0') + ',';
@@ -1245,11 +1202,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     document.addEventListener('keydown', escKeyHandler);
     
-    // Initialize
-    await loadI18n();
+    // Initialize UI
     populateYears();
-
-    // Load date default and pre-fill year select
     await loadDateDefault();
     
     // Check if data is loaded
@@ -1277,7 +1231,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         let html = '<pre style="font-family: \'Courier New\', Courier, monospace; font-size: 11px; color: #000000; line-height: 1.2; overflow-x: auto; padding: 20px; background-color: #f5f5f5; border-radius: 4px; letter-spacing: 0; word-spacing: normal;">';
         
         // Title (centered)
-        const titleLine = i18n.annual_stats.title_with_year.replace('{year}', year);
+        const titleLine = i18nStrings.annual_stats.title_with_year.replace('{year}', year);
         const titlePadding = Math.max(0, Math.floor((73 - titleLine.length) / 2));
         html += ' '.repeat(titlePadding) + titleLine + '\n';
         html += ' '.repeat(titlePadding) + '═'.repeat(titleLine.length) + '\n\n';
@@ -1311,7 +1265,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         let html = '<div style="padding: 20px;">';
         
         // Title
-        const titleLine = i18n.annual_stats.title_with_year.replace('{year}', year);
+        const titleLine = i18nStrings.annual_stats.title_with_year.replace('{year}', year);
         html += `<h3 style="text-align: center; font-family: Arial, sans-serif; margin-bottom: 30px;">${titleLine}</h3>`;
         
         // Table 1: Monthly Activity - split columns
@@ -1319,21 +1273,21 @@ document.addEventListener('DOMContentLoaded', async function() {
             html += '<table class="table table-bordered analysis-table" style="margin-bottom: 30px;">';
             html += '<thead>';
             html += '<tr>';
-            html += '<th rowspan="2">' + i18n.annual_stats.table_month + '</th>';
-            html += '<th colspan="2">' + i18n.annual_stats.table_sun + '</th>';
-            html += '<th colspan="2">' + i18n.annual_stats.table_moon + '</th>';
-            html += '<th colspan="2">' + i18n.annual_stats.table_total + '</th>';
-            html += '<th colspan="2">' + i18n.annual_stats.table_activity + '</th>';
+            html += '<th rowspan="2">' + i18nStrings.annual_stats.table_month + '</th>';
+            html += '<th colspan="2">' + i18nStrings.annual_stats.table_sun + '</th>';
+            html += '<th colspan="2">' + i18nStrings.annual_stats.table_moon + '</th>';
+            html += '<th colspan="2">' + i18nStrings.annual_stats.table_total + '</th>';
+            html += '<th colspan="2">' + i18nStrings.annual_stats.table_activity + '</th>';
             html += '</tr>';
             html += '<tr>';
-            html += '<th>' + i18n.annual_stats.table_ee + '</th>';
-            html += '<th>' + i18n.annual_stats.table_days + '</th>';
-            html += '<th>' + i18n.annual_stats.table_ee + '</th>';
-            html += '<th>' + i18n.annual_stats.table_days + '</th>';
-            html += '<th>' + i18n.annual_stats.table_ee + '</th>';
-            html += '<th>' + i18n.annual_stats.table_days + '</th>';
-            html += '<th>' + i18n.annual_stats.table_real + '</th>';
-            html += '<th>' + i18n.annual_stats.table_relative + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.table_ee + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.table_days + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.table_ee + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.table_days + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.table_ee + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.table_days + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.table_real + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.table_relative + '</th>';
             html += '</tr>';
             html += '</thead>';
             html += '<tbody>';
@@ -1343,7 +1297,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const monthData = data.monthly_stats[mmStr] || {};
                 
                 html += '<tr>';
-                html += '<td>' + i18n.months[mmStr] + '</td>';
+                html += '<td>' + i18nStrings.months[mmStr] + '</td>';
                 html += '<td style="text-align: right;">' + (monthData.sun_ee || 0) + '</td>';
                 html += '<td style="text-align: right;">' + (monthData.sun_days || 0) + '</td>';
                 html += '<td style="text-align: right;">' + (monthData.moon_ee || 0) + '</td>';
@@ -1357,7 +1311,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             // Totals row
             html += '<tr style="font-weight: bold; border-top: 2px solid #000;">';
-            html += '<td>' + i18n.annual_stats.table_total + '</td>';
+            html += '<td>' + i18nStrings.annual_stats.table_total + '</td>';
             html += '<td style="text-align: right;">' + (data.totals.sun_ee || 0) + '</td>';
             html += '<td style="text-align: right;">' + (data.totals.sun_days || 0) + '</td>';
             html += '<td style="text-align: right;">' + (data.totals.moon_ee || 0) + '</td>';
@@ -1373,7 +1327,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         // Table 2: EE Observations - one table for sun, one for moon
-        const titleLine2 = i18n.annual_stats.ee_observed_title;
+        const titleLine2 = i18nStrings.annual_stats.ee_observed_title;
         html += `<h4 style="text-align: center; font-family: Arial, sans-serif; margin-top: 30px; margin-bottom: 20px;">${titleLine2}</h4>`;
         
         // Sun halos table
@@ -1381,7 +1335,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             html += '<table class="table table-bordered analysis-table" style="margin-bottom: 30px;">';
             html += '<thead>';
             html += '<tr>';
-            html += '<th colspan="100" style="text-align: center;">' + i18n.annual_stats.ee_sun_label + '</th>';
+            html += '<th colspan="100" style="text-align: center;">' + i18nStrings.annual_stats.ee_sun_label + '</th>';
             html += '</tr>';
             html += '<tr>';
             html += '<th>EE</th>';
@@ -1393,7 +1347,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             html += '</thead>';
             html += '<tbody>';
             html += '<tr>';
-            html += '<td style="font-weight: bold;">' + i18n.annual_stats.ee_count_label + '</td>';
+            html += '<td style="font-weight: bold;">' + i18nStrings.annual_stats.ee_count_label + '</td>';
             for (const ee of sunEEs) {
                 html += '<td style="text-align: right;">' + (data.sun_ee_counts[ee] || 0) + '</td>';
             }
@@ -1407,7 +1361,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             html += '<table class="table table-bordered analysis-table" style="margin-bottom: 30px;">';
             html += '<thead>';
             html += '<tr>';
-            html += '<th colspan="100" style="text-align: center;">' + i18n.annual_stats.ee_moon_label + '</th>';
+            html += '<th colspan="100" style="text-align: center;">' + i18nStrings.annual_stats.ee_moon_label + '</th>';
             html += '</tr>';
             html += '<tr>';
             html += '<th>EE</th>';
@@ -1419,7 +1373,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             html += '</thead>';
             html += '<tbody>';
             html += '<tr>';
-            html += '<td style="font-weight: bold;">' + i18n.annual_stats.ee_count_label + '</td>';
+            html += '<td style="font-weight: bold;">' + i18nStrings.annual_stats.ee_count_label + '</td>';
             for (const ee of moonEEs) {
                 html += '<td style="text-align: right;">' + (data.moon_ee_counts[ee] || 0) + '</td>';
             }
@@ -1430,24 +1384,24 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Table 3: Observer Distribution - no separators every 5 rows
         if (data.observer_distribution && data.observer_distribution.length > 0) {
-            const titleLine3 = i18n.annual_stats.observer_dist_title;
+            const titleLine3 = i18nStrings.annual_stats.observer_dist_title;
             html += `<h4 style="text-align: center; font-family: Arial, sans-serif; margin-top: 30px; margin-bottom: 20px;">${titleLine3}</h4>`;
             
             html += '<table class="table table-bordered analysis-table" style="margin-bottom: 30px;">';
             html += '<thead>';
             html += '<tr>';
-            html += '<th>' + i18n.annual_stats.observer_dist_kk + '</th>';
-            html += '<th>' + i18n.annual_stats.observer_dist_ee01 + '</th>';
-            html += '<th>' + i18n.annual_stats.observer_dist_percent + '</th>';
-            html += '<th>' + i18n.annual_stats.observer_dist_ee02 + '</th>';
-            html += '<th>' + i18n.annual_stats.observer_dist_percent + '</th>';
-            html += '<th>' + i18n.annual_stats.observer_dist_ee03 + '</th>';
-            html += '<th>' + i18n.annual_stats.observer_dist_percent + '</th>';
-            html += '<th>' + i18n.annual_stats.observer_dist_ee567 + '</th>';
-            html += '<th>' + i18n.annual_stats.observer_dist_percent + '</th>';
-            html += '<th>' + i18n.annual_stats.observer_dist_ee17 + '</th>';
-            html += '<th>' + i18n.annual_stats.observer_dist_ee_so + '</th>';
-            html += '<th>' + i18n.annual_stats.observer_dist_ht_ges + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.observer_dist_kk + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.observer_dist_ee01 + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.observer_dist_percent + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.observer_dist_ee02 + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.observer_dist_percent + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.observer_dist_ee03 + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.observer_dist_percent + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.observer_dist_ee567 + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.observer_dist_percent + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.observer_dist_ee17 + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.observer_dist_ee_so + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.observer_dist_ht_ges + '</th>';
             html += '</tr>';
             html += '</thead>';
             html += '<tbody>';
@@ -1475,23 +1429,23 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Table 4: Phenomena - halo types in separate columns
         if (data.phenomena && data.phenomena.length > 0) {
-            const titleLine4 = i18n.annual_stats.phenomena_title;
+            const titleLine4 = i18nStrings.annual_stats.phenomena_title;
             html += `<h4 style="text-align: center; font-family: Arial, sans-serif; margin-top: 30px; margin-bottom: 20px;">${titleLine4}</h4>`;
             
             html += '<table class="table table-bordered analysis-table" style="margin-bottom: 30px;">';
             html += '<thead>';
             html += '<tr>';
-            html += '<th>' + i18n.annual_stats.phenomena_date + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.phenomena_date + '</th>';
             html += '<th>KK</th>';
             html += '<th>GG</th>';
-            html += '<th>' + i18n.annual_stats.phenomena_time + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.phenomena_time + '</th>';
             html += '<th>O</th>';
             // EE columns 01-12
             const eeColumns = [1, 2, 3, 5, 6, 7, 8, 9, 11, 12];
             for (const ee of eeColumns) {
                 html += '<th style="text-align: center;">' + ee.toString().padStart(2, '0') + '</th>';
             }
-            html += '<th>' + i18n.annual_stats.phenomena_other_ee + '</th>';
+            html += '<th>' + i18nStrings.annual_stats.phenomena_other_ee + '</th>';
             html += '</tr>';
             html += '</thead>';
             html += '<tbody>';
@@ -1524,10 +1478,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             html += '</table>';
         } else {
             // No phenomena
-            const titleLine4 = i18n.annual_stats.phenomena_title;
+            const titleLine4 = i18nStrings.annual_stats.phenomena_title;
             html += `<h4 style="text-align: center; font-family: Arial, sans-serif; margin-top: 30px; margin-bottom: 20px;">${titleLine4}</h4>`;
             html += '<div style="padding: 20px; text-align: center; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; margin-bottom: 30px;">';
-            html += '<p style="margin: 0;">' + i18n.annual_stats.phenomena_none + '</p>';
+            html += '<p style="margin: 0;">' + i18nStrings.annual_stats.phenomena_none + '</p>';
             html += '</div>';
         }
         
@@ -1537,22 +1491,22 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Build Markdown format annual statistics (pipe tables from HTML format)
     function buildMarkdownAnnualStats(data, year, i18n) {
-        let md = `# ${i18n.annual_stats.title_with_year.replace('{year}', year)}\n\n`;
+        let md = `# ${i18nStrings.annual_stats.title_with_year.replace('{year}', year)}\n\n`;
         
         // Table 1: Monthly Activity
         if (data.monthly_stats && data.totals) {
-            md += '| ' + i18n.annual_stats.table_month + ' | ';
-            md += i18n.annual_stats.table_sun + ' EE | ' + i18n.annual_stats.table_sun + ' ' + i18n.annual_stats.table_days + ' | ';
-            md += i18n.annual_stats.table_moon + ' EE | ' + i18n.annual_stats.table_moon + ' ' + i18n.annual_stats.table_days + ' | ';
-            md += i18n.annual_stats.table_total + ' EE | ' + i18n.annual_stats.table_total + ' ' + i18n.annual_stats.table_days + ' | ';
-            md += i18n.annual_stats.table_real + ' | ' + i18n.annual_stats.table_relative + ' |\n';
+            md += '| ' + i18nStrings.annual_stats.table_month + ' | ';
+            md += i18nStrings.annual_stats.table_sun + ' EE | ' + i18nStrings.annual_stats.table_sun + ' ' + i18nStrings.annual_stats.table_days + ' | ';
+            md += i18nStrings.annual_stats.table_moon + ' EE | ' + i18nStrings.annual_stats.table_moon + ' ' + i18nStrings.annual_stats.table_days + ' | ';
+            md += i18nStrings.annual_stats.table_total + ' EE | ' + i18nStrings.annual_stats.table_total + ' ' + i18nStrings.annual_stats.table_days + ' | ';
+            md += i18nStrings.annual_stats.table_real + ' | ' + i18nStrings.annual_stats.table_relative + ' |\n';
             
             md += '|---|---:|---:|---:|---:|---:|---:|---:|---:|\n';
             
             for (let mm = 1; mm <= 12; mm++) {
                 const mmStr = mm.toString();
                 const monthData = data.monthly_stats[mmStr] || {};
-                md += '| ' + i18n.months[mmStr] + ' | ';
+                md += '| ' + i18nStrings.months[mmStr] + ' | ';
                 md += (monthData.sun_ee || 0) + ' | ' + (monthData.sun_days || 0) + ' | ';
                 md += (monthData.moon_ee || 0) + ' | ' + (monthData.moon_days || 0) + ' | ';
                 md += (monthData.total_ee || 0) + ' | ' + (monthData.total_days || 0) + ' | ';
@@ -1560,7 +1514,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
             
             // Totals row
-            md += '| **' + i18n.annual_stats.table_total + '** | ';
+            md += '| **' + i18nStrings.annual_stats.table_total + '** | ';
             md += '**' + (data.totals.sun_ee || 0) + '** | **' + (data.totals.sun_days || 0) + '** | ';
             md += '**' + (data.totals.moon_ee || 0) + '** | **' + (data.totals.moon_days || 0) + '** | ';
             md += '**' + (data.totals.total_ee || 0) + '** | **' + (data.totals.total_days || 0) + '** | ';
@@ -1569,12 +1523,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Table 2: EE Observations
         if (data.sun_ee_counts || data.moon_ee_counts) {
-            md += `## ${i18n.annual_stats.ee_observed_title}\n\n`;
+            md += `## ${i18nStrings.annual_stats.ee_observed_title}\n\n`;
         }
         
         // Sun halos
         if (data.sun_ee_counts && Object.keys(data.sun_ee_counts).length > 0) {
-            md += `### ${i18n.annual_stats.ee_sun_label}\n\n`;
+            md += `### ${i18nStrings.annual_stats.ee_sun_label}\n\n`;
             md += '| EE |';
             const sunEEs = Object.keys(data.sun_ee_counts).map(Number).sort((a,b)=>a-b);
             for (const ee of sunEEs) {
@@ -1584,7 +1538,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             for (let i = 0; i < sunEEs.length; i++) {
                 md += '---:|';
             }
-            md += '\n| ' + i18n.annual_stats.ee_count_label + ' |';
+            md += '\n| ' + i18nStrings.annual_stats.ee_count_label + ' |';
             for (const ee of sunEEs) {
                 md += ' ' + (data.sun_ee_counts[ee] || 0) + ' |';
             }
@@ -1593,7 +1547,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Moon halos
         if (data.moon_ee_counts && Object.keys(data.moon_ee_counts).length > 0) {
-            md += `### ${i18n.annual_stats.ee_moon_label}\n\n`;
+            md += `### ${i18nStrings.annual_stats.ee_moon_label}\n\n`;
             md += '| EE |';
             const moonEEs = Object.keys(data.moon_ee_counts).map(Number).sort((a,b)=>a-b);
             for (const ee of moonEEs) {
@@ -1603,7 +1557,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             for (let i = 0; i < moonEEs.length; i++) {
                 md += '---:|';
             }
-            md += '\n| ' + i18n.annual_stats.ee_count_label + ' |';
+            md += '\n| ' + i18nStrings.annual_stats.ee_count_label + ' |';
             for (const ee of moonEEs) {
                 md += ' ' + (data.moon_ee_counts[ee] || 0) + ' |';
             }
@@ -1612,15 +1566,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Table 3: Observer Distribution
         if (data.observer_distribution && data.observer_distribution.length > 0) {
-            md += `## ${i18n.annual_stats.observer_dist_title}\n\n`;
-            md += '| ' + i18n.annual_stats.observer_dist_kk + ' | ';
-            md += i18n.annual_stats.observer_dist_ee01 + ' | ' + i18n.annual_stats.observer_dist_percent + ' | ';
-            md += i18n.annual_stats.observer_dist_ee02 + ' | ' + i18n.annual_stats.observer_dist_percent + ' | ';
-            md += i18n.annual_stats.observer_dist_ee03 + ' | ' + i18n.annual_stats.observer_dist_percent + ' | ';
-            md += i18n.annual_stats.observer_dist_ee567 + ' | ' + i18n.annual_stats.observer_dist_percent + ' | ';
-            md += i18n.annual_stats.observer_dist_ee17 + ' | ';
-            md += i18n.annual_stats.observer_dist_ee_so + ' | ';
-            md += i18n.annual_stats.observer_dist_ht_ges + ' |\n';
+            md += `## ${i18nStrings.annual_stats.observer_dist_title}\n\n`;
+            md += '| ' + i18nStrings.annual_stats.observer_dist_kk + ' | ';
+            md += i18nStrings.annual_stats.observer_dist_ee01 + ' | ' + i18nStrings.annual_stats.observer_dist_percent + ' | ';
+            md += i18nStrings.annual_stats.observer_dist_ee02 + ' | ' + i18nStrings.annual_stats.observer_dist_percent + ' | ';
+            md += i18nStrings.annual_stats.observer_dist_ee03 + ' | ' + i18nStrings.annual_stats.observer_dist_percent + ' | ';
+            md += i18nStrings.annual_stats.observer_dist_ee567 + ' | ' + i18nStrings.annual_stats.observer_dist_percent + ' | ';
+            md += i18nStrings.annual_stats.observer_dist_ee17 + ' | ';
+            md += i18nStrings.annual_stats.observer_dist_ee_so + ' | ';
+            md += i18nStrings.annual_stats.observer_dist_ht_ges + ' |\n';
             md += '|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n';
             
             for (const obs of data.observer_distribution) {
@@ -1636,13 +1590,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Table 4: Phenomena
         if (data.phenomena && data.phenomena.length > 0) {
-            md += `## ${i18n.annual_stats.phenomena_title}\n\n`;
-            md += '| ' + i18n.annual_stats.phenomena_date + ' | KK | GG | ' + i18n.annual_stats.phenomena_time + ' | O |';
+            md += `## ${i18nStrings.annual_stats.phenomena_title}\n\n`;
+            md += '| ' + i18nStrings.annual_stats.phenomena_date + ' | KK | GG | ' + i18nStrings.annual_stats.phenomena_time + ' | O |';
             const eeColumns = [1, 2, 3, 5, 6, 7, 8, 9, 11, 12];
             for (const ee of eeColumns) {
                 md += ' EE' + ee.toString().padStart(2, '0') + ' |';
             }
-            md += ' ' + i18n.annual_stats.phenomena_other_ee + ' |\n';
+            md += ' ' + i18nStrings.annual_stats.phenomena_other_ee + ' |\n';
             md += '|---|---:|---:|---|---:|';
             for (let i = 0; i < eeColumns.length; i++) {
                 md += '---:|';
@@ -1667,8 +1621,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
             md += '\n';
         } else {
-            md += `## ${i18n.annual_stats.phenomena_title}\n\n`;
-            md += i18n.annual_stats.phenomena_none + '\n\n';
+            md += `## ${i18nStrings.annual_stats.phenomena_title}\n\n`;
+            md += i18nStrings.annual_stats.phenomena_none + '\n\n';
         }
         
         return md;

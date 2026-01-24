@@ -67,8 +67,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadCurrentLanguage();
     await loadI18n(currentLanguage);
 
+    // Check if i18n loaded successfully - fail fast if not
+    if (!i18nStrings) {
+        console.error('Failed to load i18n - cannot proceed');
+        return;  // Stop application
+    }
+
     // Check for updates FIRST - blocks until user decides
-    await checkForUpdates();
+    if (i18nStrings.app.version) {
+        await checkForUpdates();
+    }
 
     setupLanguageSwitcher();
     setupMenuHandlers();
@@ -133,8 +141,6 @@ async function loadObserverCodes() {
 // Show Bootstrap confirmation dialog instead of browser confirm()
 function showConfirmDialog(title, message, onConfirm, onCancel, buttonLabels = null) {
     const modalId = 'confirm-modal-' + Math.random().toString(36).substr(2, 9);
-    const cancelLabel = buttonLabels?.cancel || i18nStrings.common.cancel;
-    const confirmLabel = buttonLabels?.confirm || i18nStrings.common.ok;
     const modalHtml = `
         <div class="modal fade" id="${modalId}" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
@@ -147,8 +153,8 @@ function showConfirmDialog(title, message, onConfirm, onCancel, buttonLabels = n
                         ${message}
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${cancelLabel}</button>
-                        <button type="button" class="btn btn-primary btn-sm px-3" id="confirm-yes-${modalId}">${confirmLabel}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="confirm-yes-${modalId}">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -288,6 +294,14 @@ function handleMenuAction(action) {
             highlightFileMenu();
             showSaveAsDialog();
             break;
+        case 'upload':
+            highlightFileMenu();
+            showUploadDialog();
+            break;
+        case 'download':
+            highlightFileMenu();
+            showDownloadDialog();
+            break;
         
             
         // Observations menu
@@ -374,17 +388,7 @@ function handleMenuAction(action) {
             showHelpDialog();
             break;
             
-        // Exit menu
-        case 'exit':
-            showConfirmDialog(
-                i18nStrings.exit.title,
-                i18nStrings.exit.confirm_exit,
-                () => window.close()
-            );
-            break;
-        case 'return':
-            window.location.href = '/';
-            break;
+        // Exit menu removed
             
         default:
             console.info(`Function "${action}" not implemented`);
@@ -441,18 +445,16 @@ async function showAddObservationDialogNumeric() {
         console.error('Error loading date default:', e);
     }
     
-    const title = i18nStrings.observations.add_observation;
-    const pattern = i18nStrings.observations.input_pattern;
     const modalHtml = `
         <div class="modal fade" id="add-observation-modal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content">
                     <div class="modal-header py-1">
-                        <h6 class="modal-title mb-0">${title}</h6>
+                        <h6 class="modal-title mb-0">${i18nStrings.observations.add_observation}</h6>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body py-2">
-                        <div class="border rounded mb-2" style="font-family: var(--bs-font-monospace, monospace); white-space: pre; background: #f8f9fa; padding: 4px 6px; font-size: 14px; color: #000;"><div id="obs-guide-header" style="margin: 0; padding: 0; line-height: 1.4;">${pattern}</div><div id="obs-guide-entered" style="margin: 0; padding: 0; line-height: 1.4;"></div><div id="obs-guide-caret" style="color:#0d6efd; margin: 0; padding: 0; line-height: 1.4;"></div></div>
+                        <div class="border rounded mb-2" style="font-family: var(--bs-font-monospace, monospace); white-space: pre; background: #f8f9fa; padding: 4px 6px; font-size: 14px; color: #000;"><div id="obs-guide-header" style="margin: 0; padding: 0; line-height: 1.4;">${i18nStrings.observations.input_pattern}</div><div id="obs-guide-entered" style="margin: 0; padding: 0; line-height: 1.4;"></div><div id="obs-guide-caret" style="color:#0d6efd; margin: 0; padding: 0; line-height: 1.4;"></div></div>
                         <input id="obs-code-input" class="form-control form-control-sm py-1" autocomplete="off" spellcheck="false" style="position: absolute; left: -9999px; font-family: var(--bs-font-monospace, monospace); font-size: 14px;" placeholder="KKOJJMMTTgZZZZdDDNCcEEHFVfzzGG...">
                         <div id="obs-code-error" class="text-danger mt-1" style="display:none; font-size: 12px;"></div>
                     </div>
@@ -472,7 +474,7 @@ async function showAddObservationDialogNumeric() {
         observers = data.observers;
     } catch (e) {
         console.error(e);
-        alert(i18nStrings.observations.error_loading_observers);
+        showErrorDialog(i18nStrings.common.error_loading_observers);
         return;
     }
 
@@ -537,6 +539,11 @@ async function showAddObservationDialogNumeric() {
         const navKeys = ['ArrowLeft','ArrowRight','Home','End','Tab'];
         if (navKeys.includes(ev.key)) return;
         if (ev.key === 'Backspace') {
+            // Prevent deletion if fixed observer is set and we're at position 2 or less (KK protected)
+            if (fixedObserver && eing.length <= 2) {
+                ev.preventDefault();
+                return;
+            }
             if (eing.length > 0) {
                 eing = eing.slice(0, -1);
                 input.value = eing;
@@ -767,7 +774,7 @@ async function showAddObservationDialogNumeric() {
             
             if (resp.status === 409) {
                 // Duplicate observation
-                errEl.textContent = i18nStrings.observers.error_observation_exists;
+                errEl.textContent = i18nStrings.observations.error_observation_exists;
                 errEl.style.display = 'block';
                 return;
             }
@@ -789,9 +796,7 @@ async function showAddObservationDialogNumeric() {
             modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
             
             // Show success notification
-            const obsText = currentLanguage === 'de' ? 'Beobachtung' : 'Observation';
-            const addedText = currentLanguage === 'de' ? 'hinzugefügt' : 'added';
-            showNotification(`<strong>✓</strong> 1 ${obsText} ${addedText}`);
+            showNotification(`<strong>✓</strong> 1 ${i18nStrings.common.observation} ${i18nStrings.common.added}`);
         } catch (e) {
             errEl.textContent = e.message;
             errEl.style.display = 'block';
@@ -817,7 +822,7 @@ async function showAddObservationDialogMenu() {
         observers = data.observers;
     } catch (e) {
         console.error(e);
-        showWarningModal(i18nStrings.observations.error_loading_observers);
+        showWarningModal(i18nStrings.common.error_loading_observers);
         return;
     }
     
@@ -839,13 +844,15 @@ async function showAddObservationDialogMenu() {
         console.error('Error loading date default:', e);
     }
 
-    const title = i18nStrings.observations.add_observation;
     
     // Build observer options with fixed observer pre-selected
     const observerOptions = observers.map(obs => {
         const selected = obs.KK === fixedObserver ? 'selected' : '';
         return `<option value="${obs.KK}" ${selected}>${obs.KK} - ${obs.VName} ${obs.NName}</option>`;
     }).join('');
+    
+    // Disable observer dropdown if fixed observer is set
+    const observerDisabled = fixedObserver ? 'disabled' : '';
     
     // Build year options (1950-2049)
     const yearOptions = Array.from({length: 100}, (_, i) => {
@@ -859,14 +866,14 @@ async function showAddObservationDialogMenu() {
             <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content">
                     <div class="modal-header py-1">
-                        <h6 class="modal-title mb-0">${title}</h6>
+                        <h6 class="modal-title mb-0">${i18nStrings.observations.add_observation}</h6>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body py-2">
                         <div class="row g-2">
                             <div class="col-md-6">
                                 <label class="form-label">KK - ${i18nStrings.fields.observer} <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" id="menu-kk" required>
+                                <select class="form-select form-select-sm" id="menu-kk" ${observerDisabled} required>
                                     <option value="">-- ${i18nStrings.fields.select} --</option>
                                     ${observerOptions}
                                 </select>
@@ -1333,7 +1340,7 @@ async function showAddObservationDialogMenu() {
                 // Duplicate observation
                 const errEl = document.getElementById('menu-error-message');
                 if (errEl) {
-                    errEl.textContent = i18nStrings.observers.error_observation_exists;
+                    errEl.textContent = i18nStrings.observations.error_observation_exists;
                     errEl.style.display = 'block';
                 }
                 return;
@@ -1356,9 +1363,7 @@ async function showAddObservationDialogMenu() {
             modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
             
             // Show success notification
-            const obsText = currentLanguage === 'de' ? 'Beobachtung' : 'Observation';
-            const addedText = currentLanguage === 'de' ? 'hinzugefügt' : 'added';
-            showNotification(`<strong>✓</strong> 1 ${obsText} ${addedText}`);
+            showNotification(`<strong>✓</strong> 1 ${i18nStrings.common.observation} ${i18nStrings.common.added}`);
         } catch (e) {
             errEl.textContent = e.message;
             errEl.style.display = 'block';
@@ -1663,8 +1668,6 @@ async function checkForUpdates() {
     try {
         const repo = window.UPDATE_REPO;
         if (!repo) return;
-        const current = i18nStrings.app?.version || '0.0.0';
-        const currentDate = i18nStrings.app?.version_date || '';
         const resp = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
             signal: AbortSignal.timeout(5000)  // 5 second timeout
         });
@@ -1673,24 +1676,21 @@ async function checkForUpdates() {
             return;
         }
         const json = await resp.json();
-        const latestTag = json.tag_name || json.name || '';
+        const latestTag = json.tag_name;
         const latest = latestTag.replace(/^v/, '');
         // Use ISO date format (YYYY-MM-DD) for consistency
         const latestDate = json.published_at ? json.published_at.split('T')[0] : '';
-        if (isNewerVersion(latest, current)) {
+        if (isNewerVersion(latest, i18nStrings.app.version)) {
             // Block startup until user decides
             await new Promise((resolve) => {
-                const title = i18nStrings.update?.title || 'Update';
-                const msgTpl = i18nStrings.update?.message || 'New version {latest} from {latestDate} (current {current} from {currentDate}). Update?';
-                const message = msgTpl
+                const message = i18nStrings.update.message
                     .replace('{latest}', latest)
                     .replace('{latestDate}', latestDate)
-                    .replace('{current}', current)
-                    .replace('{currentDate}', currentDate);
+                    .replace('{current}', i18nStrings.app.version)
+                    .replace('{currentDate}', i18nStrings.app.version_date);
                 showConfirmDialog(title, message, async () => {
                     try {
-                        const downloading = i18nStrings.update?.downloading || 'Downloading update...';
-                        const { modal, modalEl } = showInfoModal(title, downloading);
+                        const { modal, modalEl } = showInfoModal(i18nStrings.update.title, i18nStrings.upload_download.download_progress);
                         
                         // Send update request - expect connection to be reset when Flask reloads
                         try {
@@ -1709,17 +1709,14 @@ async function checkForUpdates() {
                         modalEl.remove();
                         
                         // Wait briefly for Flask to restart, then reload page
-                        const successMsg = i18nStrings.update?.success || 'Update complete. Reloading...';
-                        const { modal: successModal, modalEl: successModalEl } = showInfoModal(title, successMsg);
+                        const { modal: successModal, modalEl: successModalEl } = showInfoModal(title, i18nStrings.update.success);
                         
                         // Give Flask 2 seconds to restart, then reload
                         setTimeout(() => {
                             window.location.reload();
                         }, 2000);
                     } catch (e) {
-                        const errTpl = i18nStrings.update?.error || 'Update failed: {error}';
-                        const errMsg = errTpl.replace('{error}', String(e));
-                        showErrorDialog(title, errMsg);
+                        showErrorDialog(title, i18nStrings.dialogs.error.title.replace('{error}', String(e)));
                         resolve();
                     }
                 }, () => {
@@ -1760,18 +1757,10 @@ function setupLanguageSwitcher() {
     const deBtn = document.getElementById('lang-de');
     const enBtn = document.getElementById('lang-en');
     
-    // Set initial button states based on current language
-    if (currentLanguage === 'de') {
-        deBtn.classList.remove('btn-outline-light');
-        deBtn.classList.add('btn-light');
-        enBtn.classList.remove('btn-light');
-        enBtn.classList.add('btn-outline-light');
-    } else {
-        enBtn.classList.remove('btn-outline-light');
-        enBtn.classList.add('btn-light');
-        deBtn.classList.remove('btn-light');
-        deBtn.classList.add('btn-outline-light');
-    }
+    deBtn.classList.remove('btn-outline-light');
+    deBtn.classList.add('btn-light');
+    enBtn.classList.remove('btn-light');
+    enBtn.classList.add('btn-outline-light');
     
     if (deBtn) {
         deBtn.addEventListener('click', () => switchLanguage('de'));
@@ -1811,86 +1800,46 @@ async function switchLanguage(lang) {
 
 // Update menu text with current language
 function updateMenuText() {
-    const menus = i18nStrings.menus;
-    
     // Update main menu titles (skip first one which is the help icon "≡")
     const menuTitles = document.querySelectorAll('.menu-title');
+    const titles = ['≡', i18nStrings.menu_titles.file, i18nStrings.menu_titles.observations, 
+                    i18nStrings.menu_titles.observers, i18nStrings.menu_titles.analysis, 
+                    i18nStrings.menu_titles.output, i18nStrings.menu_titles.settings];
+    menuTitles.forEach((title, i) => {
+        if (titles[i] && i > 0) title.textContent = titles[i];
+    });
     
-    if (currentLanguage === 'de') {
-        const titles = ['≡', i18nStrings.menu_titles.file, i18nStrings.menu_titles.observations, i18nStrings.menu_titles.observers, i18nStrings.menu_titles.analysis, i18nStrings.menu_titles.output, i18nStrings.menu_titles.settings, i18nStrings.menu_titles.exit];
-        menuTitles.forEach((title, i) => {
-            if (titles[i] && i > 0) title.textContent = titles[i];
-        });
-        
-        // Update dropdown menu items
-        updateDropdownItem('help-version', i18nStrings.help.version);
-        updateDropdownItem('help-new', i18nStrings.help.whats_new);
-        updateDropdownItem('new-file', i18nStrings.menus.file.new_file);
-        updateDropdownItem('adjust', i18nStrings.menus.file.adjust);
-        updateDropdownItem('load', i18nStrings.menus.file.load);
-        updateDropdownItem('select', i18nStrings.menus.file.select);
-        updateDropdownItem('merge', i18nStrings.menus.file.merge);
-        updateDropdownItem('save', i18nStrings.menus.file.save);
-        updateDropdownItem('save-as', i18nStrings.menus.file.save_as);
-        updateDropdownItem('obs-add', i18nStrings.observations.add);
-        updateDropdownItem('obs-modify', i18nStrings.observations.modify);
-        updateDropdownItem('obs-delete', i18nStrings.observations.delete);
-        updateDropdownItem('observer-display', i18nStrings.observations.display);
-        updateDropdownItem('observer-add', i18nStrings.observations.add);
-        updateDropdownItem('observer-modify', i18nStrings.observations.modify);
-        updateDropdownItem('observer-delete', i18nStrings.observations.delete);
-        updateDropdownItem('analysis-create', i18nStrings.analysis.create);
-        updateDropdownItem('analysis-load', i18nStrings.analysis.load);
-        updateDropdownItem('output-monthly-report', i18nStrings.output.monthly_report);
-        updateDropdownItem('output-monthly-stats', i18nStrings.output.monthly_stats);
-        updateDropdownItem('output-yearly-stats', i18nStrings.output.yearly_stats);
-        updateDropdownItem('settings-fixed-observer', i18nStrings.menus.settings.fixed_observer);
-        updateDropdownItem('settings-eingabeart', i18nStrings.menus.settings.input_type);
-        updateDropdownItem('settings-datenpfad', i18nStrings.menus.settings.data_dir);
-        if (i18nStrings.menus.settings.active_observers) {
-            updateDropdownItem('settings-active-observers', i18nStrings.menus.settings.active_observers);
-        }
-        // Update link text for observations (has href, not data-action)
-        const obsLink = document.querySelector('a[href="/observations"]');
-        if (obsLink) obsLink.textContent = i18nStrings.observations.display;
-        const returnLink = document.querySelector('a[href="/"]');
-        if (returnLink) returnLink.textContent = i18nStrings.common.back_to_main;
-    } else {
-        // English mode - use same i18n strings
-        // Update dropdown menu items
-        updateDropdownItem('help-version', i18nStrings.help.version);
-        updateDropdownItem('help-new', i18nStrings.help.whats_new);
-        updateDropdownItem('new-file', i18nStrings.menus.file.new_file);
-        updateDropdownItem('adjust', i18nStrings.menus.file.adjust);
-        updateDropdownItem('load', i18nStrings.menus.file.load);
-        updateDropdownItem('select', i18nStrings.menus.file.select);
-        updateDropdownItem('merge', i18nStrings.menus.file.merge);
-        updateDropdownItem('save', i18nStrings.menus.file.save);
-        updateDropdownItem('save-as', i18nStrings.menus.file.save_as);
-        updateDropdownItem('obs-add', i18nStrings.observations.add);
-        updateDropdownItem('obs-modify', i18nStrings.observations.modify);
-        updateDropdownItem('obs-delete', i18nStrings.observations.delete);
-        updateDropdownItem('observer-display', i18nStrings.observations.display);
-        updateDropdownItem('observer-add', i18nStrings.observations.add);
-        updateDropdownItem('observer-modify', i18nStrings.observations.modify);
-        updateDropdownItem('observer-delete', i18nStrings.observations.delete);
-        updateDropdownItem('analysis-create', i18nStrings.analysis.create);
-        updateDropdownItem('analysis-load', i18nStrings.analysis.load);
-        updateDropdownItem('output-monthly-report', i18nStrings.output.monthly_report);
-        updateDropdownItem('output-monthly-stats', i18nStrings.output.monthly_stats);
-        updateDropdownItem('output-yearly-stats', i18nStrings.output.yearly_stats);
-        updateDropdownItem('settings-fixed-observer', i18nStrings.menus.settings.fixed_observer);
-        updateDropdownItem('settings-eingabeart', i18nStrings.menus.settings.input_type);
-        updateDropdownItem('settings-datenpfad', i18nStrings.menus.settings.data_dir);
-        if (i18nStrings.menus.settings.active_observers) {
-            updateDropdownItem('settings-active-observers', i18nStrings.menus.settings.active_observers);
-        }
-        // Update link text for observations (has href, not data-action)
-        const obsLink = document.querySelector('a[href="/observations"]');
-        if (obsLink) obsLink.textContent = i18nStrings.observations.display;
-        const returnLink = document.querySelector('a[href="/"]');
-        if (returnLink) returnLink.textContent = i18nStrings.common.back_to_main;
+    // Update dropdown menu items (i18n already contains correct language)
+    updateDropdownItem('help-version', i18nStrings.menus.help.version);
+    updateDropdownItem('help-new', i18nStrings.menus.help.whats_new);
+    updateDropdownItem('new-file', i18nStrings.menus.file.new_file);
+    updateDropdownItem('load', i18nStrings.menus.file.load);
+    updateDropdownItem('select', i18nStrings.menus.file.select);
+    updateDropdownItem('save', i18nStrings.menus.file.save);
+    updateDropdownItem('save-as', i18nStrings.menus.file.save_as);
+    updateDropdownItem('upload', i18nStrings.menus.file.upload);
+    updateDropdownItem('download', i18nStrings.menus.file.download);
+    updateDropdownItem('obs-display', i18nStrings.observations.display);
+    updateDropdownItem('obs-add', i18nStrings.observations.add);
+    updateDropdownItem('obs-modify', i18nStrings.observations.modify);
+    updateDropdownItem('obs-delete', i18nStrings.observations.delete);
+    updateDropdownItem('observer-add', i18nStrings.observations.add);
+    updateDropdownItem('observer-modify', i18nStrings.observations.modify);
+    updateDropdownItem('observer-delete', i18nStrings.observations.delete);
+    updateDropdownItem('output-monthly-report', i18nStrings.output.monthly_report);
+    updateDropdownItem('output-monthly-stats', i18nStrings.output.monthly_stats);
+    updateDropdownItem('output-yearly-stats', i18nStrings.output.yearly_stats);
+    updateDropdownItem('settings-fixed-observer', i18nStrings.menus.settings.fixed_observer);
+    updateDropdownItem('settings-eingabeart', i18nStrings.menus.settings.input_type);
+    if (i18nStrings.menus.settings.active_observers) {
+        updateDropdownItem('settings-active-observers', i18nStrings.menus.settings.active_observers);
     }
+    
+    // Update link text for observations (has href, not data-action)
+    const obsLink = document.querySelector('a[href="/observations"]');
+    if (obsLink) obsLink.textContent = i18nStrings.observations.display;
+    const returnLink = document.querySelector('a[href="/"]');
+    if (returnLink) returnLink.textContent = i18nStrings.common.back_to_main;
 }
 
 function updateDropdownItem(action, text) {
@@ -1942,35 +1891,42 @@ function showHelp() {
 
 // Show Modify Observations dialog
 async function showModifyObservationsDialog() {
-    // Check if data is loaded
-    if (!window.haloData || !window.haloData.isLoaded || !window.haloData.observations || window.haloData.observations.length === 0) {
+    // Check if data is loaded on the server
+    try {
+        const response = await fetch('/api/observations?limit=1');
+        if (!response.ok) {
+            showWarningModal(i18nStrings.dialogs.no_data.message);
+            return;
+        }
+        const data = await response.json();
+        if (!data.total || data.total === 0) {
+            showWarningModal(i18nStrings.dialogs.no_data.message);
+            return;
+        }
+    } catch (error) {
+        console.error('Error checking observations:', error);
         showWarningModal(i18nStrings.dialogs.no_data.message);
         return;
     }
     
     // Step 1: Ask user to select type (Einzelbeobachtungen or Beobachtungsgruppen)
-    const title = i18nStrings.menus.observations.modify_type_title;
-    const einzelText = i18nStrings.menus.observations.modify_single;
-    const gruppenText = i18nStrings.menus.observations.modify_groups;
-    const questionText = i18nStrings.menus.observations.modify_type_question;
-    
     const modalHtml = `
         <div class="modal fade" id="modify-type-modal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">${title}</h5>
+                        <h5 class="modal-title">${i18nStrings.observations.modify_type_title}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <p class="mb-3">${questionText}</p>
+                        <p class="mb-3">${i18nStrings.observations.modify_type_question}</p>
                         <div class="form-check form-check-inline mb-0">
                             <input class="form-check-input" type="radio" name="modify_type" id="modify-single" value="single" checked>
-                            <label class="form-check-label" for="modify-single">${einzelText}</label>
+                            <label class="form-check-label" for="modify-single">${i18nStrings.observations.modify_single}</label>
                         </div>
                         <div class="form-check form-check-inline mb-0">
                             <input class="form-check-input" type="radio" name="modify_type" id="modify-groups" value="groups">
-                            <label class="form-check-label" for="modify-groups">${gruppenText}</label>
+                            <label class="form-check-label" for="modify-groups">${i18nStrings.observations.modify_groups}</label>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -2026,14 +1982,12 @@ async function showModifyFilterDialog(modifyType) {
 // Show single observations for modification (one by one)
 async function showModifySingleObservations(filterState) {
     // Apply filters to get filtered observations
-    const filteredObs = applyFilterToObservations(filterState);
+    const filteredObs = await applyFilterToObservations(filterState);
     
     if (filteredObs.length === 0) {
         showWarningModal(i18nStrings.ui.messages.no_observations);
         return;
     }
-    
-
     
     // Show observations one by one in edit form
     let currentIndex = 0;
@@ -2048,7 +2002,7 @@ async function showModifySingleObservations(filterState) {
         const obs = filteredObs[currentIndex];
         
         // Find the index of this observation in the full observations array
-        const obsIndex = window.haloData.observations.indexOf(obs);
+        const obsIndex = window.haloData.observations ? window.haloData.observations.indexOf(obs) : -1;
         
         // Show observation form directly with populated fields
         showObservationFormForEdit(obs, currentIndex + 1, filteredObs.length, () => {
@@ -2067,7 +2021,7 @@ async function showModifySingleObservations(filterState) {
 // Show group modification form - edit multiple observations at once
 async function showModifyGroupObservations(filterState) {
     // Apply filters to get filtered observations
-    const filteredObs = applyFilterToObservations(filterState);
+    const filteredObs = await applyFilterToObservations(filterState);
     
     if (filteredObs.length === 0) {
         showWarningModal(i18nStrings.ui.messages.no_observations);
@@ -2082,18 +2036,27 @@ async function showModifyGroupObservations(filterState) {
 
 async function showGroupModifyDialogMenu(filteredObs) {
     // Load observer codes
-    let observerCodes, observers;
+    let observerCodes, observers, fixedObserver = null;
     try {
         const data = await loadObserverCodes();
         observerCodes = data.codeSet;
         observers = data.observers;
+        
+        // Load fixed observer configuration
+        try {
+            const configResp = await fetch('/api/config/fixed_observer');
+            if (configResp.ok) {
+                const config = await configResp.json();
+                fixedObserver = config.observer || null;
+            }
+        } catch (e) {
+            // Silently ignore - fixed observer is optional
+        }
     } catch (e) {
         console.error(e);
-        showWarningModal(i18nStrings.observations.error_loading_observers);
+        showWarningModal(i18nStrings.common.error_loading_observers);
         return;
     }
-
-    const title = i18nStrings.menus.observations.modify_groups;
     
     // Build observer options - NO pre-selection
     const observerOptions = observers.map(obs => {
@@ -2112,7 +2075,7 @@ async function showGroupModifyDialogMenu(filteredObs) {
             <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content">
                     <div class="modal-header py-1">
-                        <h6 class="modal-title mb-0">${title} (${filteredObs.length} ${i18nStrings.ui.messages.observations})</h6>
+                        <h6 class="modal-title mb-0">${i18nStrings.observations.modify_groups_title} (${filteredObs.length} ${i18nStrings.common.observations_count})</h6>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body py-2">
@@ -2120,7 +2083,7 @@ async function showGroupModifyDialogMenu(filteredObs) {
                         <div class="row g-2">
                             <div class="col-md-6">
                                 <label class="form-label">KK - ${i18nStrings.fields.observer}</label>
-                                <select class="form-select form-select-sm" id="group-kk">
+                                <select class="form-select form-select-sm" id="group-kk" ${fixedObserver ? 'disabled' : ''}>
                                     <option value="">-- ${i18nStrings.fields.not_specified} --</option>
                                     ${observerOptions}
                                 </select>
@@ -2465,8 +2428,20 @@ async function processBulkUpdate(filteredObs, updates) {
 
 // Show Delete Observations dialog (two-stage filters, then iterate)
 async function showDeleteObservationsDialog() {
-    // Ensure data is loaded
-    if (!window.haloData || !window.haloData.isLoaded || !window.haloData.observations || window.haloData.observations.length === 0) {
+    // Check if data is loaded on the server
+    try {
+        const response = await fetch('/api/observations?limit=1');
+        if (!response.ok) {
+            showWarningModal(i18nStrings.dialogs.no_data.message);
+            return;
+        }
+        const data = await response.json();
+        if (!data.total || data.total === 0) {
+            showWarningModal(i18nStrings.dialogs.no_data.message);
+            return;
+        }
+    } catch (error) {
+        console.error('Error checking observations:', error);
         showWarningModal(i18nStrings.dialogs.no_data.message);
         return;
     }
@@ -2489,7 +2464,7 @@ async function showDeleteObservationsDialog() {
 
 // Iterate observations and ask delete (Yes/No/Cancel). Default = No.
 async function showDeleteSingleObservations(filterState) {
-    const filteredObs = applyFilterToObservations(filterState);
+    const filteredObs = await applyFilterToObservations(filterState);
 
     if (filteredObs.length === 0) {
         showWarningModal(i18nStrings.ui.messages.no_observations);
@@ -2498,14 +2473,14 @@ async function showDeleteSingleObservations(filterState) {
 
     let currentIndex = 0;
 
-    const next = () => {
+    const showNextObservation = async () => {
         if (currentIndex >= filteredObs.length) {
             window.location.href = '/';
             return;
         }
 
         const obs = filteredObs[currentIndex];
-        const obsIndex = window.haloData.observations.indexOf(obs);
+        const obsIndex = window.haloData.observations ? window.haloData.observations.indexOf(obs) : -1;
 
         showObservationFormForDelete(obs, currentIndex + 1, filteredObs.length, async () => {
             // Yes -> delete
@@ -2514,9 +2489,6 @@ async function showDeleteSingleObservations(filterState) {
                 if (obsIndex >= 0) {
                     window.haloData.observations.splice(obsIndex, 1);
                 }
-
-                // Log payload that will be sent to the API for easier debugging
-
 
                 // Delete on server
                 const resp = await fetch('/api/observations/delete', {
@@ -2546,42 +2518,32 @@ async function showDeleteSingleObservations(filterState) {
                 
                 await triggerAutosave();
 
-                const msg = window.currentLanguage === 'de' ? 'Beobachtung gelöscht' : 'Observation deleted';
+                const msg = `${i18nStrings.common.observation} ${i18nStrings.common.deleted}`;
                 showMessage(msg, 'success');
                 
-                // Delay redirect to allow message to show
-                setTimeout(() => {
-                    window.location.href = '/';
-                }, 1500);
+                // Continue to next observation
+                currentIndex += 1;
+                setTimeout(() => showNextObservation(), 1500);
             } catch (e) {
                 console.error('Error deleting observation:', e);
                 showErrorDialog((i18nStrings.common.error) + ': ' + e.message);
-                setTimeout(() => {
-                    window.location.href = '/';
-                }, 1500);
+                window.location.href = '/';
             }
         }, () => {
-            // No -> show next
+            // No -> skip to next observation
             currentIndex += 1;
-            next();
+            showNextObservation();
         }, () => {
             // Cancel -> return to main
             window.location.href = '/';
         });
     };
 
-    next();
+    showNextObservation();
 }
 
 // Confirmation dialog for deletion with default focus on No
 async function showDeleteConfirmDialog(obs, currentNum, totalNum, callback) {
-
-
-    const questionText = i18nStrings.menus.observations.delete_question;
-    const yesText = i18nStrings.observers.yes;
-    const noText = i18nStrings.observers.no;
-    const cancelText = i18nStrings.common.cancel;
-
 
     const obsDisplay = formatObservationForDisplay(obs);
 
@@ -2590,16 +2552,16 @@ async function showDeleteConfirmDialog(obs, currentNum, totalNum, callback) {
             <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content">
                     <div class="modal-header py-2">
-                        <h6 class="modal-title">${questionText} (${currentNum}/${totalNum})</h6>
+                        <h6 class="modal-title">${i18nStrings.observations.delete_question} (${currentNum}/${totalNum})</h6>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body py-2">
                         <div style="font-size: 14px; line-height: 1.6; background-color: #f8f9fa; padding: 10px; border-radius: 4px;">${obsDisplay}</div>
                     </div>
                     <div class="modal-footer py-2">
-                        <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-delete-cancel">${cancelText}</button>
-                        <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-delete-no">${noText}</button>
-                        <button type="button" class="btn btn-danger btn-sm px-3" id="btn-delete-yes">${yesText}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-delete-cancel">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-delete-no">${i18nStrings.common.no}</button>
+                        <button type="button" class="btn btn-danger btn-sm px-3" id="btn-delete-yes">${i18nStrings.common.yes}</button>
                     </div>
                 </div>
             </div>
@@ -2687,10 +2649,6 @@ async function applyFilterToObservations(filterState) {
 
 // Show confirmation dialog asking if user wants to modify this observation
 async function showModifyConfirmDialog(obs, currentNum, totalNum, callback) {
-    const questionText = i18nStrings.menus.observations.modify_question;
-    const yesText = i18nStrings.observers.yes;
-    const noText = i18nStrings.observers.no;
-    const cancelText = i18nStrings.common.cancel;
     
     // Format observation display
     const obsDisplay = formatObservationForDisplay(obs);
@@ -2700,16 +2658,16 @@ async function showModifyConfirmDialog(obs, currentNum, totalNum, callback) {
             <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content">
                     <div class="modal-header py-2">
-                        <h6 class="modal-title">${questionText} (${currentNum}/${totalNum})</h6>
+                        <h6 class="modal-title">${i18nStrings.observations.modify_question} (${currentNum}/${totalNum})</h6>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body py-2">
                         <div style="font-size: 14px; line-height: 1.6; background-color: #f8f9fa; padding: 10px; border-radius: 4px;">${obsDisplay}</div>
                     </div>
                     <div class="modal-footer py-2">
-                        <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-modify-cancel">${cancelText}</button>
-                        <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-modify-no">${noText}</button>
-                        <button type="button" class="btn btn-danger btn-sm px-3" id="btn-modify-yes">${yesText}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-modify-cancel">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-modify-no">${i18nStrings.common.no}</button>
+                        <button type="button" class="btn btn-danger btn-sm px-3" id="btn-modify-yes">${i18nStrings.common.yes}</button>
                     </div>
                 </div>
             </div>
@@ -2765,105 +2723,103 @@ async function showModifyConfirmDialog(obs, currentNum, totalNum, callback) {
 // Format observation for display in confirmation dialog (Menüeingabe format)
 function formatObservationForDisplay(obs) {
     // Use the Menüeingabe (menu input) format with labeled fields
-    const i18n = window.i18nStrings;
     let html = '';
     
     // Observer
-    html += `<strong>${i18n.fields.observer}:</strong> ${obs.KK}<br>`;
+    html += `<strong>${i18nStrings.fields.observer}:</strong> ${obs.KK}<br>`;
     
     // Object type
-    const objectType = i18n.object_types[obs.O];
-    html += `<strong>${i18n.fields.object}:</strong> ${obs.O} - ${objectType}<br>`;
+    const objectType = i18nStrings.object_types[obs.O];
+    html += `<strong>${i18nStrings.fields.object}:</strong> ${obs.O} - ${objectType}<br>`;
     
     // Date
-    const monthName = i18n.months[obs.MM];
-    html += `<strong>${i18n.fields.year}:</strong> ${obs.JJ} `;
-    html += `<strong>${i18n.fields.month}:</strong> ${monthName} `;
-    html += `<strong>${i18n.fields.day}:</strong> ${obs.TT}<br>`;
+    const monthName = i18nStrings.months[obs.MM];
+    html += `<strong>${i18nStrings.fields.year}:</strong> ${obs.JJ} `;
+    html += `<strong>${i18nStrings.fields.month}:</strong> ${monthName} `;
+    html += `<strong>${i18nStrings.fields.day}:</strong> ${obs.TT}<br>`;
     
     // Location type (observing site)
-    const locType = i18n.location_types[obs.g];
-    html += `<strong>${i18n.fields.observing_area}:</strong> ${locType}<br>`;
+    const locType = i18nStrings.location_types[obs.g];
+    html += `<strong>${i18nStrings.fields.observing_area}:</strong> ${locType}<br>`;
     
     // Time
     const timeStr = (obs.ZS !== null && obs.ZS !== -1 && obs.ZS !== 99) ? String(obs.ZS).padStart(2, '0') : '--';
     const timeMin = (obs.ZM !== null && obs.ZM !== -1 && obs.ZM !== 99) ? String(obs.ZM).padStart(2, '0') : '--';
     html += `<strong>Zeit:</strong> ${timeStr}:${timeMin}<br>`;
     
-    // Duration (DD × 10 = minutes)
-    if (obs.DD !== null && obs.DD !== -1) {
-        html += `<strong>${i18n.fields.duration}:</strong> ${obs.DD * 10} min<br>`;
+    // Density
+    if (obs.d !== null && obs.d !== -1) {
+        html += `<strong>${i18nStrings.fields.cirrus_density}:</strong> ${i18nStrings.cirrus_density[obs.d]}<br>`;
     }
     
-    // Origin/Density
-    if (obs.d !== null && obs.d !== -1) {
-        const origin = i18n.origin_density[obs.d];
-        html += `<strong>${i18n.fields.origin}:</strong> ${origin}<br>`;
+    // Duration (DD × 10 = minutes)
+    if (obs.DD !== null && obs.DD !== -1) {
+        html += `<strong>${i18nStrings.fields.duration}:</strong> ${obs.DD * 10} min<br>`;
     }
     
     // Cirrus density
     if (obs.N !== null && obs.N !== -1) {
-        const cirrusDens = i18n.cirrus_density[obs.N];
-        html += `<strong>${i18n.fields.cirrus_density}:</strong> ${cirrusDens}<br>`;
+        const cirrusDens = i18nStrings.cirrus_density[obs.N];
+        html += `<strong>${i18nStrings.fields.cirrus_density}:</strong> ${cirrusDens}<br>`;
     }
     
     // Cloud cover
     if (obs.C !== null && obs.C !== -1) {
-        const cloudCover = i18n.cloud_cover[obs.C];
-        html += `<strong>${i18n.fields.cloud_cover}:</strong> ${cloudCover}<br>`;
+        const cloudCover = i18nStrings.cloud_cover[obs.C];
+        html += `<strong>${i18nStrings.fields.cloud_cover}:</strong> ${cloudCover}<br>`;
     }
     
     // Cirrus type
     if (obs.C !== null && obs.C !== -1) {
-        const cirrusType = i18n.cirrus_types[obs.C];
-        html += `<strong>${i18n.fields.cirrus_type}:</strong> ${cirrusType}<br>`;
+        const cirrusType = i18nStrings.cirrus_types[obs.C];
+        html += `<strong>${i18nStrings.fields.cirrus_type}:</strong> ${cirrusType}<br>`;
     }
     
     // Halo phenomenon
-    const haloType = i18n.halo_types[obs.EE];
-    html += `<strong>${i18n.fields.phenomenon}:</strong> ${String(obs.EE).padStart(2, '0')} - ${haloType}<br>`;
+    const haloType = i18nStrings.halo_types[obs.EE];
+    html += `<strong>${i18nStrings.fields.phenomenon}:</strong> ${String(obs.EE).padStart(2, '0')} - ${haloType}<br>`;
     
     // Brightness
     if (obs.H !== null && obs.H !== -1) {
-        const brightness = i18n.brightness[obs.H];
-        html += `<strong>${i18n.fields.brightness}:</strong> ${brightness}<br>`;
+        const brightness = i18nStrings.brightness[obs.H];
+        html += `<strong>${i18nStrings.fields.brightness}:</strong> ${brightness}<br>`;
     }
     
     // Color
     if (obs.F !== null && obs.F !== -1) {
-        const color = i18n.color[obs.F];
-        html += `<strong>${i18n.fields.color}:</strong> ${color}<br>`;
+        const color = i18nStrings.color[obs.F];
+        html += `<strong>${i18nStrings.fields.color}:</strong> ${color}<br>`;
     }
     
     // Completeness
     if (obs.V !== null && obs.V !== -1) {
-        const complete = i18n.completeness[obs.V];
-        html += `<strong>${i18n.fields.completeness}:</strong> ${complete}<br>`;
+        const complete = i18nStrings.completeness[obs.V];
+        html += `<strong>${i18nStrings.fields.completeness}:</strong> ${complete}<br>`;
     }
     
     // Weather front
     if (obs.f !== null && obs.f !== -1) {
-        const front = i18n.weather_front[obs.f];
+        const front = i18nStrings.weather_front[obs.f];
         html += `<strong>Front:</strong> ${front}<br>`;
     }
     
     // Precipitation
     if (obs.zz !== null && obs.zz !== -1 && obs.zz !== 99) {
-        html += `<strong>${i18n.fields.precipitation}:</strong> ${obs.zz} mm<br>`;
+        html += `<strong>${i18nStrings.fields.precipitation}:</strong> ${obs.zz} mm<br>`;
     }
     
     // Geographic region
-    const region = i18n.geographic_regions[obs.GG];
-    html += `<strong>${i18n.fields.region}:</strong> ${String(obs.GG).padStart(2, '0')} - ${region}<br>`;
+    const region = i18nStrings.geographic_regions[obs.GG];
+    html += `<strong>${i18nStrings.fields.region}:</strong> ${String(obs.GG).padStart(2, '0')} - ${region}<br>`;
     
     // Sectors
     if (obs.sectors && obs.sectors.trim()) {
-        html += `<strong>${i18n.fields.select_observer}:</strong> ${obs.sectors.trim()}<br>`;
+        html += `<strong>${i18nStrings.fields.sectors}:</strong> ${obs.sectors.trim()}<br>`;
     }
     
     // Remarks
     if (obs.remarks && obs.remarks.trim()) {
-        html += `<strong>${i18n.fields.remarks}:</strong> ${obs.remarks.trim()}<br>`;
+        html += `<strong>${i18nStrings.fields.remarks}:</strong> ${obs.remarks.trim()}<br>`;
     }
     
     return html;
@@ -2872,7 +2828,7 @@ function formatObservationForDisplay(obs) {
 // Show observation form for editing
 async function showObservationFormForEdit(obs, currentNum, totalNum, onModified, onCancelled, obsIndex = null) {
     const form = new ObservationForm();
-    await form.initialize();
+    await form.initialize('edit');
     
     // Store the original observation index for deletion
     let originalIndex = obsIndex;
@@ -2927,7 +2883,7 @@ async function showObservationFormForEdit(obs, currentNum, totalNum, onModified,
             if (resp.status === 409) {
                 // Duplicate - this shouldn't happen in edit mode, but handle it
                 logs.push('[EDIT DEBUG] ERROR: Duplicate observation detected');
-                throw new Error(i18nStrings.observers.error_observation_exists);
+                throw new Error(i18nStrings.observations.error_observation_exists);
             }
             
             if (!resp.ok) throw new Error('Failed to save modified observation');
@@ -2955,9 +2911,7 @@ async function showObservationFormForEdit(obs, currentNum, totalNum, onModified,
             // Trigger autosave
             await triggerAutosave();
             
-            const successMsg = window.currentLanguage === 'de' 
-                ? 'Beobachtung geändert'
-                : 'Observation modified';
+            const successMsg = i18nStrings.dialogs.success.observation_modified;
             showMessage(successMsg, 'success');
             
             // Delay before calling onModified (which redirects)
@@ -2976,11 +2930,10 @@ async function showObservationFormForEdit(obs, currentNum, totalNum, onModified,
 // Show observation form for deletion (read-only display with Yes/No/Cancel)
 async function showObservationFormForDelete(obs, currentNum, totalNum, onYes, onNo, onCancel) {
     const form = new ObservationForm();
-    await form.initialize();
+    await form.initialize('delete');
     
     // Show the form in delete mode with custom title and buttons
-    const questionText = i18nStrings.menus.observations.delete_question;
-    form.show('delete', obs, null, null, currentNum, totalNum, questionText, onYes, onNo, onCancel);
+    form.show('delete', obs, null, null, currentNum, totalNum, i18nStrings.observations.delete_question, onYes, onNo, onCancel);
 }
 
 // Show Display Observations dialog (filter then navigate)
@@ -3052,35 +3005,35 @@ async function showDisplayCompactList(filterState) {
     
     // Create modal
     const modalHtml = `
-        <div class="modal fade" id="compact-list-modal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal fade" id="compact-list-modal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="true">
             <div class="modal-dialog modal-xl modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header py-2">
-                        <h6 class="modal-title mb-0">${i18nStrings.observations.title}</h6>
+                        <h6 class="modal-title mb-0">${i18nStrings.observations.display_title}</h6>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="modal-body p-3">
-                        <div class="compact-header mb-2">
-                            <pre style="font-family: 'Courier New', Consolas, monospace; font-size: 14px; margin: 0; padding: 10px; background: #f8f9fa; border-radius: 4px 4px 0 0;">KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ${currentLanguage === 'de' ? 'Sektoren        ' : 'Sectors         '}${currentLanguage === 'de' ? 'Bemerkungen' : 'Remarks'}</pre>
+                    <div class="modal-body px-3 py-0">
+                        <div class="compact-header" style="background: #0d6efd; color: white; padding: 10px; border-bottom: 2px solid #0a58ca; margin-left: -1rem; margin-right: -1rem;">
+                            <pre style="font-family: 'Courier New', Consolas, monospace; font-size: 14px; line-height: 1.4; margin: 0; color: white;">KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ${i18nStrings.fields.sectors.padEnd(16)}${i18nStrings.fields.remarks}</pre>
                         </div>
-                        <div class="compact-body" style="max-height: 60vh; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 0 0 4px 4px; margin-top: -10px;">
+                        <div class="compact-body" style="max-height: 60vh; overflow-y: auto; background: #f8f9fa; padding: 10px; margin-left: -1rem; margin-right: -1rem;">
                             <pre id="compact-list-content" style="font-family: 'Courier New', Consolas, monospace; font-size: 14px; line-height: 1.4; margin: 0;"></pre>
                         </div>
                         <div class="compact-navigation mt-3 d-flex justify-content-between align-items-center">
                             <div class="d-flex gap-2">
-                                <button id="btn-first" class="btn btn-sm btn-secondary" title="${currentLanguage === 'de' ? 'Erste Seite' : 'First Page'}">
+                                <button id="btn-first" class="btn btn-sm btn-secondary" title="${i18nStrings.observers.pagination_first}">
                                     <i class="bi bi-chevron-bar-left"></i>
                                 </button>
-                                <button id="btn-prev" class="btn btn-sm btn-secondary" title="${currentLanguage === 'de' ? 'Vorherige' : 'Previous'}">
+                                <button id="btn-prev" class="btn btn-sm btn-secondary" title="${i18nStrings.observers.pagination_prev}">
                                     <i class="bi bi-chevron-left"></i>
                                 </button>
                             </div>
                             <span id="page-info" class="text-muted"></span>
                             <div class="d-flex gap-2">
-                                <button id="btn-next" class="btn btn-sm btn-secondary" title="${currentLanguage === 'de' ? 'Nächste' : 'Next'}">
+                                <button id="btn-next" class="btn btn-sm btn-secondary" title="${i18nStrings.observers.pagination_next}">
                                     <i class="bi bi-chevron-right"></i>
                                 </button>
-                                <button id="btn-last" class="btn btn-sm btn-secondary" title="${currentLanguage === 'de' ? 'Letzte Seite' : 'Last Page'}">
+                                <button id="btn-last" class="btn btn-sm btn-secondary" title="${i18nStrings.observers.pagination_last}">
                                     <i class="bi bi-chevron-bar-right"></i>
                                 </button>
                             </div>
@@ -3090,7 +3043,7 @@ async function showDisplayCompactList(filterState) {
                         </div>
                     </div>
                     <div class="modal-footer py-2">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${i18nStrings.common.close}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -3112,13 +3065,10 @@ async function showDisplayCompactList(filterState) {
         document.getElementById('compact-list-content').textContent = lines.join('\n');
         
         // Update page info
-        const pageText = currentLanguage === 'de' ? 'Seite' : 'Page';
-        const ofText = currentLanguage === 'de' ? 'von' : 'of';
-        document.getElementById('page-info').textContent = `${pageText} ${currentPage} ${ofText} ${maxPage}`;
+        document.getElementById('page-info').textContent = `${i18nStrings.ui.messages.page} ${currentPage} ${i18nStrings.ui.messages.of} ${maxPage}`;
         
         // Update record info
-        const recordText = currentLanguage === 'de' ? 'Zeile' : 'Row';
-        document.getElementById('record-info').textContent = `${recordText} ${startIndex + 1}-${endIndex} ${ofText} ${filteredObs.length}`;
+        document.getElementById('record-info').textContent = `${i18nStrings.ui.messages.row} ${startIndex + 1}-${endIndex} ${i18nStrings.ui.messages.of} ${filteredObs.length}`;
         
         // Update button states
         document.getElementById('btn-first').disabled = currentPage === 1;
@@ -3136,9 +3086,9 @@ async function showDisplayCompactList(filterState) {
     // Close button
     const btnClose = modalEl.querySelector('[data-bs-dismiss="modal"]');
     
-    // Enter key support when modal is visible
-    const enterKeyHandler = (e) => {
-        if (e.key === 'Enter' && modalEl.classList.contains('show')) {
+    // Enter/ESC key support when modal is visible
+    const keyHandler = (e) => {
+        if ((e.key === 'Enter' || e.key === 'Escape') && modalEl.classList.contains('show')) {
             e.preventDefault();
             const modal = bootstrap.Modal.getInstance(modalEl);
             if (modal) modal.hide();
@@ -3147,12 +3097,12 @@ async function showDisplayCompactList(filterState) {
     };
     
     // Remove any existing handler first to avoid duplicates
-    document.removeEventListener('keypress', enterKeyHandler);
-    document.addEventListener('keypress', enterKeyHandler);
+    document.removeEventListener('keydown', keyHandler);
+    document.addEventListener('keydown', keyHandler);
     
     // Cleanup on close
     modalEl.addEventListener('hidden.bs.modal', () => {
-        document.removeEventListener('keypress', enterKeyHandler);
+        document.removeEventListener('keydown', keyHandler);
         modalEl.remove();
         window.location.href = '/';
     });
@@ -3360,7 +3310,7 @@ async function showDisplaySingleObservations(filterState) {
 // Show observation form for viewing (read-only display with navigation)
 async function showObservationFormForView(obs, currentNum, totalNum, onNext, onPrev, onClose) {
     const form = new ObservationForm();
-    await form.initialize();
+    await form.initialize('view');
     
     // Show the form in view mode
     form.show('view', obs, null, null, currentNum, totalNum, null, onNext, onPrev, onClose);
@@ -3374,8 +3324,8 @@ async function showActiveObserversDialog() {
         const enabled = !!config.enabled;
 
         const title = i18nStrings.menus.settings.active_observers_question;
-        const yesText = i18nStrings.observers.yes;
-        const noText = i18nStrings.observers.no;
+        const i18nStrings.common.yes = i18nStrings.common.yes;
+        const i18nStrings.common.no = i18nStrings.common.no;
 
         const modalHtml = `
             <div class="modal fade" id="active-observers-modal" tabindex="-1">
@@ -3388,11 +3338,11 @@ async function showActiveObserversDialog() {
                         <div class="modal-body">
                             <div class="form-check form-check-inline mb-0">
                                 <input class="form-check-input" type="radio" name="active_observers" id="active-yes" value="1" ${enabled ? 'checked' : ''}>
-                                <label class="form-check-label" for="active-yes">${yesText}</label>
+                                <label class="form-check-label" for="active-yes">${i18nStrings.common.yes}</label>
                             </div>
                             <div class="form-check form-check-inline mb-0">
                                 <input class="form-check-input" type="radio" name="active_observers" id="active-no" value="0" ${!enabled ? 'checked' : ''}>
-                                <label class="form-check-label" for="active-no">${noText}</label>
+                                <label class="form-check-label" for="active-no">${i18nStrings.common.no}</label>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -3438,28 +3388,23 @@ async function showStartupFileDialog() {
         const enabled = !!config.enabled;
         const currentFile = config.file_path || '';
 
-        const title = i18nStrings.menus.settings.startup_file_title;
-        const question = i18nStrings.menus.settings.startup_file_question;
-        const yesText = i18nStrings.observers.yes;
-        const noText = i18nStrings.observers.no;
-
         const modalHtml = `
             <div class="modal fade" id="startup-file-modal" tabindex="-1">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">${title}</h5>
+                            <h5 class="modal-title">${i18nStrings.menus.settings.startup_file_title}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
-                            <p class="mb-3">${question}</p>
+                            <p class="mb-3">${i18nStrings.menus.settings.startup_file_question}</p>
                             <div class="form-check form-check-inline mb-3">
                                 <input class="form-check-input" type="radio" name="startup_file" id="startup-yes" value="1" ${enabled ? 'checked' : ''}>
-                                <label class="form-check-label" for="startup-yes">${yesText}</label>
+                                <label class="form-check-label" for="startup-yes">${i18nStrings.common.yes}</label>
                             </div>
                             <div class="form-check form-check-inline mb-3">
                                 <input class="form-check-input" type="radio" name="startup_file" id="startup-no" value="0" ${!enabled ? 'checked' : ''}>
-                                <label class="form-check-label" for="startup-no">${noText}</label>
+                                <label class="form-check-label" for="startup-no">${i18nStrings.common.no}</label>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -3551,21 +3496,21 @@ async function showSelectDialog() {
 
     // Build filter options (same as in Auswertung)
     const filterOptions = [
-        { value: '', text: currentLanguage === 'de' ? '-- Bitte wählen --' : '-- Please select --' },
-        { value: 'JJ', text: currentLanguage === 'de' ? 'Jahr' : 'Year' },
-        { value: 'MM', text: currentLanguage === 'de' ? 'Monat' : 'Month' },
-        { value: 'TT', text: currentLanguage === 'de' ? 'Tag' : 'Day' },
-        { value: 'ZZ', text: currentLanguage === 'de' ? 'Uhrzeit' : 'Time' },
-        { value: 'SH', text: currentLanguage === 'de' ? 'Sonnenhöhe' : 'Solar altitude' },
-        { value: 'KK', text: currentLanguage === 'de' ? 'Beobachter' : 'Observer' },
-        { value: 'GG', text: currentLanguage === 'de' ? 'Region' : 'Region' },
-        { value: 'O', text: currentLanguage === 'de' ? 'Objekt' : 'Object' },
-        { value: 'EE', text: currentLanguage === 'de' ? 'Haloart' : 'Halo type' },
-        { value: 'DD', text: currentLanguage === 'de' ? 'Cirrusdichte' : 'Cirrus density' },
-        { value: 'C', text: currentLanguage === 'de' ? 'Cirrusart' : 'Cirrus type' },
-        { value: 'H', text: currentLanguage === 'de' ? 'Helligkeit' : 'Brightness' },
-        { value: 'F', text: currentLanguage === 'de' ? 'Farbe' : 'Color' },
-        { value: 'V', text: currentLanguage === 'de' ? 'Vollständigkeit' : 'Completeness' }
+        { value: '', text: i18nStrings.analysis_dialog.please_select },
+        { value: 'JJ', text: i18nStrings.analysis_dialog.param_names.JJ },
+        { value: 'MM', text: i18nStrings.analysis_dialog.param_names.MM },
+        { value: 'TT', text: i18nStrings.analysis_dialog.param_names.TT },
+        { value: 'ZZ', text: i18nStrings.analysis_dialog.param_names.ZZ },
+        { value: 'SH', text: i18nStrings.analysis_dialog.param_names.SH },
+        { value: 'KK', text: i18nStrings.analysis_dialog.param_names.KK },
+        { value: 'GG', text: i18nStrings.analysis_dialog.param_names.GG },
+        { value: 'O', text: i18nStrings.analysis_dialog.param_names.O },
+        { value: 'EE', text: i18nStrings.analysis_dialog.param_names.EE },
+        { value: 'DD', text: i18nStrings.analysis_dialog.param_names.DD },
+        { value: 'C', text: i18nStrings.analysis_dialog.param_names.C },
+        { value: 'H', text: i18nStrings.analysis_dialog.param_names.H },
+        { value: 'F', text: i18nStrings.analysis_dialog.param_names.F },
+        { value: 'V', text: i18nStrings.analysis_dialog.param_names.V }
     ];
 
     const filterOptionsHtml = filterOptions.map(opt => 
@@ -3577,13 +3522,13 @@ async function showSelectDialog() {
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">${i18nStrings.observers.select_observations }</h5>
+                        <h5 class="modal-title">${i18nStrings.observations.select_observations }</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <!-- Filter criterion -->
                         <div class="mb-3">
-                            <label for="select-filter" class="form-label">${i18nStrings.observers.select_criterion}</label>
+                            <label for="select-filter" class="form-label">${i18nStrings.observations.select_criterion}</label>
                             <select class="form-select" id="select-filter" required autofocus>
                                 ${filterOptionsHtml}
                             </select>
@@ -3592,7 +3537,7 @@ async function showSelectDialog() {
                         <!-- Filter value (shown after selection) -->
                         <div id="select-value-div" style="display: none;">
                             <div class="mb-3">
-                                <label for="select-value" class="form-label">${currentLanguage === 'de' ? 'Filterwert:' : 'Filter value:'}</label>
+                                <label for="select-value" class="form-label">${i18nStrings.observations.select_filter_value}</label>
                                 <select class="form-select" id="select-value">
                                     <!-- Will be populated by JavaScript -->
                                 </select>
@@ -3603,13 +3548,13 @@ async function showSelectDialog() {
                         <div id="select-month-fields" style="display: none;">
                             <div class="row mb-3">
                                 <div class="col-md-6">
-                                    <label for="select-month" class="form-label">${currentLanguage === 'de' ? 'Monat:' : 'Month:'}</label>
+                                    <label for="select-month" class="form-label">${i18nStrings.common.month}</label>
                                     <select class="form-select" id="select-month">
                                         <!-- Will be populated by JavaScript -->
                                     </select>
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="select-year" class="form-label">${currentLanguage === 'de' ? 'Jahr:' : 'Year:'}</label>
+                                    <label for="select-year" class="form-label">${i18nStrings.common.year}</label>
                                     <select class="form-select" id="select-year">
                                         <!-- Will be populated by JavaScript -->
                                     </select>
@@ -3621,19 +3566,19 @@ async function showSelectDialog() {
                         <div id="select-day-fields" style="display: none;">
                             <div class="row mb-3">
                                 <div class="col-md-4">
-                                    <label for="select-day" class="form-label">${currentLanguage === 'de' ? 'Tag:' : 'Day:'}</label>
+                                    <label for="select-day" class="form-label">${i18nStrings.common.day}</label>
                                     <select class="form-select" id="select-day">
                                         <!-- Will be populated by JavaScript -->
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label for="select-day-month" class="form-label">${currentLanguage === 'de' ? 'Monat:' : 'Month:'}</label>
+                                    <label for="select-day-month" class="form-label">${i18nStrings.common.month}</label>
                                     <select class="form-select" id="select-day-month">
                                         <!-- Will be populated by JavaScript -->
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label for="select-day-year" class="form-label">${currentLanguage === 'de' ? 'Jahr:' : 'Year:'}</label>
+                                    <label for="select-day-year" class="form-label">${i18nStrings.common.year}</label>
                                     <select class="form-select" id="select-day-year">
                                         <!-- Will be populated by JavaScript -->
                                     </select>
@@ -3645,7 +3590,7 @@ async function showSelectDialog() {
                         <div id="select-time-fields" style="display: none;">
                             <div class="row mb-3">
                                 <div class="col-md-6">
-                                    <label class="form-label">${currentLanguage === 'de' ? 'Von:' : 'From:'}</label>
+                                    <label class="form-label">${i18nStrings.common.from}</label>
                                     <div class="row">
                                         <div class="col-6">
                                             <select class="form-select" id="select-time-from-hour">
@@ -3660,7 +3605,7 @@ async function showSelectDialog() {
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">${currentLanguage === 'de' ? 'Bis:' : 'To:'}</label>
+                                    <label class="form-label">${i18nStrings.common.to}</label>
                                     <div class="row">
                                         <div class="col-6">
                                             <select class="form-select" id="select-time-to-hour">
@@ -3681,36 +3626,36 @@ async function showSelectDialog() {
                         <div id="select-sh-fields" style="display: none;">
                             <div class="row mb-3">
                                 <div class="col-md-6">
-                                    <label for="select-sh-from" class="form-label">${currentLanguage === 'de' ? 'Von:' : 'From:'}</label>
+                                    <label for="select-sh-from" class="form-label">${i18nStrings.common.from}</label>
                                     <select class="form-select" id="select-sh-from">
                                         <!-- Will be populated by JavaScript -->
                                     </select>
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="select-sh-to" class="form-label">${currentLanguage === 'de' ? 'Bis:' : 'To:'}</label>
+                                    <label for="select-sh-to" class="form-label">${i18nStrings.common.to}</label>
                                     <select class="form-select" id="select-sh-to">
                                         <!-- Will be populated by JavaScript -->
                                     </select>
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">${currentLanguage === 'de' ? 'Sonnenhöhe:' : 'Solar altitude:'}</label><br>
+                                <label class="form-label">${i18nStrings.common.solar_altitude}</label><br>
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" name="select-sh-time" id="select-sh-min" value="min">
                                     <label class="form-check-label" for="select-sh-min">
-                                        ${currentLanguage === 'de' ? 'minimale' : 'minimum'}
+                                        ${i18nStrings.common.minimum}
                                     </label>
                                 </div>
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" name="select-sh-time" id="select-sh-mean" value="mean" checked>
                                     <label class="form-check-label" for="select-sh-mean">
-                                        ${currentLanguage === 'de' ? 'mittlere' : 'mean'}
+                                        ${i18nStrings.common.mean}
                                     </label>
                                 </div>
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" name="select-sh-time" id="select-sh-max" value="max">
                                     <label class="form-check-label" for="select-sh-max">
-                                        ${currentLanguage === 'de' ? 'maximale' : 'maximum'}
+                                        ${i18nStrings.common.maximum}
                                     </label>
                                 </div>
                             </div>
@@ -3718,25 +3663,25 @@ async function showSelectDialog() {
 
                         <!-- Keep or Delete radio buttons -->
                         <div class="mb-3">
-                            <label class="form-label">${i18nStrings.observers.select_action}</label><br>
+                            <label class="form-label">${i18nStrings.observations.select_action}</label><br>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="select-action" id="select-keep" value="keep" checked>
                                 <label class="form-check-label" for="select-keep">
-                                    ${i18nStrings.observers.select_keep}
+                                    ${i18nStrings.observations.select_keep}
                                 </label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="select-action" id="select-delete" value="delete">
                                 <label class="form-check-label" for="select-delete">
-                                    ${i18nStrings.observers.select_delete}
+                                    ${i18nStrings.observations.select_delete}
                                 </label>
                             </div>
                         </div>
 
                         <!-- New filename input -->
                         <div class="mb-3">
-                            <label for="select-filename" class="form-label">${i18nStrings.observers.new_filename}:</label>
-                            <input type="text" id="select-filename" class="form-control" placeholder="${currentLanguage === 'de' ? 'Dateiname eingeben' : 'Enter filename'}">
+                            <label for="select-filename" class="form-label">${i18nStrings.observations.new_filename}:</label>
+                            <input type="text" id="select-filename" class="form-control" placeholder="${i18nStrings.common.enter_filename_placeholder}">
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -3761,10 +3706,10 @@ async function showSelectDialog() {
     // Reuse getParameterRange function from analysis.js
     function getParameterRange(paramCode) {
         function getMonthName(monthNum) {
-            if (i18n.months && typeof i18n.months === 'object') {
-                return i18n.months[String(monthNum)];
+            if (i18nStrings.months && typeof i18nStrings.months === 'object') {
+                return i18nStrings.months[String(monthNum)];
             }
-            const monthArray = i18n.months;
+            const monthArray = i18nStrings.months;
             return monthArray[monthNum - 1];
         }
         
@@ -3814,14 +3759,14 @@ async function showSelectDialog() {
             case 'GG':
                 const regionNumbers = [1,2,3,4,5,6,7,8,9,10,11,16,17,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39];
                 return regionNumbers.map(gg => {
-                    const regionName = i18n.geographic_regions[String(gg)];
+                    const regionName = i18nStrings.geographic_regions[String(gg)];
                     return { value: gg, display: `${String(gg).padStart(2, '0')} - ${regionName}` };
                 });
             
             case 'O':
                 const objects = [];
                 for (let i = 1; i <= 5; i++) {
-                    const objName = i18n.object_types[String(i)];
+                    const objName = i18nStrings.object_types[String(i)];
                     objects.push({ value: i, display: `${i} - ${objName}` });
                 }
                 return objects;
@@ -3829,27 +3774,27 @@ async function showSelectDialog() {
             case 'EE':
                 const haloTypes = [];
                 for (let i = 1; i <= 77; i++) {
-                    const haloName = i18n.halo_types[String(i)];
+                    const haloName = i18nStrings.halo_types[String(i)];
                     haloTypes.push({ value: i, display: `${String(i).padStart(2, '0')} - ${haloName}` });
                 }
-                haloTypes.push({ value: 99, display: `99 - ${i18n.halo_types['99']}` });
+                haloTypes.push({ value: 99, display: `99 - ${i18nStrings.halo_types['99']}` });
                 return haloTypes;
             
             case 'DD':
                 const densities = [];
-                densities.push({ value: 0, display: `0 - ${i18n.cirrus_density['0']}` });
-                densities.push({ value: 1, display: `1 - ${i18n.cirrus_density['1']}` });
-                densities.push({ value: 2, display: `2 - ${i18n.cirrus_density['2']}` });
-                densities.push({ value: 4, display: `4 - ${i18n.cirrus_density['4']}` });
-                densities.push({ value: 5, display: `5 - ${i18n.cirrus_density['5']}` });
-                densities.push({ value: 6, display: `6 - ${i18n.cirrus_density['6']}` });
-                densities.push({ value: 7, display: `7 - ${i18n.cirrus_density['7']}` });
+                densities.push({ value: 0, display: `0 - ${i18nStrings.cirrus_density['0']}` });
+                densities.push({ value: 1, display: `1 - ${i18nStrings.cirrus_density['1']}` });
+                densities.push({ value: 2, display: `2 - ${i18nStrings.cirrus_density['2']}` });
+                densities.push({ value: 4, display: `4 - ${i18nStrings.cirrus_density['4']}` });
+                densities.push({ value: 5, display: `5 - ${i18nStrings.cirrus_density['5']}` });
+                densities.push({ value: 6, display: `6 - ${i18nStrings.cirrus_density['6']}` });
+                densities.push({ value: 7, display: `7 - ${i18nStrings.cirrus_density['7']}` });
                 return densities;
             
             case 'N':
                 const coverages = [];
                 for (let i = 0; i <= 9; i++) {
-                    const coverageName = i18n.cirrus_coverage[String(i)];
+                    const coverageName = i18nStrings.cloud_cover[String(i)];
                     coverages.push({ value: i, display: `${i} - ${coverageName}` });
                 }
                 return coverages;
@@ -3857,7 +3802,7 @@ async function showSelectDialog() {
             case 'C':
                 const cirrus = [];
                 for (let i = 0; i <= 7; i++) {
-                    const cirrusName = i18n.cirrus_types[String(i)];
+                    const cirrusName = i18nStrings.cirrus_types[String(i)];
                     cirrus.push({ value: i, display: `${i} - ${cirrusName}` });
                 }
                 return cirrus;
@@ -3865,7 +3810,7 @@ async function showSelectDialog() {
             case 'H':
                 const brightness = [];
                 for (let i = 0; i <= 3; i++) {
-                    const brightName = i18n.brightness[String(i)];
+                    const brightName = i18nStrings.brightness[String(i)];
                     brightness.push({ value: i, display: `${i} - ${brightName}` });
                 }
                 return brightness;
@@ -3873,7 +3818,7 @@ async function showSelectDialog() {
             case 'F':
                 const colors = [];
                 for (let i = 0; i <= 5; i++) {
-                    const colorName = i18n.color[String(i)];
+                    const colorName = i18nStrings.color[String(i)];
                     colors.push({ value: i, display: `${i} - ${colorName}` });
                 }
                 return colors;
@@ -3881,7 +3826,7 @@ async function showSelectDialog() {
             case 'V':
                 const completeness = [];
                 for (let i = 1; i <= 2; i++) {
-                    const complName = i18n.completeness[String(i)];
+                    const complName = i18nStrings.completeness[String(i)];
                     completeness.push({ value: i, display: `${i} - ${complName}` });
                 }
                 return completeness;
@@ -4122,12 +4067,12 @@ async function showSelectDialog() {
         let filename = document.getElementById('select-filename').value.trim();
 
         if (!filterType) {
-            showWarningModal(i18nStrings.observers.select_no_filter);
+            showWarningModal(i18nStrings.observations.select_no_filter);
             return;
         }
 
         if (!filename) {
-            showWarningModal(i18nStrings.observers.select_no_filename);
+            showWarningModal(i18nStrings.common.please_enter_filename);
             return;
         }
         
@@ -4234,7 +4179,7 @@ async function showSelectDialog() {
                         <div class="spinner-border text-primary mb-3" role="status">
                             <span class="visually-hidden">${i18nStrings.dialogs.loading.loading}</span>
                         </div>
-                        <p class="mb-0">${i18nStrings.observers.select_processing}</p>
+                        <p class="mb-0">${i18nStrings.observations.select_processing}</p>
                     </div>
                 </div>
             </div>
@@ -4282,7 +4227,7 @@ async function showSelectDialog() {
             
             if (!filterResponse.ok) {
                 const error = await filterResponse.json();
-                showWarningModal(error.error || 'Failed to filter observations');
+                showWarningModal(error.error);
                 bsLoadingModal.hide();
                 loadingModal.remove();
                 return;
@@ -4300,9 +4245,7 @@ async function showSelectDialog() {
             
             // Check if result is empty
             if (keptCount === 0) {
-                const emptyMessage = currentLanguage === 'de'
-                    ? 'Keine Beobachtungen entsprechen den Filterkriterien. Es würde eine leere Datei erstellt.'
-                    : 'No observations match the filter criteria. This would create an empty file.';
+                const emptyMessage = i18nStrings.dialogs.empty_filter_result;
                 showWarningModal(emptyMessage);
                 bsLoadingModal.hide();
                 loadingModal.remove();
@@ -4313,9 +4256,10 @@ async function showSelectDialog() {
             
             // Function to show selection results
             function showSelectionResults(filename, keptCount, deletedCount) {
-                const message = currentLanguage === 'de' 
-                    ? `${keptCount} Beobachtungen behalten, ${deletedCount} gelöscht. Gespeichert als ${filename}`
-                    : `${keptCount} observations kept, ${deletedCount} deleted. Saved as ${filename}`;
+                const message = i18nStrings.dialogs.success.selection_result
+                    .replace('{kept}', keptCount)
+                    .replace('{deleted}', deletedCount)
+                    .replace('{filename}', filename);
                 
                 // Show success alert at top of window
                 showNotification(`<strong>✓</strong> ${message}`);
@@ -4341,7 +4285,7 @@ async function showSelectDialog() {
             
             if (!saveResponse.ok) {
                 const error = await saveResponse.json();
-                showWarningModal(error.error || 'Failed to save file');
+                showWarningModal(error.error);
                 modal.hide();
                 window.location.href = '/';
                 return;
@@ -4359,7 +4303,6 @@ async function showSelectDialog() {
                         // Recreate loading modal
                         const newLoadingModal = document.createElement('div');
                         newLoadingModal.className = 'modal fade';
-                        const savingText = currentLanguage === 'de' ? 'Speichern...' : 'Saving...';
                         newLoadingModal.innerHTML = `
                             <div class="modal-dialog modal-dialog-centered">
                                 <div class="modal-content">
@@ -4367,7 +4310,7 @@ async function showSelectDialog() {
                                         <div class="spinner-border text-primary mb-3" role="status">
                                             <span class="visually-hidden">${i18nStrings.dialogs.loading.loading}</span>
                                         </div>
-                                        <p class="mb-0">${savingText}</p>
+                                        <p class="mb-0">${i18nStrings.common.saving}</p>
                                     </div>
                                 </div>
                             </div>
@@ -4389,7 +4332,7 @@ async function showSelectDialog() {
                         
                         if (!overwriteResponse.ok) {
                             const error = await overwriteResponse.json();
-                            showWarningModal(error.error || 'Failed to save file');
+                            showWarningModal(error.error);
                             modal.hide();
                             window.location.href = '/';
                             return;
@@ -4429,8 +4372,8 @@ async function showSelectDialog() {
                         window.location.href = '/';
                     },
                     {
-                        cancel: i18nStrings.observers.no,
-                        confirm: i18nStrings.observers.yes
+                        cancel: i18nStrings.common.no,
+                        confirm: i18nStrings.common.yes
                     }
                 );
                 return;
@@ -4438,7 +4381,7 @@ async function showSelectDialog() {
             
             // Check if save was successful
             if (!saveResult.success) {
-                showWarningModal(saveResult.error || 'Failed to save file');
+                showWarningModal(saveResult.error);
                 modal.hide();
                 window.location.href = '/';
                 return;
@@ -4478,7 +4421,7 @@ async function showSelectDialog() {
             loadingModal.remove();
             modal.hide();
             console.error('Selection error:', error);
-            showWarningModal(error.message || 'Error during selection');
+            showWarningModal(error.message);
             window.location.href = '/';
         }
     }
@@ -4553,7 +4496,7 @@ async function showNewFileDialog() {
                 modal.hide();
                 showMessage(result.message, 'success');
             } else {
-                showErrorDialog(i18nStrings.common.error + ': ' + (result.error || 'Unknown error'));
+                showErrorDialog(i18nStrings.common.error + ': ' + (result.error));
             }
         } catch (error) {
             showErrorDialog(i18nStrings.common.error + ': ' + error.message);
@@ -4709,7 +4652,7 @@ async function processSaveAs(filename) {
         if (result.exists) {
             const overwriteMsg = result.message + ' ' + (i18nStrings.common.overwrite_confirm);
             showConfirmDialog(
-                i18nStrings.common.confirm,
+                i18nStrings.common.overwrite_confirm,
                 overwriteMsg,
                 async () => {
                     // User confirmed - proceed with overwrite
@@ -4759,6 +4702,170 @@ async function processSaveAs(filename) {
             showErrorDialog(i18nStrings.common.error + ': ' + result.error);
         }
     } catch (error) {
+        showErrorDialog(i18nStrings.common.error + ': ' + error.message);
+    }
+}
+
+// Upload file to halo.online
+async function showUploadDialog() {
+    try {
+        // Check if file is loaded
+        const statusResponse = await fetch('/api/file/status');
+        const status = await statusResponse.json();
+        
+        if (!status.filename) {
+            showErrorDialog(i18nStrings.common.no_file_loaded);
+            return;
+        }
+        
+        // Get observation count
+        const count = status.count || 0;
+        
+        // Show confirmation dialog
+        const confirmMessage = i18nStrings.upload_download.download_success.replace('{0}', count);
+        
+        showConfirmDialog(i18nStrings.upload_download.download_title, confirmMessage, async () => {
+            // User confirmed - proceed with upload
+            
+            // Show progress spinner
+            showSpinner(i18nStrings.upload_download.download_progress);
+            
+            try {
+                // Upload to halo.online API
+                // TODO: Define exact API endpoint URL
+                const uploadUrl = 'https://halo.online/api/upload'; // Placeholder URL
+                
+                const response = await fetch('/api/file/upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        targetUrl: uploadUrl
+                    })
+                });
+                
+                const result = await response.json();
+                
+                hideSpinner();
+                
+                if (response.ok && result.success) {
+                    // Success - show toast notification
+                    const successMessage = i18nStrings.upload_download.download_success.replace('{0}', result.count);
+                    showNotification(successMessage, 'success');
+                } else {
+                    showErrorDialog(i18nStrings.common.error + ': ' + (result.error));
+                }
+            } catch (error) {
+                hideSpinner();
+                showErrorDialog(i18nStrings.common.error + ': ' + error.message);
+            }
+        });
+        
+    } catch (error) {
+        showErrorDialog(i18nStrings.common.error + ': ' + error.message);
+    }
+}
+
+// Download file from halo.online
+async function showDownloadDialog() {
+    // Show filename input dialog
+    const modalHtml = `
+        <div class="modal fade" id="download-modal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">${i18nStrings.upload_download.download_title}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <label class="form-label">${i18nStrings.upload_download.download_filename_prompt}</label>
+                        <input type="text" class="form-control" id="download-filename" placeholder="download" value="download">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="btn-download-confirm">${i18nStrings.common.ok}</button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modalEl = document.getElementById('download-modal');
+    const modal = new bootstrap.Modal(modalEl);
+    const filenameInput = document.getElementById('download-filename');
+    
+    modal.show();
+    setTimeout(() => {
+        filenameInput.focus();
+        filenameInput.select(); // Select all text so first keystroke replaces it
+    }, 500);
+    
+    // Handle OK button click
+    document.getElementById('btn-download-confirm').addEventListener('click', async () => {
+        const filename = filenameInput.value.trim();
+        if (!filename) return;
+        
+        modal.hide();
+        await processDownload(filename);
+    });
+    
+    // Handle Enter key in input
+    filenameInput.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter') {
+            const filename = filenameInput.value.trim();
+            if (!filename) return;
+            
+            modal.hide();
+            await processDownload(filename);
+        }
+    });
+    
+    // Clean up modal after hiding
+    modalEl.addEventListener('hidden.bs.modal', () => {
+        clearMenuHighlights();
+        modalEl.remove();
+    });
+}
+
+async function processDownload(filename) {
+    try {
+        // Show progress spinner
+        showSpinner(i18nStrings.upload_download.download_progress);
+        
+        // Download from halo.online API
+        // TODO: Define exact API endpoint URL
+        const downloadUrl = 'https://halo.online/api/download'; // Placeholder URL
+        
+        const response = await fetch('/api/file/download', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                filename: filename,
+                sourceUrl: downloadUrl
+            })
+        });
+        
+        const result = await response.json();
+        
+        hideSpinner();
+        
+        if (response.ok && result.success) {
+            // Update global state
+            window.haloData.fileName = result.filename;
+            window.haloData.observations = result.observations || [];
+            window.haloData.isLoaded = true;
+            window.haloData.isDirty = true;
+            
+            // Update file info display
+            updateFileInfoDisplay(result.filename, result.count);
+            
+            // Success toast
+            const successMessage = i18nStrings.upload_download.download_success.replace('{0}', result.count);
+            showNotification(successMessage, 'success');
+        } else {
+            showErrorDialog(i18nStrings.common.error + ': ' + (result.error);
+        }
+    } catch (error) {
+        hideSpinner();
         showErrorDialog(i18nStrings.common.error + ': ' + error.message);
     }
 }
@@ -4818,10 +4925,10 @@ async function checkAutosaveRecovery() {
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-dismiss-autosave">
-                                ${i18nStrings.dialogs.autosave_recovery.no}
+                                ${i18nStrings.common.no}
                             </button>
                             <button type="button" class="btn btn-primary btn-sm px-3" id="btn-restore-autosave">
-                                ${i18nStrings.dialogs.autosave_recovery.yes}
+                                ${i18nStrings.common.yes}
                             </button>
                         </div>
                     </div>
@@ -4888,7 +4995,7 @@ function showErrorDialog(message, onClose = null) {
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">${i18nStrings.dialogs.error.title}</h5>
+                        <h5 class="modal-title">${i18nStrings.common.error}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
@@ -5048,7 +5155,7 @@ async function continueLoadFile() {
             formData.append('file', file);
             
 
-            const uploadResponse = await fetch('/api/file/upload', {
+            const uploadResponse = await fetch('/api/file/load', {
                 method: 'POST',
                 body: formData
             });
@@ -5075,8 +5182,7 @@ async function continueLoadFile() {
             setTimeout(() => loadingModal.remove(), 300);
             
             // Show success message
-            const obsText = i18nStrings.ui.messages.observations;
-            showNotification(`<strong>✓</strong> ${window.haloData.observations.length} ${obsText} ${i18nStrings.dialogs.success.loaded_from} "${file.name}" ${i18nStrings.dialogs.success.geladen}`);
+            showNotification(`<strong>✓</strong> ${window.haloData.observations.length} ${i18nStrings.ui.messages.observations} ${i18nStrings.dialogs.success.loaded_from} "${file.name}" ${i18nStrings.dialogs.success.geladen}`);
         } catch (error) {
             bsModal.hide();
             setTimeout(() => loadingModal.remove(), 300);
@@ -5145,7 +5251,7 @@ async function continueMergeFile() {
                         <div class="spinner-border text-primary mb-3" role="status">
                             <span class="visually-hidden">${i18nStrings.dialogs.loading.loading}</span>
                         </div>
-                        <p class="mb-0">${i18nStrings.dialogs.loading.merging_file || 'Merging file'} "${file.name}" ...</p>
+                        <p class="mb-0">${i18nStrings.dialogs.loading.merging_file} "${file.name}" ...</p>
                     </div>
                 </div>
             </div>
@@ -5166,7 +5272,7 @@ async function continueMergeFile() {
             
             if (!mergeResponse.ok) {
                 const errorData = await mergeResponse.json();
-                throw new Error(errorData.error || 'Failed to merge file');
+                throw new Error(errorData.error);
             }
             
             const result = await mergeResponse.json();
@@ -5193,8 +5299,7 @@ async function continueMergeFile() {
             
             // Show success message with count of added observations
             // (addedCount already computed above)
-            const obsText = i18nStrings.ui.messages.observations;
-            showNotification(`<strong>✓</strong> ${addedCount} ${obsText} ${i18nStrings.dialogs.success.hinzugefuegt} "${file.name}"`);
+            showNotification(`<strong>✓</strong> ${addedCount} ${i18nStrings.ui.messages.observations} ${i18nStrings.dialogs.success.hinzugefuegt} "${file.name}"`);
         } catch (error) {
             bsModal.hide();
             setTimeout(() => loadingModal.remove(), 300);
@@ -5220,8 +5325,7 @@ function updateFileInfoDisplay(fileName, count) {
     if (fileInfo && fileNameElem && obsCountElem && i18nStrings.ui) {
         const dirtyMarker = window.haloData.isDirty ? '*' : '';
         fileNameElem.textContent = dirtyMarker + fileName;
-        const countText = i18nStrings.ui.file_info.observations_count;
-        obsCountElem.textContent = `${count} ${countText}`;
+        obsCountElem.textContent = `${count} ${i18nStrings.common.observations_count}`;
         fileInfo.style.display = 'flex';
     }
 }
@@ -5263,9 +5367,7 @@ async function checkAndDisplayFileInfo() {
                 
                 // Show notification if file was auto-loaded
                 if (status.auto_loaded) {
-                    const loadedText = currentLanguage === 'de' ? 'geladen' : 'loaded';
-                    const recordsText = currentLanguage === 'de' ? 'Datensätze' : 'records';
-                    showNotification(`<strong>✓</strong> ${status.filename} ${loadedText} (${status.count} ${recordsText})`);
+                    showNotification(`<strong>✓</strong> ${status.filename} ${i18nStrings.dialogs.success.geladen} (${status.count} ${i18nStrings.observations.records_label})`);
                 }
             } else {
                 // No data loaded
@@ -5360,8 +5462,7 @@ async function showFixedObserverDialog() {
         const observers = obsData.observers || [];
         
         // Build dropdown options
-        const noObserverText = i18nStrings.menus.settings.no_fixed_observer;
-        let options = `<option value="">${noObserverText}</option>`;
+        let options = `<option value="">${i18nStrings.menus.settings.no_fixed_observer}</option>`;
         observers.forEach(obs => {
             const selected = String(obs.KK) === String(currentObserver) ? 'selected' : '';
             options += `<option value="${obs.KK}" ${selected}>${obs.KK} - ${obs.VName} ${obs.NName}</option>`;
@@ -5863,10 +5964,15 @@ async function showAddObserverDialog(formData = null) {
         await loadI18n(currentLanguage);
     }
     
-    const i18n = i18nStrings.observers || {};
-    const common = i18nStrings.common || {};
-    const months = i18nStrings.months || {};
-    const regions = i18nStrings.geographic_regions || {};
+    // Check for fixed observer
+    let fixedObserver = '';
+    try {
+        const response = await fetch('/api/config/fixed_observer');
+        const config = await response.json();
+        fixedObserver = config.observer || '';
+    } catch (error) {
+        console.error('Error loading fixed observer:', error);
+    }
     
     // Build month options with names
     const monthOptions = Array.from({length: 12}, (_, i) => {
@@ -5906,12 +6012,14 @@ async function showAddObserverDialog(formData = null) {
         `<option value="${i}">${i}</option>`
     ).join('');
     
+    const kkDisabled = fixedObserver ? 'disabled' : '';
+    
     const modalHtml = `
         <div class="modal fade" id="add-observer-modal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content">
                     <div class="modal-header py-2">
-                        <h6 class="modal-title mb-0">${i18n.add_title}</h6>
+                        <h6 class="modal-title mb-0">${i18nStrings.observers.add_title}</h6>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body py-2">
@@ -5919,49 +6027,49 @@ async function showAddObserverDialog(formData = null) {
                             <div class="row g-2">
                                 <!-- KK, First Name, Last Name -->
                                 <div class="col-md-2">
-                                    <label class="form-label small mb-0">${i18n.kk_label} <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control form-control-sm" id="obs-kk" maxlength="2" pattern="[0-9]{2}" required>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.kk_label} <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-sm" id="obs-kk" maxlength="2" pattern="[0-9]{2}" ${kkDisabled} required>
                                 </div>
                                 <div class="col-md-5">
-                                    <label class="form-label small mb-0">${i18n.first_name_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.first_name_label} <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control form-control-sm" id="obs-vname" maxlength="15" required>
                                 </div>
                                 <div class="col-md-5">
-                                    <label class="form-label small mb-0">${i18n.last_name_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.last_name_label} <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control form-control-sm" id="obs-nname" maxlength="15" required>
                                 </div>
                                 
                                 <!-- Since (Month/Year) and Active -->
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.since_month_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.since_month_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="obs-seit-month" required>
                                         ${monthOptions}
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.since_year_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.since_year_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="obs-seit-year" required>
                                         ${yearOptions}
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.active_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.common.active} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="obs-active" required>
-                                        <option value="1">${i18n.yes}</option>
-                                        <option value="0">${i18n.no}</option>
+                                        <option value="1">${i18nStrings.common.yes}</option>
+                                        <option value="0">${i18nStrings.common.no}</option>
                                     </select>
                                 </div>
                                 
                                 <!-- Main Observation Site -->
                                 <div class="col-12 mt-2">
-                                    <h6 class="mb-1">${i18n.main_site_label}</h6>
+                                    <h6 class="mb-1">${i18nStrings.observers.main_site_label}</h6>
                                 </div>
                                 <div class="col-md-8">
-                                    <label class="form-label small mb-0">${i18n.main_site_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.main_site_label} <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control form-control-sm" id="obs-hb-ort" maxlength="20" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.region_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.region_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="obs-gh" required>
                                         <option value="">--</option>
                                         ${regionOptions}
@@ -5970,7 +6078,7 @@ async function showAddObserverDialog(formData = null) {
                                 
                                 <!-- Main Site Coordinates -->
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.longitude_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.longitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="obs-hlg" required>
                                             ${lonDegOptions}
@@ -5987,7 +6095,7 @@ async function showAddObserverDialog(formData = null) {
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.latitude_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.latitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="obs-hbg" required>
                                             ${latDegOptions}
@@ -6006,14 +6114,14 @@ async function showAddObserverDialog(formData = null) {
                                 
                                 <!-- Secondary Observation Site -->
                                 <div class="col-12 mt-2">
-                                    <h6 class="mb-1">${i18n.secondary_site_label}</h6>
+                                    <h6 class="mb-1">${i18nStrings.observers.secondary_site_label}</h6>
                                 </div>
                                 <div class="col-md-8">
-                                    <label class="form-label small mb-0">${i18n.secondary_site_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.secondary_site_label} <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control form-control-sm" id="obs-nb-ort" maxlength="20" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.region_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.region_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="obs-gn" required>
                                         <option value="">--</option>
                                         ${regionOptions}
@@ -6022,7 +6130,7 @@ async function showAddObserverDialog(formData = null) {
                                 
                                 <!-- Secondary Site Coordinates -->
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.longitude_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.longitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="obs-nlg" required>
                                             ${lonDegOptions}
@@ -6039,7 +6147,7 @@ async function showAddObserverDialog(formData = null) {
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.latitude_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.latitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="obs-nbg" required>
                                             ${latDegOptions}
@@ -6076,6 +6184,11 @@ async function showAddObserverDialog(formData = null) {
     
     // Focus KK input when modal is shown and restore form data if provided
     modalEl.addEventListener('shown.bs.modal', () => {
+        // Pre-fill KK with fixed observer if set
+        if (fixedObserver && !formData) {
+            document.getElementById('obs-kk').value = fixedObserver;
+        }
+        
         if (formData) {
             // Restore form values
             document.getElementById('obs-kk').value = formData.KK || '';
@@ -6101,7 +6214,13 @@ async function showAddObserverDialog(formData = null) {
             document.getElementById('obs-nbm').value = formData.NBM !== undefined ? formData.NBM : '';
             document.getElementById('obs-nns').value = formData.NNS || 'N';
         }
-        document.getElementById('obs-kk').focus();
+        
+        // Focus first name if KK is disabled, otherwise focus KK
+        if (fixedObserver) {
+            document.getElementById('obs-vname').focus();
+        } else {
+            document.getElementById('obs-kk').focus();
+        }
     });
     
     // Handle Enter key to submit
@@ -6151,7 +6270,7 @@ async function showAddObserverDialog(formData = null) {
                 modal.hide();
                 modalEl.addEventListener('hidden.bs.modal', () => {
                     modalEl.remove();
-                    showErrorDialog(i18n.error_missing_required, () => {
+                    showErrorDialog(i18nStrings.observers.error_missing_required, () => {
                         showAddObserverDialog(formData);
                     });
                 }, { once: true });
@@ -6164,7 +6283,7 @@ async function showAddObserverDialog(formData = null) {
                 modal.hide();
                 modalEl.addEventListener('hidden.bs.modal', () => {
                     modalEl.remove();
-                    showErrorDialog(i18n.error_invalid_kk, () => {
+                    showErrorDialog(i18nStrings.observers.error_invalid_kk, () => {
                         showAddObserverDialog(formData);
                     });
                 }, { once: true });
@@ -6188,7 +6307,7 @@ async function showAddObserverDialog(formData = null) {
                     modal.hide();
                     modalEl.addEventListener('hidden.bs.modal', () => {
                         modalEl.remove();
-                        showErrorDialog(i18n.error_kk_exists || result.error, () => {
+                        showErrorDialog(i18nStrings.observers.error_kk_exists || result.error, () => {
                             showAddObserverDialog(formData);
                         });
                     }, { once: true });
@@ -6209,7 +6328,7 @@ async function showAddObserverDialog(formData = null) {
             modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
             
             // Show success message
-            showNotification(`<strong>✓</strong> ${i18n.success_added}`);
+            showNotification(`<strong>✓</strong> ${i18nStrings.observers.success_added}`);
             
         } catch (e) {
             const formData = observerData;
@@ -6228,8 +6347,16 @@ async function showAddObserverDialog(formData = null) {
 
 // Delete Observer Dialog Functions
 async function showDeleteObserverDialog() {
-    const i18n = i18nStrings.observers || {};
-    const common = i18nStrings.common || {};
+    
+    // Check for fixed observer
+    let fixedObserver = '';
+    try {
+        const response = await fetch('/api/config/fixed_observer');
+        const config = await response.json();
+        fixedObserver = config.observer || '';
+    } catch (error) {
+        console.error('Error loading fixed observer:', error);
+    }
     
     // Load observers first
     try {
@@ -6237,8 +6364,25 @@ async function showDeleteObserverDialog() {
         const data = await resp.json();
         
         if (!data.observers || data.observers.length === 0) {
-            showErrorDialog(i18n.error_loading_observers);
+            showErrorDialog(i18nStrings.common.error_loading_observers);
             return;
+        }
+        
+        // If fixed observer is set, directly show confirm dialog for that observer
+        if (fixedObserver) {
+            const observer = data.observers.find(obs => obs.KK === fixedObserver);
+            if (observer) {
+                // Load all sites for this observer
+                try {
+                    const sitesResp = await fetch(`/api/observers/${fixedObserver}/sites`);
+                    const sitesData = await sitesResp.json();
+                    showDeleteObserverConfirmDialog(observer, sitesData.sites);
+                    return;
+                } catch (e) {
+                    showErrorDialog(e.message);
+                    return;
+                }
+            }
         }
         
         // Create observer options sorted by KK
@@ -6252,11 +6396,11 @@ async function showDeleteObserverDialog() {
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header py-2">
-                            <h5 class="modal-title">${i18n.delete_observer}</h5>
+                            <h5 class="modal-title">${i18nStrings.observers.delete_observer}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
-                            <label class="form-label">${i18n.select_observer_prompt}</label>
+                            <label class="form-label">${i18nStrings.observers.select_observer_prompt}</label>
                             <select class="form-select" id="delete-observer-select" required>
                                 ${observerOptions}
                             </select>
@@ -6311,17 +6455,14 @@ async function showDeleteObserverDialog() {
 }
 
 async function showDeleteObserverConfirmDialog(observer, sites) {
-    const i18n = i18nStrings.observers || {};
-    const common = i18nStrings.common || {};
-    const months = i18nStrings.months || {};
     
     // Build table rows
     const tableRows = sites.map(site => {
         const yearNum = parseInt(site.seit_year);
         const fullYear = yearNum < 50 ? 2000 + yearNum : 1900 + yearNum;
-        const monthName = months[site.seit_month] || site.seit_month;
+        const monthName = months[site.seit_month];
         const seitDisplay = `${String(site.seit_month).padStart(2, '0')}/${String(yearNum).padStart(2, '0')}`;
-        const aktivDisplay = site.active === 1 ? (i18n.yes) : (i18n.no);
+        const aktivDisplay = site.active === 1 ? (common.yes) : (common.no);
         
         return `
             <tr>
@@ -6343,7 +6484,7 @@ async function showDeleteObserverConfirmDialog(observer, sites) {
             <div class="modal-dialog modal-xl modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header py-2">
-                        <h5 class="modal-title">${i18n.delete_observer}: ${observer.KK} ${observer.VName} ${observer.NName}</h5>
+                        <h5 class="modal-title">${i18nStrings.observers.delete_observer}: ${observer.KK} ${observer.VName} ${observer.NName}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
@@ -6351,16 +6492,16 @@ async function showDeleteObserverConfirmDialog(observer, sites) {
                             <table class="table table-sm table-striped table-hover" style="font-size: 0.85rem;">
                                 <thead class="table-primary sticky-top">
                                     <tr>
-                                        <th>${i18n.kk_label}</th>
-                                        <th>${i18n.name_label}</th>
-                                        <th>${i18n.since_year_label}</th>
-                                        <th>${i18n.active_label}</th>
-                                        <th>${i18n.main_site_label}</th>
-                                        <th>${i18n.region_label}</th>
-                                        <th>${i18n.coordinates_label}</th>
-                                        <th>${i18n.secondary_site_label}</th>
-                                        <th>${i18n.region_label}</th>
-                                        <th>${i18n.coordinates_label}</th>
+                                        <th>${i18nStrings.observers.kk_label}</th>
+                                        <th>${i18nStrings.observers.name_label}</th>
+                                        <th>${i18nStrings.observers.since_year_label}</th>
+                                        <th>${i18nStrings.common.active}</th>
+                                        <th>${i18nStrings.observers.main_site_label}</th>
+                                        <th>${i18nStrings.observers.region_label}</th>
+                                        <th>${i18nStrings.observers.coordinates_label}</th>
+                                        <th>${i18nStrings.observers.secondary_site_label}</th>
+                                        <th>${i18nStrings.observers.region_label}</th>
+                                        <th>${i18nStrings.observers.coordinates_label}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -6416,7 +6557,7 @@ async function showDeleteObserverConfirmDialog(observer, sites) {
             modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
             
             // Show success message
-            showNotification(`<strong>✓</strong> ${i18n.success_deleted}`);
+            showNotification(`<strong>✓</strong> ${i18nStrings.observers.success_deleted}`);
             
             // Reload page after 2 seconds if on observers page
             setTimeout(() => {
@@ -6435,12 +6576,15 @@ async function showDeleteObserverConfirmDialog(observer, sites) {
 
 // Edit Observer Dialog Functions
 async function showEditObserverDialog() {
-    const i18n = i18nStrings.observers;
-    const common = i18nStrings.common;
-    
-    if (!i18n || !common) {
-        showErrorDialog('ERROR: i18n strings not loaded');
-        return;
+
+    // Check for fixed observer
+    let fixedObserver = '';
+    try {
+        const response = await fetch('/api/config/fixed_observer');
+        const config = await response.json();
+        fixedObserver = config.observer || '';
+    } catch (error) {
+        console.error('Error loading fixed observer:', error);
     }
     
     // Load observers first
@@ -6449,8 +6593,17 @@ async function showEditObserverDialog() {
         const data = await resp.json();
         
         if (!data.observers || data.observers.length === 0) {
-            showErrorDialog(i18n.error_loading_observers);
+            showErrorDialog(i18nStrings.common.error_loading_observers);
             return;
+        }
+        
+        // If fixed observer is set, directly show edit dialog for that observer
+        if (fixedObserver) {
+            const observer = data.observers.find(obs => obs.KK === fixedObserver);
+            if (observer) {
+                showEditTypeDialog(observer);
+                return;
+            }
         }
         
         // Create observer options sorted by KK
@@ -6464,11 +6617,11 @@ async function showEditObserverDialog() {
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header py-2">
-                            <h5 class="modal-title">${i18n.select_observer}</h5>
+                            <h5 class="modal-title">${i18nStrings.common.select_observer}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
-                            <label class="form-label">${i18n.select_observer_prompt}</label>
+                            <label class="form-label">${i18nStrings.observers.select_observer_prompt}</label>
                             <select class="form-select" id="observer-select" required>
                                 ${observerOptions}
                             </select>
@@ -6509,42 +6662,40 @@ async function showEditObserverDialog() {
 }
 
 function showEditTypeDialog(observer) {
-    const i18n = i18nStrings.observers || {};
-    const common = i18nStrings.common || {};
     
     const modalHtml = `
         <div class="modal fade" id="edit-type-modal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header py-2">
-                        <h5 class="modal-title">${i18n.modify_title}: ${observer.KK} ${observer.VName} ${observer.NName}</h5>
+                        <h5 class="modal-title">${i18nStrings.observers.modify_title}: ${observer.KK} ${observer.VName} ${observer.NName}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <p class="mb-3">${i18n.modify_what_title}</p>
+                        <p class="mb-3">${i18nStrings.observers.modify_what_title}</p>
                         <div class="d-grid gap-2">
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="editType" id="radio-edit-base" value="base" checked>
                                 <label class="form-check-label" for="radio-edit-base">
-                                    ${i18n.modify_base_data}
+                                    ${i18nStrings.observers.modify_base_data}
                                 </label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="editType" id="radio-add-site" value="add-site">
                                 <label class="form-check-label" for="radio-add-site">
-                                    ${i18n.modify_add_site}
+                                    ${i18nStrings.observers.modify_add_site}
                                 </label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="editType" id="radio-edit-site" value="edit-site">
                                 <label class="form-check-label" for="radio-edit-site">
-                                    ${i18n.modify_edit_site}
+                                    ${i18nStrings.observers.modify_edit_site}
                                 </label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="editType" id="radio-delete-site" value="delete-site">
                                 <label class="form-check-label" for="radio-delete-site">
-                                    ${i18n.modify_delete_site}
+                                    ${i18nStrings.observers.modify_delete_site}
                                 </label>
                             </div>
                         </div>
@@ -6584,30 +6735,28 @@ function showEditTypeDialog(observer) {
 }
 
 function showEditBaseDataDialog(observer) {
-    const i18n = i18nStrings.observers || {};
-    const common = i18nStrings.common || {};
     
     const modalHtml = `
         <div class="modal fade" id="edit-base-modal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header py-2">
-                        <h5 class="modal-title">${i18n.edit_base_title}</h5>
+                        <h5 class="modal-title">${i18nStrings.observers.edit_base_title}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <form id="edit-base-form">
                             <div class="row g-2">
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.kk_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.kk_label} <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control form-control-sm" id="edit-kk" value="${observer.KK}" maxlength="2" required readonly style="background-color: #f0f0f0;">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.first_name_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.first_name_label} <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control form-control-sm" id="edit-vname" value="${observer.VName}" maxlength="15" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.last_name_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.last_name_label} <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control form-control-sm" id="edit-nname" value="${observer.NName}" maxlength="15" required>
                                 </div>
                             </div>
@@ -6642,7 +6791,7 @@ function showEditBaseDataDialog(observer) {
             
             // Validate required fields
             if (!updatedData.VName || !updatedData.NName) {
-                errEl.textContent = i18n.error_missing_required;
+                errEl.textContent = i18nStrings.observers.error_missing_required;
                 errEl.style.display = 'block';
                 return;
             }
@@ -6667,7 +6816,7 @@ function showEditBaseDataDialog(observer) {
             modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
             
             // Show success message
-            showNotification(`<strong>✓</strong> ${i18n.success_updated}`);
+            showNotification(`<strong>✓</strong> ${i18nStrings.observers.success_updated}`);
             
             // Reload the page if we're on the observers page
             setTimeout(() => {
@@ -6692,10 +6841,6 @@ function showEditBaseDataDialog(observer) {
 
 // Add new observation site
 async function showAddSiteDialog(observer) {
-    const i18n = i18nStrings.observers || {};
-    const common = i18nStrings.common || {};
-    const months = i18nStrings.months || {};
-    const regions = i18nStrings.geographic_regions || {};
     
     // Generate month options
     const monthOptions = Object.keys(months).map(m => {
@@ -6729,7 +6874,7 @@ async function showAddSiteDialog(observer) {
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header py-2">
-                        <h5 class="modal-title">${i18n.modify_add_site}: ${observer.KK} ${observer.VName} ${observer.NName}</h5>
+                        <h5 class="modal-title">${i18nStrings.observers.modify_add_site}: ${observer.KK} ${observer.VName} ${observer.NName}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
@@ -6737,37 +6882,37 @@ async function showAddSiteDialog(observer) {
                             <div class="row g-2">
                                 <!-- Since (Month/Year) and Active -->
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.since_month_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.since_month_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="site-seit-month" required>
                                         <option value="">--</option>
                                         ${monthOptions}
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.since_year_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.since_year_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="site-seit-year" required>
                                         <option value="">--</option>
                                         ${yearOptions}
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.active_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.common.active} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="site-active" required>
-                                        <option value="1">${i18n.yes}</option>
-                                        <option value="0">${i18n.no}</option>
+                                        <option value="1">${i18nStrings.common.yes}</option>
+                                        <option value="0">${i18nStrings.common.no}</option>
                                     </select>
                                 </div>
                                 
                                 <!-- Main Observation Site -->
                                 <div class="col-12 mt-2">
-                                    <h6 class="mb-1">${i18n.main_site_label}</h6>
+                                    <h6 class="mb-1">${i18nStrings.observers.main_site_label}</h6>
                                 </div>
                                 <div class="col-md-8">
-                                    <label class="form-label small mb-0">${i18n.main_site_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.main_site_label} <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control form-control-sm" id="site-hb-ort" maxlength="20" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.region_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.region_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="site-gh" required>
                                         <option value="">--</option>
                                         ${regionOptions}
@@ -6776,7 +6921,7 @@ async function showAddSiteDialog(observer) {
                                 
                                 <!-- Main Site Coordinates -->
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.longitude_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.longitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="site-hlg" required>
                                             ${lonDegOptions}
@@ -6793,7 +6938,7 @@ async function showAddSiteDialog(observer) {
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.latitude_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.latitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="site-hbg" required>
                                             ${latDegOptions}
@@ -6812,14 +6957,14 @@ async function showAddSiteDialog(observer) {
                                 
                                 <!-- Secondary Observation Site -->
                                 <div class="col-12 mt-2">
-                                    <h6 class="mb-1">${i18n.secondary_site_label}</h6>
+                                    <h6 class="mb-1">${i18nStrings.observers.secondary_site_label}</h6>
                                 </div>
                                 <div class="col-md-8">
-                                    <label class="form-label small mb-0">${i18n.secondary_site_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.secondary_site_label} <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control form-control-sm" id="site-nb-ort" maxlength="20" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.region_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.region_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="site-gn" required>
                                         <option value="">--</option>
                                         ${regionOptions}
@@ -6828,7 +6973,7 @@ async function showAddSiteDialog(observer) {
                                 
                                 <!-- Secondary Site Coordinates -->
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.longitude_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.longitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="site-nlg" required>
                                             ${lonDegOptions}
@@ -6845,7 +6990,7 @@ async function showAddSiteDialog(observer) {
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.latitude_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.latitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="site-nbg" required>
                                             ${latDegOptions}
@@ -6921,7 +7066,7 @@ async function showAddSiteDialog(observer) {
             
             // Validate
             if (!siteData.seit_month || !siteData.seit_year || !siteData.HbOrt || !siteData.GH || !siteData.NbOrt || !siteData.GN) {
-                errEl.textContent = i18n.error_missing_required;
+                errEl.textContent = i18nStrings.observers.error_missing_required;
                 errEl.style.display = 'block';
                 return;
             }
@@ -6946,7 +7091,7 @@ async function showAddSiteDialog(observer) {
             modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
             
             // Show success message
-            showNotification(`<strong>✓</strong> ${i18n.success_added}`);
+            showNotification(`<strong>✓</strong> ${i18nStrings.observers.success_added}`);
             
             setTimeout(() => {
                 if (window.location.pathname === '/observers') {
@@ -6965,8 +7110,6 @@ async function showAddSiteDialog(observer) {
 
 // Edit existing observation site
 async function showEditSiteDialog(observer) {
-    const i18n = i18nStrings.observers || {};
-    const common = i18nStrings.common || {};
     
     // Load all sites for this observer
     try {
@@ -6974,7 +7117,7 @@ async function showEditSiteDialog(observer) {
         const data = await resp.json();
         
         if (!data.sites || data.sites.length === 0) {
-            showErrorDialog(i18n.error_no_sites);
+            showErrorDialog(i18nStrings.observers.error_no_sites);
             return;
         }
         
@@ -6987,10 +7130,6 @@ async function showEditSiteDialog(observer) {
 }
 
 async function showEditSiteConfirmDialog(observer, sites, currentIndex) {
-    const i18n = i18nStrings.observers || {};
-    const common = i18nStrings.common || {};
-    const months = i18nStrings.months || {};
-    const regions = i18nStrings.geographic_regions || {};
     const site = sites[currentIndex];
     
     // Generate month options
@@ -7025,46 +7164,46 @@ async function showEditSiteConfirmDialog(observer, sites, currentIndex) {
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header py-2">
-                        <h5 class="modal-title">${i18n.modify_edit_site}: ${observer.KK} ${observer.VName} ${observer.NName}</h5>
+                        <h5 class="modal-title">${i18nStrings.observers.modify_edit_site}: ${observer.KK} ${observer.VName} ${observer.NName}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <p class="mb-2">${i18n.modify_edit_question}</p>
+                        <p class="mb-2">${i18nStrings.observers.modify_edit_question}</p>
                         <form id="edit-site-confirm-form">
                             <div class="row g-2">
                                 <!-- Since (Month/Year) and Active -->
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.since_month_label}</label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.since_month_label}</label>
                                     <select class="form-select form-select-sm" id="confirm-edit-site-seit-month" disabled>
                                         <option value="">--</option>
                                         ${monthOptions}
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.since_year_label}</label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.since_year_label}</label>
                                     <select class="form-select form-select-sm" id="confirm-edit-site-seit-year" disabled>
                                         <option value="">--</option>
                                         ${yearOptions}
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.active_label}</label>
+                                    <label class="form-label small mb-0">${i18nStrings.common.active}</label>
                                     <select class="form-select form-select-sm" id="confirm-edit-site-active" disabled>
-                                        <option value="1">${i18n.yes}</option>
-                                        <option value="0">${i18n.no}</option>
+                                        <option value="1">${i18nStrings.common.yes}</option>
+                                        <option value="0">${i18nStrings.common.no}</option>
                                     </select>
                                 </div>
                                 
                                 <!-- Main Observation Site -->
                                 <div class="col-12 mt-2">
-                                    <h6 class="mb-1">${i18n.main_site_label}</h6>
+                                    <h6 class="mb-1">${i18nStrings.observers.main_site_label}</h6>
                                 </div>
                                 <div class="col-md-8">
-                                    <label class="form-label small mb-0">${i18n.main_site_label}</label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.main_site_label}</label>
                                     <input type="text" class="form-control form-control-sm" id="confirm-edit-site-hb-ort" maxlength="20" disabled>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.region_label}</label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.region_label}</label>
                                     <select class="form-select form-select-sm" id="confirm-edit-site-gh" disabled>
                                         <option value="">--</option>
                                         ${regionOptions}
@@ -7073,7 +7212,7 @@ async function showEditSiteConfirmDialog(observer, sites, currentIndex) {
                                 
                                 <!-- Main Site Coordinates -->
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.longitude_label}</label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.longitude_label}</label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="confirm-edit-site-hlg" disabled>
                                             ${lonDegOptions}
@@ -7090,7 +7229,7 @@ async function showEditSiteConfirmDialog(observer, sites, currentIndex) {
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.latitude_label}</label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.latitude_label}</label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="confirm-edit-site-hbg" disabled>
                                             ${latDegOptions}
@@ -7109,14 +7248,14 @@ async function showEditSiteConfirmDialog(observer, sites, currentIndex) {
                                 
                                 <!-- Secondary Observation Site -->
                                 <div class="col-12 mt-2">
-                                    <h6 class="mb-1">${i18n.secondary_site_label}</h6>
+                                    <h6 class="mb-1">${i18nStrings.observers.secondary_site_label}</h6>
                                 </div>
                                 <div class="col-md-8">
-                                    <label class="form-label small mb-0">${i18n.secondary_site_label}</label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.secondary_site_label}</label>
                                     <input type="text" class="form-control form-control-sm" id="confirm-edit-site-nb-ort" maxlength="20" disabled>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.region_label}</label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.region_label}</label>
                                     <select class="form-select form-select-sm" id="confirm-edit-site-gn" disabled>
                                         <option value="">--</option>
                                         ${regionOptions}
@@ -7125,7 +7264,7 @@ async function showEditSiteConfirmDialog(observer, sites, currentIndex) {
                                 
                                 <!-- Secondary Site Coordinates -->
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.longitude_label}</label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.longitude_label}</label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="confirm-edit-site-nlg" disabled>
                                             ${lonDegOptions}
@@ -7142,7 +7281,7 @@ async function showEditSiteConfirmDialog(observer, sites, currentIndex) {
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.latitude_label}</label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.latitude_label}</label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="confirm-edit-site-nbg" disabled>
                                             ${latDegOptions}
@@ -7160,7 +7299,7 @@ async function showEditSiteConfirmDialog(observer, sites, currentIndex) {
                                 </div>
                             </div>
                         </form>
-                        <p class="text-muted small mt-2">${i18n.edit_site_info}</p>
+                        <p class="text-muted small mt-2">${i18nStrings.observers.delete_site_info.replace('{0}', currentIndex + 1).replace('{1}', sites.length)}</p>
                     </div>
                     <div class="modal-footer py-1">
                         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${common.cancel}</button>
@@ -7235,10 +7374,6 @@ async function showEditSiteConfirmDialog(observer, sites, currentIndex) {
 }
 
 async function showEditSiteFormDialog(observer, sites, currentIndex) {
-    const i18n = i18nStrings.observers || {};
-    const common = i18nStrings.common || {};
-    const months = i18nStrings.months || {};
-    const regions = i18nStrings.geographic_regions || {};
     const site = sites[currentIndex];
     
     // Generate month options
@@ -7273,7 +7408,7 @@ async function showEditSiteFormDialog(observer, sites, currentIndex) {
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header py-2">
-                        <h5 class="modal-title">${i18n.modify_edit_site}: ${observer.KK} ${observer.VName} ${observer.NName}</h5>
+                        <h5 class="modal-title">${i18nStrings.observers.modify_edit_site}: ${observer.KK} ${observer.VName} ${observer.NName}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
@@ -7281,37 +7416,37 @@ async function showEditSiteFormDialog(observer, sites, currentIndex) {
                             <div class="row g-2">
                                 <!-- Since (Month/Year) and Active -->
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.since_month_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.since_month_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="edit-site-seit-month" required>
                                         <option value="">--</option>
                                         ${monthOptions}
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.since_year_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.since_year_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="edit-site-seit-year" required>
                                         <option value="">--</option>
                                         ${yearOptions}
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.active_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.common.active} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="edit-site-active" required>
-                                        <option value="1">${i18n.yes}</option>
-                                        <option value="0">${i18n.no}</option>
+                                        <option value="1">${i18nStrings.common.yes}</option>
+                                        <option value="0">${i18nStrings.common.no}</option>
                                     </select>
                                 </div>
                                 
                                 <!-- Main Observation Site -->
                                 <div class="col-12 mt-2">
-                                    <h6 class="mb-1">${i18n.main_site_label}</h6>
+                                    <h6 class="mb-1">${i18nStrings.observers.main_site_label}</h6>
                                 </div>
                                 <div class="col-md-8">
-                                    <label class="form-label small mb-0">${i18n.main_site_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.main_site_label} <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control form-control-sm" id="edit-site-hb-ort" maxlength="20" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.region_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.region_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="edit-site-gh" required>
                                         <option value="">--</option>
                                         ${regionOptions}
@@ -7320,7 +7455,7 @@ async function showEditSiteFormDialog(observer, sites, currentIndex) {
                                 
                                 <!-- Main Site Coordinates -->
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.longitude_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.longitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="edit-site-hlg" required>
                                             ${lonDegOptions}
@@ -7337,7 +7472,7 @@ async function showEditSiteFormDialog(observer, sites, currentIndex) {
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.latitude_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.latitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="edit-site-hbg" required>
                                             ${latDegOptions}
@@ -7356,14 +7491,14 @@ async function showEditSiteFormDialog(observer, sites, currentIndex) {
                                 
                                 <!-- Secondary Observation Site -->
                                 <div class="col-12 mt-2">
-                                    <h6 class="mb-1">${i18n.secondary_site_label}</h6>
+                                    <h6 class="mb-1">${i18nStrings.observers.secondary_site_label}</h6>
                                 </div>
                                 <div class="col-md-8">
-                                    <label class="form-label small mb-0">${i18n.secondary_site_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.secondary_site_label} <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control form-control-sm" id="edit-site-nb-ort" maxlength="20" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.region_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.region_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="edit-site-gn" required>
                                         <option value="">--</option>
                                         ${regionOptions}
@@ -7372,7 +7507,7 @@ async function showEditSiteFormDialog(observer, sites, currentIndex) {
                                 
                                 <!-- Secondary Site Coordinates -->
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.longitude_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.longitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="edit-site-nlg" required>
                                             ${lonDegOptions}
@@ -7389,7 +7524,7 @@ async function showEditSiteFormDialog(observer, sites, currentIndex) {
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.latitude_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.latitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="edit-site-nbg" required>
                                             ${latDegOptions}
@@ -7499,7 +7634,7 @@ async function showEditSiteFormDialog(observer, sites, currentIndex) {
             
             // Validate
             if (!siteData.seit_month || !siteData.seit_year || !siteData.HbOrt || !siteData.GH || !siteData.NbOrt || !siteData.GN) {
-                errEl.textContent = i18n.error_missing_required;
+                errEl.textContent = i18nStrings.observers.error_missing_required;
                 errEl.style.display = 'block';
                 return;
             }
@@ -7524,7 +7659,7 @@ async function showEditSiteFormDialog(observer, sites, currentIndex) {
             modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
             
             // Show success message
-            showNotification(`<strong>✓</strong> ${i18n.success_updated}`);
+            showNotification(`<strong>✓</strong> ${i18nStrings.observers.success_updated}`);
             
             setTimeout(() => {
                 if (window.location.pathname === '/observers') {
@@ -7543,8 +7678,6 @@ async function showEditSiteFormDialog(observer, sites, currentIndex) {
 
 // Delete observation site
 async function showDeleteSiteDialog(observer) {
-    const i18n = i18nStrings.observers || {};
-    const common = i18nStrings.common || {};
     
     // Load all sites for this observer
     try {
@@ -7552,12 +7685,12 @@ async function showDeleteSiteDialog(observer) {
         const data = await resp.json();
         
         if (!data.sites || data.sites.length === 0) {
-            showErrorDialog(i18n.error_no_sites);
+            showErrorDialog(i18nStrings.observers.error_no_sites);
             return;
         }
         
         if (data.sites.length === 1) {
-            showErrorDialog(i18n.error_last_site);
+            showErrorDialog(i18nStrings.observers.error_last_site);
             return;
         }
         
@@ -7570,10 +7703,6 @@ async function showDeleteSiteDialog(observer) {
 }
 
 async function showDeleteSiteConfirmDialog(observer, sites, currentIndex = 0) {
-    const i18n = i18nStrings.observers || {};
-    const common = i18nStrings.common || {};
-    const months = i18nStrings.months || {};
-    const regions = i18nStrings.geographic_regions || {};
     const site = sites[currentIndex];
     
     // Generate month options
@@ -7608,7 +7737,7 @@ async function showDeleteSiteConfirmDialog(observer, sites, currentIndex = 0) {
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header py-2">
-                        <h5 class="modal-title">${i18n.modify_delete_site}: ${observer.KK} ${observer.VName} ${observer.NName}</h5>
+                        <h5 class="modal-title">${i18nStrings.observers.modify_delete_site}: ${observer.KK} ${observer.VName} ${observer.NName}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
@@ -7616,37 +7745,37 @@ async function showDeleteSiteConfirmDialog(observer, sites, currentIndex = 0) {
                             <div class="row g-2">
                                 <!-- Since (Month/Year) and Active -->
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.since_month_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.since_month_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="delete-site-seit-month" disabled>
                                         <option value="">--</option>
                                         ${monthOptions}
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.since_year_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.since_year_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="delete-site-seit-year" disabled>
                                         <option value="">--</option>
                                         ${yearOptions}
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.active_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.common.active} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="delete-site-active" disabled>
-                                        <option value="1">${i18n.yes}</option>
-                                        <option value="0">${i18n.no}</option>
+                                        <option value="1">${i18nStrings.common.yes}</option>
+                                        <option value="0">${i18nStrings.common.no}</option>
                                     </select>
                                 </div>
                                 
                                 <!-- Main Observation Site -->
                                 <div class="col-12 mt-2">
-                                    <h6 class="mb-1">${i18n.main_site_label}</h6>
+                                    <h6 class="mb-1">${i18nStrings.observers.main_site_label}</h6>
                                 </div>
                                 <div class="col-md-8">
-                                    <label class="form-label small mb-0">${i18n.main_site_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.main_site_label} <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control form-control-sm" id="delete-site-hb-ort" maxlength="20" disabled>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.region_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.region_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="delete-site-gh" disabled>
                                         <option value="">--</option>
                                         ${regionOptions}
@@ -7655,7 +7784,7 @@ async function showDeleteSiteConfirmDialog(observer, sites, currentIndex = 0) {
                                 
                                 <!-- Main Site Coordinates -->
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.longitude_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.longitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="delete-site-hlg" disabled>
                                             ${lonDegOptions}
@@ -7672,7 +7801,7 @@ async function showDeleteSiteConfirmDialog(observer, sites, currentIndex = 0) {
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.latitude_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.latitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="delete-site-hbg" disabled>
                                             ${latDegOptions}
@@ -7691,14 +7820,14 @@ async function showDeleteSiteConfirmDialog(observer, sites, currentIndex = 0) {
                                 
                                 <!-- Secondary Observation Site -->
                                 <div class="col-12 mt-2">
-                                    <h6 class="mb-1">${i18n.secondary_site_label}</h6>
+                                    <h6 class="mb-1">${i18nStrings.observers.secondary_site_label}</h6>
                                 </div>
                                 <div class="col-md-8">
-                                    <label class="form-label small mb-0">${i18n.secondary_site_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.secondary_site_label} <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control form-control-sm" id="delete-site-nb-ort" maxlength="20" disabled>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.region_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.region_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="delete-site-gn" disabled>
                                         <option value="">--</option>
                                         ${regionOptions}
@@ -7707,7 +7836,7 @@ async function showDeleteSiteConfirmDialog(observer, sites, currentIndex = 0) {
                                 
                                 <!-- Secondary Site Coordinates -->
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.longitude_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.longitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="delete-site-nlg" disabled>
                                             ${lonDegOptions}
@@ -7724,7 +7853,7 @@ async function showDeleteSiteConfirmDialog(observer, sites, currentIndex = 0) {
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.latitude_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.latitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="delete-site-nbg" disabled>
                                             ${latDegOptions}
@@ -7824,7 +7953,7 @@ async function showDeleteSiteConfirmDialog(observer, sites, currentIndex = 0) {
             modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
             
             // Show success message
-            showNotification(`<strong>✓</strong> ${i18n.success_deleted}`);
+            showNotification(`<strong>✓</strong> ${i18nStrings.observers.success_deleted}`);
             
             setTimeout(() => {
                 if (window.location.pathname === '/observers') {

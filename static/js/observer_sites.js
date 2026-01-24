@@ -5,10 +5,6 @@
 
 // Add new observation site
 async function showAddSiteDialog(observer) {
-    const i18n = i18nStrings.observers || {};
-    const common = i18nStrings.common || {};
-    const months = i18nStrings.months || {};
-    const regions = i18nStrings.geographic_regions || {};
     
     // Generate month options
     const monthOptions = Object.keys(months).map(m => {
@@ -42,7 +38,7 @@ async function showAddSiteDialog(observer) {
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header py-2">
-                        <h5 class="modal-title">${i18n.modify_add_site}: ${observer.KK} ${observer.VName} ${observer.NName}</h5>
+                        <h5 class="modal-title">${i18nStrings.observers.modify_add_site}: ${observer.KK} ${observer.VName} ${observer.NName}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
@@ -50,37 +46,37 @@ async function showAddSiteDialog(observer) {
                             <div class="row g-2">
                                 <!-- Since (Month/Year) and Active -->
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.since_month_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.since_month_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="site-seit-month" required>
                                         <option value="">--</option>
                                         ${monthOptions}
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.since_year_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.since_year_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="site-seit-year" required>
                                         <option value="">--</option>
                                         ${yearOptions}
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.active_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.common.active} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="site-active" required>
-                                        <option value="1">${i18n.yes}</option>
-                                        <option value="0">${i18n.no}</option>
+                                        <option value="1">${i18nStrings.common.yes}</option>
+                                        <option value="0">${i18nStrings.common.no}</option>
                                     </select>
                                 </div>
                                 
                                 <!-- Main Observation Site -->
                                 <div class="col-12 mt-2">
-                                    <h6 class="mb-1">${i18n.main_site_label}</h6>
+                                    <h6 class="mb-1">${i18nStrings.observers.main_site_label}</h6>
                                 </div>
                                 <div class="col-md-8">
-                                    <label class="form-label small mb-0">${i18n.main_site_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.main_site_label} <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control form-control-sm" id="site-hb-ort" maxlength="20" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.region_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.region_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="site-gh" required>
                                         <option value="">--</option>
                                         ${regionOptions}
@@ -89,7 +85,7 @@ async function showAddSiteDialog(observer) {
                                 
                                 <!-- Main Site Coordinates -->
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.longitude_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.longitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="site-hlg" required>
                                             ${lonDegOptions}
@@ -106,7 +102,7 @@ async function showAddSiteDialog(observer) {
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.latitude_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.latitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="site-hbg" required>
                                             ${latDegOptions}
@@ -125,14 +121,14 @@ async function showAddSiteDialog(observer) {
                                 
                                 <!-- Secondary Observation Site -->
                                 <div class="col-12 mt-2">
-                                    <h6 class="mb-1">${i18n.secondary_site_label}</h6>
+                                    <h6 class="mb-1">${i18nStrings.observers.secondary_site_label}</h6>
                                 </div>
                                 <div class="col-md-8">
-                                    <label class="form-label small mb-0">${i18n.secondary_site_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.secondary_site_label} <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control form-control-sm" id="site-nb-ort" maxlength="20" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-0">${i18n.region_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.region_label} <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="site-gn" required>
                                         <option value="">--</option>
                                         ${regionOptions}
@@ -141,7 +137,7 @@ async function showAddSiteDialog(observer) {
                                 
                                 <!-- Secondary Site Coordinates -->
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.longitude_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.longitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="site-nlg" required>
                                             ${lonDegOptions}
@@ -158,7 +154,7 @@ async function showAddSiteDialog(observer) {
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-0">${i18n.latitude_label} <span class="text-danger">*</span></label>
+                                    <label class="form-label small mb-0">${i18nStrings.observers.latitude_label} <span class="text-danger">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <select class="form-select" id="site-nbg" required>
                                             ${latDegOptions}
@@ -179,8 +175,8 @@ async function showAddSiteDialog(observer) {
                         </form>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${common.cancel}</button>
-                        <button type="button" class="btn btn-primary btn-sm px-3" id="btn-add-site-ok">${common.ok}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="btn-add-site-ok">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -234,7 +230,7 @@ async function showAddSiteDialog(observer) {
             
             // Validate
             if (!siteData.seit_month || !siteData.seit_year || !siteData.HbOrt || !siteData.GH || !siteData.NbOrt || !siteData.GN) {
-                errEl.textContent = i18n.error_missing_required;
+                errEl.textContent = i18nStrings.observers.error_missing_required;
                 errEl.style.display = 'block';
                 return;
             }
@@ -259,7 +255,7 @@ async function showAddSiteDialog(observer) {
             modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
             
             // Show success message
-            showNotification(`<strong>✓</strong> ${i18n.success_added}`);
+            showNotification(`<strong>✓</strong> ${i18nStrings.observers.success_added}`);
             
             setTimeout(() => {
                 if (window.location.pathname === '/observers') {
@@ -278,8 +274,6 @@ async function showAddSiteDialog(observer) {
 
 // Edit existing observation site
 async function showEditSiteDialog(observer) {
-    const i18n = i18nStrings.observers || {};
-    const common = i18nStrings.common || {};
     
     // Load all sites for this observer
     try {
@@ -287,7 +281,7 @@ async function showEditSiteDialog(observer) {
         const data = await resp.json();
         
         if (!data.sites || data.sites.length === 0) {
-            showErrorDialog(i18n.error_no_sites);
+            showErrorDialog(i18nStrings.observers.error_no_sites);
             return;
         }
         
@@ -300,32 +294,29 @@ async function showEditSiteDialog(observer) {
 }
 
 function showEditSiteConfirmDialog(observer, sites, currentIndex) {
-    const i18n = i18nStrings.observers || {};
-    const common = i18nStrings.common || {};
     
     const site = sites[currentIndex];
-    const seitMonth = i18nStrings.months && i18nStrings.months[site.seit_month] ? i18nStrings.months[site.seit_month] : site.seit_month;
     
     const modalHtml = `
         <div class="modal fade" id="confirm-edit-site-modal" tabindex="-1">
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header py-2">
-                        <h5 class="modal-title">${i18n.modify_edit_site}</h5>
+                        <h5 class="modal-title">${i18nStrings.observers.modify_edit_site}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <p class="mb-2">${i18n.modify_edit_question}</p>
+                        <p class="mb-2">${i18nStrings.observers.modify_edit_question}</p>
                         <table class="table table-sm table-bordered">
-                            <tr><td><strong>${i18n.since_label}:</strong></td><td>${seitMonth} ${site.seit_year}</td></tr>
-                            <tr><td><strong>${i18n.active_label}:</strong></td><td>${site.active === 1 ? i18n.yes : i18n.no}</td></tr>
-                            <tr><td><strong>${i18n.main_site_label}:</strong></td><td>${site.HbOrt} (GG ${site.GH})</td></tr>
-                            <tr><td><strong>${i18n.secondary_site_label}:</strong></td><td>${site.NbOrt} (GG ${site.GN})</td></tr>
+                            <tr><td><strong>${i18nStrings.observers.since_label}:</strong></td><td>${i18nStrings.months[site.seit_month]} ${site.seit_year}</td></tr>
+                            <tr><td><strong>${i18nStrings.common.active}:</strong></td><td>${site.active === 1 ? i18nStrings.common.yes : i18nStrings.common.no}</td></tr>
+                            <tr><td><strong>${i18nStrings.observers.main_site_label}:</strong></td><td>${site.HbOrt} (GG ${site.GH})</td></tr>
+                            <tr><td><strong>${i18nStrings.observers.secondary_site_label}:</strong></td><td>${site.NbOrt} (GG ${site.GN})</td></tr>
                         </table>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${common.no}</button>
-                        <button type="button" class="btn btn-primary btn-sm px-3" id="btn-confirm-edit-site">${common.yes}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.no}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="btn-confirm-edit-site">${i18nStrings.common.yes}</button>
                     </div>
                 </div>
             </div>
@@ -355,8 +346,6 @@ function showEditSiteFormDialog(observer, oldSite) {
 
 // Delete observation site
 async function showDeleteSiteDialog(observer) {
-    const i18n = i18nStrings.observers || {};
-    const common = i18nStrings.common || {};
     
     // Load all sites for this observer
     try {
@@ -364,12 +353,12 @@ async function showDeleteSiteDialog(observer) {
         const data = await resp.json();
         
         if (!data.sites || data.sites.length === 0) {
-            showErrorDialog(i18n.error_no_sites);
+            showErrorDialog(i18nStrings.observers.error_no_sites);
             return;
         }
         
         if (data.sites.length === 1) {
-            showErrorDialog(i18n.error_last_sit);
+            showErrorDialog(i18nStrings.observers.error_last_site);
             return;
         }
         
@@ -382,34 +371,31 @@ async function showDeleteSiteDialog(observer) {
 }
 
 function showDeleteSiteConfirmDialog(observer, sites, currentIndex) {
-    const i18n = i18nStrings.observers || {};
-    const common = i18nStrings.common || {};
     
     const site = sites[currentIndex];
-    const seitMonth = i18nStrings.months && i18nStrings.months[site.seit_month] ? i18nStrings.months[site.seit_month] : site.seit_month;
     
     const modalHtml = `
         <div class="modal fade" id="confirm-delete-site-modal" tabindex="-1">
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header py-2">
-                        <h5 class="modal-title">${i18n.modify_delete_site}</h5>
+                        <h5 class="modal-title">${i18nStrings.observers.modify_delete_site}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <p class="mb-2">${i18n.delete_site_question}</p>
+                        <p class="mb-2">${i18nStrings.observers.delete_site_question}</p>
                         <table class="table table-sm table-bordered">
-                            <tr><td><strong>${i18n.since_label}:</strong></td><td>${seitMonth} ${site.seit_year}</td></tr>
-                            <tr><td><strong>${i18n.active_label}:</strong></td><td>${site.active === 1 ? i18n.yes : i18n.no}</td></tr>
-                            <tr><td><strong>${i18n.main_site_label}:</strong></td><td>${site.HbOrt} (GG ${site.GH})</td></tr>
-                            <tr><td><strong>${i18n.secondary_site_label}:</strong></td><td>${site.NbOrt} (GG ${site.GN})</td></tr>
+                            <tr><td><strong>${i18nStrings.observers.since_label}:</strong></td><td>${i18nStrings.months[site.seit_month]} ${site.seit_year}</td></tr>
+                            <tr><td><strong>${i18nStrings.common.active}:</strong></td><td>${site.active === 1 ? i18nStrings.common.yes : i18nStrings.common.no}</td></tr>
+                            <tr><td><strong>${i18nStrings.observers.main_site_label}:</strong></td><td>${site.HbOrt} (GG ${site.GH})</td></tr>
+                            <tr><td><strong>${i18nStrings.observers.secondary_site_label}:</strong></td><td>${site.NbOrt} (GG ${site.GN})</td></tr>
                         </table>
-                        <p class="text-muted small">${i18n.delete_site_info}</p>
+                        <p class="text-muted small">${i18nStrings.observers.delete_site_info}</p>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${common.no}</button>
-                        <button type="button" class="btn btn-danger btn-sm px-3" id="btn-delete-site">${common.yes}</button>
-                        ${currentIndex < sites.length - 1 ? `<button type="button" class="btn btn-info btn-sm px-3" id="btn-next-site">${common.next}</button>` : ''}
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.no}</button>
+                        <button type="button" class="btn btn-danger btn-sm px-3" id="btn-delete-site">${i18nStrings.common.yes}</button>
+                        ${currentIndex < sites.length - 1 ? `<button type="button" class="btn btn-info btn-sm px-3" id="btn-next-site">${i18nStrings.common.next}</button>` : ''}
                     </div>
                 </div>
             </div>
@@ -438,7 +424,7 @@ function showDeleteSiteConfirmDialog(observer, sites, currentIndex) {
             modalEl.addEventListener('hidden.bs.modal', () => {
                 modalEl.remove();
                 // Show success and reload
-                showNotification(`<strong>✓</strong> ${i18n.success_deleted}`);
+                showNotification(`<strong>✓</strong> ${i18nStrings.observers.success_deleted}`);
                 
                 setTimeout(() => {
                     if (window.location.pathname === '/observers') {

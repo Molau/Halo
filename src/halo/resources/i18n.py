@@ -126,9 +126,9 @@ class I18n:
             Formatted string
             
         Example:
-            # If string is "Found {count} observations"
-            msg = i18n.format('messages.found', count=42)
-            # Returns "Found 42 observations"
+            # If string is "Beobachter {kk} erfolgreich hinzugefügt"
+            msg = i18n.format('success.observer_added', kk=44)
+            # Returns "Beobachter 44 erfolgreich hinzugefügt"
         """
         template = self.get(key)
         try:

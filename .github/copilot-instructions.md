@@ -90,7 +90,13 @@ This document provides workflow guidance for GitHub Copilot when working on the 
    - Can we reuse existing patterns, components, or functions?
    - Check: API routes, services, UI components, i18n strings
 
-5. **Propose approach**
+5. **When asked about specific UI text** (e.g., "error in observation modify dialog"):
+   - **FIRST**: Search i18n files (`resources/strings_de.json`, `resources/strings_en.json`) for the actual text
+   - Find the exact i18n key (e.g., `observations.modify_title`, not guessed names like `obs_change`)
+   - **THEN**: Search codebase using that i18n key name
+   - This approach is faster and more accurate than guessing function/variable names
+
+6. **Propose approach**
    - If implementing as-is from Pascal: proceed
    - If deviating from original: explain why and get approval
    - If architectural decision needed: use Change Request Template
@@ -149,6 +155,9 @@ A: Only with explicit approval. Use Change Request Template and wait for approva
 
 **Q: Should I create a new modal or reuse existing?**  
 A: Always reuse existing patterns. Check `showWarningModal()`, Bootstrap modal patterns in templates.
+
+**Q: User mentions a specific UI text (e.g., "error in observation dialog")?**  
+A: Search i18n files for the actual text first to find the key name, then search code using that key. Don't guess function names.
 
 ---
 

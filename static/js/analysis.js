@@ -2,7 +2,6 @@
 document.addEventListener('DOMContentLoaded', async function() {
 
 
-    let i18n = null;
     let observers = [];
 
     // Timezone array from H_TYPES.PAS - timezone offsets by region (1-38)
@@ -138,22 +137,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     const filter2DdFieldsDiv = document.getElementById('filter2-dd-fields');
     const filter2DdIncompleteRadios = document.querySelectorAll('input[name="filter2-dd-incomplete"]');
 
-    // Load i18n strings
-    async function loadI18n() {
-        try {
-            const langResponse = await fetch('/api/language');
-            const langData = await langResponse.json();
-            const lang = langData.language;
-
-            const i18nResponse = await fetch(`/api/i18n/${lang}`);
-            i18n = await i18nResponse.json();
-
-        } catch (error) {
-            console.error('Error loading i18n:', error);
-            i18n = { analysis_dialog: {}, common: {} };
-        }
-    }
-
     // Load observers - get all observers and sort by KK numerically
     async function loadObservers() {
         try {
@@ -182,14 +165,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">${i18n.common.warning}</h5>
+                            <h5 class="modal-title">${i18nStrings.common.warning}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
                             <p>${message}</p>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">${i18n.common.ok}</button>
+                            <button type="button" class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.ok}</button>
                         </div>
                     </div>
                 </div>
@@ -208,25 +191,25 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Populate parameter dropdowns with all available parameters
     function populateParameterSelects() {
         const params = [
-            { code: 'JJ', name: i18n.analysis_dialog.param_names.JJ },
-            { code: 'MM', name: i18n.analysis_dialog.param_names.MM },
-            { code: 'TT', name: i18n.analysis_dialog.param_names.TT },
-            { code: 'ZZ', name: i18n.analysis_dialog.param_names.ZZ },
-            { code: 'SH', name: i18n.analysis_dialog.param_names.SH },
-            { code: 'KK', name: i18n.analysis_dialog.param_names.KK },
-            { code: 'GG', name: i18n.analysis_dialog.param_names.GG },
-            { code: 'O', name: i18n.analysis_dialog.param_names.O },
-            { code: 'f', name: i18n.analysis_dialog.param_names.f },
-            { code: 'C', name: i18n.analysis_dialog.param_names.C },
-            { code: 'd', name: i18n.analysis_dialog.param_names.d },
-            { code: 'EE', name: i18n.analysis_dialog.param_names.EE },
-            { code: 'DD', name: i18n.analysis_dialog.param_names.DD },
-            { code: 'H', name: i18n.analysis_dialog.param_names.H },
-            { code: 'F', name: i18n.analysis_dialog.param_names.F },
-            { code: 'V', name: i18n.analysis_dialog.param_names.V },
-            { code: 'zz', name: i18n.analysis_dialog.param_names.zz },
-            { code: 'HO_HU', name: i18n.analysis_dialog.param_names.HO_HU },
-            { code: 'SE', name: i18n.analysis_dialog.param_names.SE }
+            { code: 'JJ', name: i18nStrings.analysis_dialog.param_names.JJ },
+            { code: 'MM', name: i18nStrings.analysis_dialog.param_names.MM },
+            { code: 'TT', name: i18nStrings.analysis_dialog.param_names.TT },
+            { code: 'ZZ', name: i18nStrings.analysis_dialog.param_names.ZZ },
+            { code: 'SH', name: i18nStrings.analysis_dialog.param_names.SH },
+            { code: 'KK', name: i18nStrings.analysis_dialog.param_names.KK },
+            { code: 'GG', name: i18nStrings.analysis_dialog.param_names.GG },
+            { code: 'O', name: i18nStrings.analysis_dialog.param_names.O },
+            { code: 'f', name: i18nStrings.analysis_dialog.param_names.f },
+            { code: 'C', name: i18nStrings.analysis_dialog.param_names.C },
+            { code: 'd', name: i18nStrings.analysis_dialog.param_names.d },
+            { code: 'EE', name: i18nStrings.analysis_dialog.param_names.EE },
+            { code: 'DD', name: i18nStrings.analysis_dialog.param_names.DD },
+            { code: 'H', name: i18nStrings.analysis_dialog.param_names.H },
+            { code: 'F', name: i18nStrings.analysis_dialog.param_names.F },
+            { code: 'V', name: i18nStrings.analysis_dialog.param_names.V },
+            { code: 'zz', name: i18nStrings.analysis_dialog.param_names.zz },
+            { code: 'HO_HU', name: i18nStrings.analysis_dialog.param_names.HO_HU },
+            { code: 'SE', name: i18nStrings.analysis_dialog.param_names.SE }
         ];
 
         // Populate all select dropdowns
@@ -288,15 +271,15 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Get range values for a parameter
     function getParameterRange(paramCode) {
-        // Helper function to get month name from either i18n object or array
+        // Helper function to get month name - check actual type
         function getMonthName(monthNum) {
-            if (i18n.months && typeof i18n.months === 'object') {
-                // i18n.months is an object with string keys: {"1": "Januar", "2": "Februar", ...}
-                return i18n.months[String(monthNum)];
+            if (Array.isArray(i18nStrings.months)) {
+                // Array (0-indexed): ["Januar", "Februar", ...]
+                return i18nStrings.months[monthNum - 1];
+            } else {
+                // Object with string keys: {"1": "Januar", "2": "Februar", ...}
+                return i18nStrings.months[String(monthNum)];
             }
-            // Fallback to array (0-indexed)
-            const monthArray = i18n.months;
-            return monthArray[monthNum - 1];
         }
         
         switch (paramCode) {
@@ -349,14 +332,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                 // Use exact region list from observation form
                 const regionNumbers = [1,2,3,4,5,6,7,8,9,10,11,16,17,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39];
                 return regionNumbers.map(gg => {
-                    const regionName = i18n.geographic_regions[String(gg)];
+                    const regionName = i18nStrings.geographic_regions[String(gg)];
                     return { value: gg, display: `${String(gg).padStart(2, '0')} - ${regionName}` };
                 });
             
             case 'O':
                 const objects = [];
                 for (let i = 1; i <= 5; i++) {
-                    const objName = i18n.object_types[String(i)];
+                    const objName = i18nStrings.object_types[String(i)];
                     objects.push({ value: i, display: `${i} - ${objName}` });
                 }
                 return objects;
@@ -365,7 +348,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 // Weather front with text names
                 const fronts = [];
                 for (let i = 0; i <= 8; i++) {
-                    const frontName = i18n.weather_front[String(i)];
+                    const frontName = i18nStrings.weather_front[String(i)];
                     fronts.push({ value: i, display: `${i} - ${frontName}` });
                 }
                 return fronts;
@@ -374,7 +357,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 // Cirrus type with text names
                 const cirrus = [];
                 for (let i = 0; i <= 7; i++) {
-                    const cirrusName = i18n.cirrus_types[String(i)];
+                    const cirrusName = i18nStrings.cirrus_types[String(i)];
                     cirrus.push({ value: i, display: `${i} - ${cirrusName}` });
                 }
                 return cirrus;
@@ -382,29 +365,29 @@ document.addEventListener('DOMContentLoaded', async function() {
             case 'd':
                 // Cirrus density - use exact format from observation form
                 return [
-                    { value: 0, display: `0 - ${i18n.cirrus_density['0']}` },
-                    { value: 1, display: `1 - ${i18n.cirrus_density['1']}` },
-                    { value: 2, display: `2 - ${i18n.cirrus_density['2']}` },
-                    { value: 4, display: `4 - ${i18n.cirrus_density['4']}` },
-                    { value: 5, display: `5 - ${i18n.cirrus_density['5']}` },
-                    { value: 6, display: `6 - ${i18n.cirrus_density['6']}` },
-                    { value: 7, display: `7 - ${i18n.cirrus_density['7']}` }
+                    { value: 0, display: `0 - ${i18nStrings.cirrus_density['0']}` },
+                    { value: 1, display: `1 - ${i18nStrings.cirrus_density['1']}` },
+                    { value: 2, display: `2 - ${i18nStrings.cirrus_density['2']}` },
+                    { value: 4, display: `4 - ${i18nStrings.cirrus_density['4']}` },
+                    { value: 5, display: `5 - ${i18nStrings.cirrus_density['5']}` },
+                    { value: 6, display: `6 - ${i18nStrings.cirrus_density['6']}` },
+                    { value: 7, display: `7 - ${i18nStrings.cirrus_density['7']}` }
                 ];
             
             case 'EE':
                 // Only halo types 1-77 and 99 (exclude 78-98)
                 const haloTypes = [];
                 for (let i = 1; i <= 77; i++) {
-                    const haloName = i18n.halo_types[String(i)];
+                    const haloName = i18nStrings.halo_types[String(i)];
                     haloTypes.push({ value: i, display: `${String(i).padStart(2, '0')} - ${haloName}` });
                 }
-                haloTypes.push({ value: 99, display: `99 - ${i18n.halo_types['99']}` });
+                haloTypes.push({ value: 99, display: `99 - ${i18nStrings.halo_types['99']}` });
                 return haloTypes;
             
             case 'DD':
                 // Duration: display key values 0, 10, 20, 30, etc.
                 const durations = [];
-                const minuteText = i18n.observations.detail_labels.minutes.trim();
+                const minuteText = i18nStrings.observations.detail_labels.minutes.trim();
                 for (let i = 0; i <= 99; i += 10) {
                     durations.push({ value: i, display: `${i} ${minuteText}` });
                 }
@@ -414,7 +397,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 // Brightness with text values
                 const brightness = [];
                 for (let i = 0; i <= 3; i++) {
-                    const brightName = i18n.brightness[String(i)];
+                    const brightName = i18nStrings.brightness[String(i)];
                     brightness.push({ value: i, display: `${i} - ${brightName}` });
                 }
                 return brightness;
@@ -423,7 +406,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 // Color with text values
                 const colours = [];
                 for (let i = 0; i <= 5; i++) {
-                    const colorName = i18n.color[String(i)];
+                    const colorName = i18nStrings.color[String(i)];
                     colours.push({ value: i, display: `${i} - ${colorName}` });
                 }
                 return colours;
@@ -431,14 +414,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             case 'V':
                 // Completeness with text values
                 return [
-                    { value: 1, display: `1 - ${i18n.completeness['1']}` },
-                    { value: 2, display: `2 - ${i18n.completeness['2']}` }
+                    { value: 1, display: `1 - ${i18nStrings.completeness['1']}` },
+                    { value: 2, display: `2 - ${i18nStrings.completeness['2']}` }
                 ];
             
             case 'zz':
                 // Zeit bis Niederschlag (hours): 0 hours, 1 hours, etc.
                 const zzTimes = [];
-                const hourText = i18n.observations.detail_labels.hours.trim();
+                const hourText = i18nStrings.observations.detail_labels.hours.trim();
                 for (let i = 0; i <= 99; i++) {
                     zzTimes.push({ value: i, display: `${i} ${hourText}` });
                 }
@@ -481,14 +464,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (!validRegions.includes(ggNum)) {
                 return null; // Return null if region doesn't exist (will be filtered out)
             }
-            const regionName = i18n.geographic_regions[String(ggNum)];
+            const regionName = i18nStrings.geographic_regions[String(ggNum)];
             return `${String(ggNum).padStart(2, '0')} - ${regionName}`;
         }
 
         // Special handling for SE (sectors) - count by octant letter
         if (paramCode === 'SE') {
             if (rawValue === 'keine Angabe') {
-                return i18n.fields.not_applicable || rawValue;
+                return i18nStrings.fields.not_applicable || rawValue;
             }
             return String(rawValue).toLowerCase();
         }
@@ -509,7 +492,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (isNaN(hoursVal)) {
                 return null;
             }
-            const hourText = i18n.observations.detail_labels.hours.trim();
+            const hourText = i18nStrings.observations.detail_labels.hours.trim();
             return `${hoursVal} ${hourText}`;
         }
         
@@ -520,7 +503,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (eeNum < 1 || (eeNum > 77 && eeNum !== 99)) {
                 return null; // Return null if halo type doesn't exist (will be filtered out)
             }
-            const haloName = i18n.halo_types[String(eeNum)];
+            const haloName = i18nStrings.halo_types[String(eeNum)];
             return `${String(eeNum).padStart(2, '0')} - ${haloName}`;
         }
         
@@ -1587,21 +1570,21 @@ document.addEventListener('DOMContentLoaded', async function() {
         lastAnalysisParams = params;
         
         // Build title
-        const param1Name = i18n.analysis_dialog.param_names[params.param1];
-        const param2Name = params.param2 ? i18n.analysis_dialog.param_names[params.param2] : null;
+        const param1Name = i18nStrings.analysis_dialog.param_names[params.param1];
+        const param2Name = params.param2 ? i18nStrings.analysis_dialog.param_names[params.param2] : null;
         const titleText = param2Name 
-            ? `${i18n.analysis_results.title_two_params}: ${param1Name} ${i18n.analysis_results.and} ${param2Name}`
-            : `${i18n.analysis_results.title_one_param}: ${param1Name}`;
+            ? `${i18nStrings.analysis_results.title_two_params}: ${param1Name} ${i18nStrings.analysis_results.and} ${param2Name}`
+            : `${i18nStrings.analysis_results.title_one_param}: ${param1Name}`;
         
         // Build restrictions array
         const restrictions = [];
         if (params.filter1) {
-            const filterName = i18n.analysis_dialog.param_names[params.filter1];
+            const filterName = i18nStrings.analysis_dialog.param_names[params.filter1];
             const displayValue = params.filter1_display;
             restrictions.push(`${filterName} = ${displayValue}`);
         }
         if (params.filter2) {
-            const filterName = i18n.analysis_dialog.param_names[params.filter2];
+            const filterName = i18nStrings.analysis_dialog.param_names[params.filter2];
             const displayValue = params.filter2_display;
             restrictions.push(`${filterName} = ${displayValue}`);
         }
@@ -1609,7 +1592,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Build restrictions HTML (for HTML mode only)
         let restrictionsHtml = '';
         if (restrictions.length > 0 && outputMode === 'H') {
-            restrictionsHtml = `<div class="restrictions"><strong>${i18n.analysis_results.restrictions}:</strong> ${restrictions.join(', ')}</div>`;
+            restrictionsHtml = `<div class="restrictions"><strong>${i18nStrings.analysis_results.restriction}:</strong> ${restrictions.join(', ')}</div>`;
         }
         
         // Build result HTML based on output mode and number of parameters
@@ -1663,17 +1646,17 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <div class="modal-dialog modal-dialog-scrollable" style="max-width: 800px;">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">${i18n.dialogs.analysis_title}</h5>
+                            <h5 class="modal-title">${i18nStrings.dialogs.analysis_title}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body" id="resultModalBody" style="overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 250px);">
                         </div>
                         <div class="modal-footer d-flex justify-content-end gap-2">
-                            <button type="button" id="btn-result-bar-chart" class="btn btn-secondary btn-sm px-3">${i18n.button.bar_chart}</button>
-                            <button type="button" id="btn-result-line-chart" class="btn btn-secondary btn-sm px-3">${i18n.button.line_chart}</button>
-                            <button type="button" id="btn-result-print" class="btn btn-secondary btn-sm px-3">${i18n.button.print}</button>
-                            <button type="button" id="btn-result-save" class="btn btn-secondary btn-sm px-3">${i18n.button.save}</button>
-                            <button type="button" id="btn-result-ok" class="btn btn-primary btn-sm px-3">${i18n.button.ok}</button>
+                            <button type="button" id="btn-result-bar-chart" class="btn btn-secondary btn-sm px-3">${i18nStrings.button.bar_chart}</button>
+                            <button type="button" id="btn-result-line-chart" class="btn btn-secondary btn-sm px-3">${i18nStrings.common.line_chart}</button>
+                            <button type="button" id="btn-result-print" class="btn btn-secondary btn-sm px-3">${i18nStrings.common.print}</button>
+                            <button type="button" id="btn-result-save" class="btn btn-secondary btn-sm px-3">${i18nStrings.common.save}</button>
+                            <button type="button" id="btn-result-ok" class="btn btn-primary btn-sm px-3">${i18nStrings.common.ok}</button>
                         </div>
                     </div>
                 </div>
@@ -1784,12 +1767,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         const data = result.data;
         
         // Build title with parameter names and filters
-        const param1Name = i18n.analysis_dialog.param_names[params.param1];
-        const param2Name = params.param2 ? i18n.analysis_dialog.param_names[params.param2] : null;
+        const param1Name = i18nStrings.analysis_dialog.param_names[params.param1];
+        const param2Name = params.param2 ? i18nStrings.analysis_dialog.param_names[params.param2] : null;
         let titleText;
         
         if (param2Name) {
-            titleText = `Parameter: ${param1Name} ${i18n.analysis_results.and} ${param2Name}`;
+            titleText = `Parameter: ${param1Name} ${i18nStrings.analysis_results.and} ${param2Name}`;
         } else {
             titleText = `Parameter: ${param1Name}`;
         }
@@ -1797,17 +1780,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Add filter restrictions to title
         const restrictions = [];
         if (params.filter1) {
-            const filterName = i18n.analysis_dialog.param_names[params.filter1];
+            const filterName = i18nStrings.analysis_dialog.param_names[params.filter1];
             const displayValue = params.filter1_display;
             restrictions.push(`${filterName} = ${displayValue}`);
         }
         if (params.filter2) {
-            const filterName = i18n.analysis_dialog.param_names[params.filter2];
+            const filterName = i18nStrings.analysis_dialog.param_names[params.filter2];
             const displayValue = params.filter2_display;
             restrictions.push(`${filterName} = ${displayValue}`);
         }
         if (restrictions.length > 0) {
-            titleText += `\n${i18n.analysis_results.restrictions}: ${restrictions.join(', ')}`;
+            titleText += `\n${i18nStrings.analysis_results.restriction}: ${restrictions.join(', ')}`;
         }
         
         if (!params.param2) {
@@ -1817,7 +1800,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const counts = data.map(item => item.count);
             
             const datasets = [{
-                label: i18n.analysis_results.count,
+                label: i18nStrings.analysis_results.count,
                 data: counts,
                 backgroundColor: 'rgba(54, 162, 235, 0.5)',
                 borderColor: 'rgba(54, 162, 235, 1)',
@@ -1882,7 +1865,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     hovertemplate: 
                         formatParamValue(params.param1, p1Val) + '<br>' +
                         formatParamValue(params.param2, p2Val) + '<br>' +
-                        i18n.analysis_results.count + ': ' + count +
+                        i18nStrings.analysis_results.count + ': ' + count +
                         '<extra></extra>',
                     showlegend: false
                 });
@@ -1910,7 +1893,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 colorscale: 'Viridis',
                 showscale: true,
                 colorbar: {
-                    title: i18n.analysis_results.count
+                    title: i18nStrings.analysis_results.count
                 }
             },
             showlegend: false,
@@ -1924,17 +1907,17 @@ document.addEventListener('DOMContentLoaded', async function() {
             },
             scene: {
                 xaxis: { 
-                    title: i18n.analysis_dialog.param_names[params.param2],
+                    title: i18nStrings.analysis_dialog.param_names[params.param2],
                     tickvals: param2ValuesArray.map((_, i) => i),
                     ticktext: param2ValuesArray.map(v => formatParamValue(params.param2, v))
                 },
                 yaxis: { 
-                    title: i18n.analysis_dialog.param_names[params.param1],
+                    title: i18nStrings.analysis_dialog.param_names[params.param1],
                     tickvals: param1Values.map((_, i) => i),
                     ticktext: param1Values.map(v => formatParamValue(params.param1, v))
                 },
                 zaxis: { 
-                    title: i18n.analysis_results.count
+                    title: i18nStrings.analysis_results.count
                 },
                 camera: {
                     eye: { x: 1.5, y: 1.5, z: 1.3 }
@@ -1963,7 +1946,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         // Determine chart title based on type
-        const chartTitle = chartType === 'line' ? i18n.button.line_chart : i18n.button.bar_chart;
+        const chartTitle = chartType === 'line' ? i18nStrings.common.line_chart : i18nStrings.common.bar_chart;
         
         // Create fresh modal
         const chartModal = document.createElement('div');
@@ -1984,9 +1967,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                         <div id="plotly3DChart" style="width: 100%; height: 100%;"></div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm px-3" onclick="window.print()">${i18n.common.print}</button>
-                        <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-save-3d-chart">${i18n.common.save}</button>
-                        <button type="button" class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">${i18n.common.ok}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" onclick="window.print()">${i18nStrings.common.print}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-save-3d-chart">${i18nStrings.common.save}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -2038,7 +2021,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         // Determine chart title based on type
-        const chartTitle = chartTypeParam === 'line' ? i18n.button.line_chart : i18n.button.bar_chart;
+        const chartTitle = chartTypeParam === 'line' ? i18nStrings.common.line_chart : i18nStrings.common.bar_chart;
         
         // Create fresh modal
         const chartModal = document.createElement('div');
@@ -2059,9 +2042,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                         <canvas id="analysisChart"></canvas>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm px-3" onclick="window.print()">${i18n.common.print}</button>
-                        <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-save-2d-chart">${i18n.common.save}</button>
-                        <button type="button" class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">${i18n.common.ok}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" onclick="window.print()">${i18nStrings.common.print}</button>
+                        <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-save-2d-chart">${i18nStrings.common.save}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
@@ -2122,7 +2105,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                             beginAtZero: true,
                             title: {
                                 display: true,
-                                text: i18n.analysis_results.count
+                                text: i18nStrings.analysis_results.count
                             }
                         }
                     }
@@ -2169,12 +2152,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         const data = result.data;
         
         // Build title with parameter names and filters
-        const param1Name = i18n.analysis_dialog.param_names[params.param1];
-        const param2Name = params.param2 ? i18n.analysis_dialog.param_names[params.param2] : null;
+        const param1Name = i18nStrings.analysis_dialog.param_names[params.param1];
+        const param2Name = params.param2 ? i18nStrings.analysis_dialog.param_names[params.param2] : null;
         let titleText;
         
         if (param2Name) {
-            titleText = `Parameter: ${param1Name} ${i18n.analysis_results.and} ${param2Name}`;
+            titleText = `Parameter: ${param1Name} ${i18nStrings.analysis_results.and} ${param2Name}`;
         } else {
             titleText = `Parameter: ${param1Name}`;
         }
@@ -2182,17 +2165,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Add filter restrictions to title
         const restrictions = [];
         if (params.filter1) {
-            const filterName = i18n.analysis_dialog.param_names[params.filter1];
+            const filterName = i18nStrings.analysis_dialog.param_names[params.filter1];
             const displayValue = params.filter1_display;
             restrictions.push(`${filterName} = ${displayValue}`);
         }
         if (params.filter2) {
-            const filterName = i18n.analysis_dialog.param_names[params.filter2];
+            const filterName = i18nStrings.analysis_dialog.param_names[params.filter2];
             const displayValue = params.filter2_display;
             restrictions.push(`${filterName} = ${displayValue}`);
         }
         if (restrictions.length > 0) {
-            titleText += `\n${i18n.analysis_results.restrictions}: ${restrictions.join(', ')}`;
+            titleText += `\n${i18nStrings.analysis_results.restriction}: ${restrictions.join(', ')}`;
         }
         
         if (!params.param2) {
@@ -2202,7 +2185,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const counts = data.map(item => item.count);
             
             const datasets = [{
-                label: i18n.analysis_results.count,
+                label: i18nStrings.analysis_results.count,
                 data: counts,
                 borderColor: 'rgba(54, 162, 235, 1)',
                 backgroundColor: 'rgba(54, 162, 235, 0.1)',
@@ -2256,12 +2239,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             colorscale: 'Viridis',
             showscale: true,
             colorbar: {
-                title: i18n.analysis_results.count
+                title: i18nStrings.analysis_results.count
             },
             hovertemplate: 
-                i18n.analysis_dialog.param_names[params.param1] + ': %{y}<br>' +
-                i18n.analysis_dialog.param_names[params.param2] + ': %{x}<br>' +
-                i18n.analysis_results.count + ': %{z}<br>' +
+                i18nStrings.analysis_dialog.param_names[params.param1] + ': %{y}<br>' +
+                i18nStrings.analysis_dialog.param_names[params.param2] + ': %{x}<br>' +
+                i18nStrings.analysis_results.count + ': %{z}<br>' +
                 '<extra></extra>'
         };
         
@@ -2272,13 +2255,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             },
             scene: {
                 xaxis: { 
-                    title: i18n.analysis_dialog.param_names[params.param2]
+                    title: i18nStrings.analysis_dialog.param_names[params.param2]
                 },
                 yaxis: { 
-                    title: i18n.analysis_dialog.param_names[params.param1]
+                    title: i18nStrings.analysis_dialog.param_names[params.param1]
                 },
                 zaxis: { 
-                    title: i18n.analysis_results.count
+                    title: i18nStrings.analysis_results.count
                 },
                 camera: {
                     eye: { x: 1.5, y: 1.5, z: 1.3 }
@@ -2367,32 +2350,32 @@ document.addEventListener('DOMContentLoaded', async function() {
         const params = lastAnalysisParams;
         const result = lastAnalysisResult;
 
-        const param1Name = i18n.analysis_dialog.param_names[params.param1];
-        const param2Name = params.param2 ? i18n.analysis_dialog.param_names[params.param2] : '';
+        const param1Name = i18nStrings.analysis_dialog.param_names[params.param1];
+        const param2Name = params.param2 ? i18nStrings.analysis_dialog.param_names[params.param2] : '';
         const titleText = params.param2
-            ? `${i18n.analysis_results.title_two_params}: ${param1Name} ${i18n.analysis_results.and} ${param2Name}`
-            : `${i18n.analysis_results.title_one_param}: ${param1Name}`;
+            ? `${i18nStrings.analysis_results.title_two_params}: ${param1Name} ${i18nStrings.analysis_results.and} ${param2Name}`
+            : `${i18nStrings.analysis_results.title_one_param}: ${param1Name}`;
 
         const restrictions = [];
         if (params.filter1) {
-            const filterName = i18n.analysis_dialog.param_names[params.filter1];
+            const filterName = i18nStrings.analysis_dialog.param_names[params.filter1];
             restrictions.push(`${filterName} = ${params.filter1_value}`);
         }
         if (params.filter2) {
-            const filterName = i18n.analysis_dialog.param_names[params.filter2];
+            const filterName = i18nStrings.analysis_dialog.param_names[params.filter2];
             restrictions.push(`${filterName} = ${params.filter2_value}`);
         }
 
         const lines = [];
         lines.push(escapeCsv(titleText));
         if (restrictions.length > 0) {
-            lines.push(escapeCsv(`${i18n.analysis_results.restrictions}: ${restrictions.join(', ')}`));
+            lines.push(escapeCsv(`${i18nStrings.analysis_results.restriction}: ${restrictions.join(', ')}`));
         }
         lines.push('');
 
         if (!params.param2) {
             // Single-parameter table
-            lines.push([param1Name, `${i18n.analysis_results.count} (Σ=${result.total} ${i18n.analysis_results.observations})`].map(escapeCsv).join(','));
+            lines.push([param1Name, `${i18nStrings.analysis_results.count} (Σ=${result.total} ${i18nStrings.analysis_results.observations})`].map(escapeCsv).join(','));
             for (const item of result.data) {
                 const displayKey = formatParamValue(params.param1, item.key);
                 const percentage = result.total > 0 ? ((item.count / result.total) * 100).toFixed(1) : '0.0';
@@ -2459,7 +2442,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             });
 
             // Totals row
-            const totalsRow = [i18n.analysis_results.total, `Σ=${result.total} (Σ=100%)`];
+            const totalsRow = [i18nStrings.analysis_results.total, `Σ=${result.total} (Σ=100%)`];
             columns.forEach(col => {
                 const colTotal = columnTotals[col];
                 const colPercentage = result.total > 0 ? ((colTotal / result.total) * 100).toFixed(1) : '0.0';
@@ -2478,19 +2461,19 @@ document.addEventListener('DOMContentLoaded', async function() {
         const params = lastAnalysisParams;
         const result = lastAnalysisResult;
 
-        const param1Name = i18n.analysis_dialog.param_names[params.param1];
-        const param2Name = params.param2 ? i18n.analysis_dialog.param_names[params.param2] : '';
+        const param1Name = i18nStrings.analysis_dialog.param_names[params.param1];
+        const param2Name = params.param2 ? i18nStrings.analysis_dialog.param_names[params.param2] : '';
         const titleText = params.param2
-            ? `${i18n.analysis_results.title_two_params}: ${param1Name} ${i18n.analysis_results.and} ${param2Name}`
-            : `${i18n.analysis_results.title_one_param}: ${param1Name}`;
+            ? `${i18nStrings.analysis_results.title_two_params}: ${param1Name} ${i18nStrings.analysis_results.and} ${param2Name}`
+            : `${i18nStrings.analysis_results.title_one_param}: ${param1Name}`;
 
         const restrictions = [];
         if (params.filter1) {
-            const filterName = i18n.analysis_dialog.param_names[params.filter1];
+            const filterName = i18nStrings.analysis_dialog.param_names[params.filter1];
             restrictions.push(`${filterName} = ${params.filter1_value}`);
         }
         if (params.filter2) {
-            const filterName = i18n.analysis_dialog.param_names[params.filter2];
+            const filterName = i18nStrings.analysis_dialog.param_names[params.filter2];
             restrictions.push(`${filterName} = ${params.filter2_value}`);
         }
 
@@ -2499,13 +2482,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         const lines = [];
         lines.push(`#### ${escapeCell(titleText)}`);
         if (restrictions.length > 0) {
-            lines.push(`_${escapeCell(i18n.analysis_results.restrictions)}: ${escapeCell(restrictions.join(', '))}_`);
+            lines.push(`_${escapeCell(i18nStrings.analysis_results.restriction)}: ${escapeCell(restrictions.join(', '))}_`);
         }
         lines.push('');
 
         if (!params.param2) {
             // Single-parameter table
-            lines.push(`| **${escapeCell(param1Name)}** | ${escapeCell(i18n.analysis_results.count)} (Σ=${result.total} ${escapeCell(i18n.analysis_results.observations)}) |`);
+            lines.push(`| **${escapeCell(param1Name)}** | ${escapeCell(i18nStrings.analysis_results.count)} (Σ=${result.total} ${escapeCell(i18nStrings.analysis_results.observations)}) |`);
             lines.push('| --- | --- |');
             for (const item of result.data) {
                 const displayKey = formatParamValue(params.param1, item.key);
@@ -2596,7 +2579,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             });
 
             // Totals row: merge label and total into first cell
-            let totalsLine = `| **${escapeCell(i18n.analysis_results.total)}** Σ=${result.total} (Σ=100%) |`;
+            let totalsLine = `| **${escapeCell(i18nStrings.analysis_results.total)}** Σ=${result.total} (Σ=100%) |`;
             columns.forEach(col => {
                 const colTotal = columnTotals[col];
                 const colPercentage = result.total > 0 ? ((colTotal / result.total) * 100).toFixed(1) : '0.0';
@@ -2628,7 +2611,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <thead>
                     <tr class="table-primary">
                         <th>${paramName}</th>
-                        <th>${i18n.analysis_results.count} (Σ=${total} ${i18n.analysis_results.observations})</th>
+                        <th>${i18nStrings.analysis_results.count} (Σ=${total} ${i18nStrings.analysis_results.observations})</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -2643,7 +2626,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             html += `
                 <tr>
                     <td>${displayKey}</td>
-                    <td cass="text-end">${count} ${i18n.analysis_results.observation_s} - ${percentage}%</td>
+                    <td cass="text-end">${count} ${i18nStrings.analysis_results.observation_s} - ${percentage}%</td>
                 </tr>
             `;
         }
@@ -2784,7 +2767,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         ? cell.pCol.toFixed(1)
                         : cell.pGlobal.toFixed(1);
                 
-                html += `<td class="text-end">${cell.count} ${i18n.analysis_results.observation_abbr} - ${percentage}%</td>`;
+                html += `<td class="text-end">${cell.count} ${i18nStrings.analysis_results.observation_abbr} - ${percentage}%</td>`;
             });
             
             html += `</tr>`;
@@ -2820,15 +2803,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Build centered title with double underline based on actual table width
         const titleText = param2Name 
-            ? `${i18n.analysis_results.title_two_params}: ${param1Name} ${i18n.analysis_results.and} ${param2Name}`
-            : `${i18n.analysis_results.title_one_param}: ${param1Name}`;
+            ? `${i18nStrings.analysis_results.title_two_params}: ${param1Name} ${i18nStrings.analysis_results.and} ${param2Name}`
+            : `${i18nStrings.analysis_results.title_one_param}: ${param1Name}`;
         const titlePadLeft = Math.max(0, Math.floor((tableWidth - titleText.length) / 2));
         html += ' '.repeat(titlePadLeft) + titleText + '\n';
         html += ' '.repeat(titlePadLeft) + '═'.repeat(titleText.length) + '\n';
         
         // Add centered restrictions with double underline if any
         if (restrictions.length > 0) {
-            const restrictionText = `${i18n.analysis_results.restrictions}: ${restrictions.join(', ')}`;
+            const restrictionText = `${i18nStrings.analysis_results.restriction}: ${restrictions.join(', ')}`;
             const restrictionPadLeft = Math.max(0, Math.floor((tableWidth - restrictionText.length) / 2));
             html += '\n' + ' '.repeat(restrictionPadLeft) + restrictionText + '\n';
             html += ' '.repeat(restrictionPadLeft) + '═'.repeat(restrictionText.length) + '\n';
@@ -2854,7 +2837,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         const formattedData = [];
         const isNumericAlignedParam = param1Code === 'DD' || param1Code === 'zz';
-        const obsAbbr = i18n.analysis_results.observation_abbr || 'Beob.';
+        const obsAbbr = i18nStrings.analysis_results.observation_abbr;
         
         for (const item of data) {
             const key = item.key;
@@ -3015,7 +2998,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const cellWidths = [];
         const countColWidths = [];
         const percColWidths = [];
-        const obsAbbr = i18n.analysis_results.observation_abbr || 'B';
+        const obsAbbr = i18nStrings.analysis_results.observation_abbr || 'B';
         const alignNumericParam1 = param1Code === 'DD' || param1Code === 'zz';
         
         columns.forEach(col => {
@@ -3198,7 +3181,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     // Initialize
-    await loadI18n();
     await loadObservers();
     populateParameterSelects();
     

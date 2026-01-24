@@ -8,7 +8,7 @@ class FilterDialog {
     constructor() {
         this.modalElement = null;
         this.modal = null;
-        this.i18n = null;
+        i18nStrings = i18nStrings;
         this.observersData = null;
         
         // Filter state
@@ -23,17 +23,7 @@ class FilterDialog {
     }
     
     async initialize() {
-        await this.loadI18n();
         await this.loadObserversData();
-    }
-    
-    async loadI18n() {
-        try {
-            const response = await fetch(`/api/i18n/${window.currentLanguage || 'de'}`);
-            this.i18n = await response.json();
-        } catch (error) {
-            console.error('Error loading i18n:', error);
-        }
     }
     
     async loadObserversData() {
@@ -60,13 +50,38 @@ class FilterDialog {
      * @param {Function} onApplyCallback - Called when filters are applied (filterState) => void
      * @param {Function} onCancelCallback - Called when dialog is cancelled
      */
-    show(onApplyCallback, onCancelCallback) {
+    async show(onApplyCallback, onCancelCallback) {
         this.onApply = onApplyCallback;
         this.onCancel = onCancelCallback;
+        
+        // Load fixed observer setting
+        let fixedObserver = '';
+        try {
+            const configResponse = await fetch('/api/config/fixed_observer');
+            const config = await configResponse.json();
+            fixedObserver = config.observer || '';
+        } catch (e) {
+            console.error('Error loading fixed observer:', e);
+        }
         
         this.createModalHTML();
         this.setupEventListeners();
         this.updateText();
+        
+        // Apply fixed observer if set
+        if (fixedObserver) {
+            const filter1Criterion = document.getElementById('filter-criterion-1');
+            filter1Criterion.value = 'observer';
+            filter1Criterion.disabled = true;
+            
+            // Trigger change to show observer dropdown
+            this.handleFilter1Change();
+            
+            // Set and disable observer dropdown
+            const filter1Select = document.getElementById('filter-1-select');
+            filter1Select.value = fixedObserver;
+            filter1Select.disabled = true;
+        }
         
         this.modal = new bootstrap.Modal(this.modalElement);
         this.modal.show();
@@ -117,10 +132,10 @@ class FilterDialog {
                             </div>
                         </div>
                         <div class="modal-footer py-2">
-                            <button type="button" id="btn-cancel-filter" class="btn btn-secondary btn-sm px-3">${this.i18n?.common?.cancel || 'Abbrechen'}</button>
+                            <button type="button" id="btn-cancel-filter" class="btn btn-secondary btn-sm px-3">${i18nStrings.common.cancel}</button>
                             <button type="button" id="btn-apply-filter" class="btn btn-primary btn-sm px-3">
                                 <span id="apply-spinner" class="spinner-border spinner-border-sm me-1" role="status" style="display:none;"></span>
-                                ${this.i18n?.common?.ok || 'OK'}
+                                ${i18nStrings.common.ok}
                             </button>
                         </div>
                     </div>
@@ -172,9 +187,9 @@ class FilterDialog {
     }
     
     updateText() {
-        if (!this.i18n || !this.i18n.ui) return;
+        if (!i18nStrings || !i18nStrings.ui) return;
         
-        const ui = this.i18n.ui;
+        const ui = i18nStrings.ui;
         
         document.getElementById('filterDialogLabel').textContent = ui.filter_dialog.title;
         
@@ -196,9 +211,9 @@ class FilterDialog {
         filter2Select.options[3].textContent = ui.filter_dialog.year;
         filter2Select.options[4].textContent = ui.filter_dialog.halo_type;
         
-        document.getElementById('btn-cancel-filter').textContent = ui.buttons.cancel;
+        document.getElementById('btn-cancel-filter').textContent = i18nStrings.common.cancel;
         const applyBtn = document.getElementById('btn-apply-filter');
-        applyBtn.childNodes[applyBtn.childNodes.length - 1].textContent = ui.buttons.apply;
+        applyBtn.childNodes[applyBtn.childNodes.length - 1].textContent = i18nStrings.common.ok;
     }
     
     handleFilter1Change() {
@@ -233,19 +248,19 @@ class FilterDialog {
             filter2Input.style.display = 'block';
             filter2Value.style.display = 'block';
             filter2SelectElem.style.display = 'none';
-            filter2Value.placeholder = this.i18n && this.i18n.ui ? this.i18n.ui.placeholders.date : '';
+            filter2Value.placeholder = i18nStrings && i18nStrings.ui ? i18nStrings.ui.placeholders.date : '';
             setTimeout(() => filter2Value.focus(), 50);
         } else if (value === 'month') {
             filter2Input.style.display = 'block';
             filter2Value.style.display = 'block';
             filter2SelectElem.style.display = 'none';
-            filter2Value.placeholder = this.i18n && this.i18n.ui ? this.i18n.ui.placeholders.month : '';
+            filter2Value.placeholder = i18nStrings && i18nStrings.ui ? i18nStrings.ui.placeholders.month : '';
             setTimeout(() => filter2Value.focus(), 50);
         } else if (value === 'year') {
             filter2Input.style.display = 'block';
             filter2Value.style.display = 'block';
             filter2SelectElem.style.display = 'none';
-            filter2Value.placeholder = this.i18n && this.i18n.ui ? this.i18n.ui.placeholders.year : '';
+            filter2Value.placeholder = i18nStrings && i18nStrings.ui ? i18nStrings.ui.placeholders.year : '';
             setTimeout(() => filter2Value.focus(), 50);
         } else if (value === 'halo-type') {
             filter2Input.style.display = 'block';
@@ -293,9 +308,9 @@ class FilterDialog {
         const filter1SelectElem = document.getElementById('filter-1-select');
         filter1SelectElem.innerHTML = '';
         
-        if (this.i18n && this.i18n.geographic_regions) {
+        if (i18nStrings && i18nStrings.geographic_regions) {
             for (let i = 1; i <= 39; i++) {
-                const regionName = this.i18n.geographic_regions[String(i)];
+                const regionName = i18nStrings.geographic_regions[String(i)];
                 if (regionName && regionName.trim()) {
                     const option = document.createElement('option');
                     option.value = i;
@@ -308,14 +323,14 @@ class FilterDialog {
     
     populateHaloTypeSelect() {
         const filter2SelectElem = document.getElementById('filter-2-select');
-        const unknown = this.i18n && this.i18n.ui ? this.i18n.ui.filter_dialog.unknown : 'Unknown';
+        const unknown = i18nStrings && i18nStrings.ui ? i18nStrings.ui.filter_dialog.unknown : 'Unknown';
         filter2SelectElem.innerHTML = '';
         
-        if (this.i18n && this.i18n.halo_types) {
+        if (i18nStrings && i18nStrings.halo_types) {
             for (let i = 1; i <= 99; i++) {
                 const option = document.createElement('option');
                 option.value = i;
-                option.textContent = `${String(i).padStart(2, '0')} - ${this.i18n.halo_types[i] || unknown}`;
+                option.textContent = `${String(i).padStart(2, '0')} - ${i18nStrings.halo_types[i] || unknown}`;
                 filter2SelectElem.appendChild(option);
             }
         }
@@ -334,7 +349,7 @@ class FilterDialog {
         // Validate filter 1
         if (this.filterCriterion1 !== 'none') {
             if (!filter1SelectElem.value || filter1SelectElem.value === '') {
-                this.showWarning(this.i18n && this.i18n.ui ? this.i18n.ui.messages.filter_value_required : 'Bitte geben Sie einen Filterwert ein!');
+                this.showWarning(i18nStrings && i18nStrings.ui ? i18nStrings.ui.messages.filter_value_required : 'Bitte geben Sie einen Filterwert ein!');
                 return;
             }
         }
@@ -343,12 +358,12 @@ class FilterDialog {
         if (this.filterCriterion2 !== 'none') {
             if (this.filterCriterion2 === 'date' || this.filterCriterion2 === 'month' || this.filterCriterion2 === 'year') {
                 if (!filter2Value.value.trim()) {
-                    this.showWarning(this.i18n && this.i18n.ui ? this.i18n.ui.messages.filter_value_required : 'Bitte geben Sie einen Filterwert ein!');
+                    this.showWarning(i18nStrings && i18nStrings.ui ? i18nStrings.ui.messages.filter_value_required : 'Bitte geben Sie einen Filterwert ein!');
                     return;
                 }
             } else if (this.filterCriterion2 === 'halo-type') {
                 if (!filter2SelectElem.value || filter2SelectElem.value === '') {
-                    this.showWarning(this.i18n && this.i18n.ui ? this.i18n.ui.messages.filter_value_required : 'Bitte geben Sie einen Filterwert ein!');
+                    this.showWarning(i18nStrings && i18nStrings.ui ? i18nStrings.ui.messages.filter_value_required : 'Bitte geben Sie einen Filterwert ein!');
                     return;
                 }
             }

@@ -2,7 +2,6 @@
 document.addEventListener('DOMContentLoaded', async function() {
 
 
-    let i18n = null;
     let allObservers = [];
     let fixedObserver = '';
     let currentReportData = null; // Store current report data for save/print
@@ -24,25 +23,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     const btnApply = document.getElementById('btn-apply-filter');
     const applySpinner = document.getElementById('apply-spinner');
 
-    // Load i18n strings
-    async function loadI18n() {
-        try {
-            const langResponse = await fetch('/api/language');
-            const langData = await langResponse.json();
-            const lang = langData.language || 'de';
-
-            const i18nResponse = await fetch(`/api/i18n/${lang}`);
-            i18n = await i18nResponse.json();
-
-            
-            // Update UI text
-            updateUIText();
-        } catch (error) {
-            console.error('Error loading i18n:', error);
-            i18n = { monthly_report: {}, ui: { messages: {} } };
-        }
-    }
-    
     // Show warning modal (same style as main.js)
     function showWarningModal(message) {
         const modalHtml = `
@@ -50,14 +30,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">${i18n.common.warning}</h5>
+                            <h5 class="modal-title">${i18nStrings.common.warning}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
                             <p>${message}</p>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">${i18n.common.ok}</button>
+                            <button type="button" class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.ok}</button>
                         </div>
                     </div>
                 </div>
@@ -80,12 +60,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Observer select placeholder
         const observerPlaceholder = document.getElementById('observer-select-placeholder');
         if (observerPlaceholder) {
-            observerPlaceholder.textContent = '-- ' + i18n.observers?.select_prompt + ' --';
+            observerPlaceholder.textContent = '-- ' + i18nStrings.observers.select_prompt + ' --';
         }
         
         // Populate year dropdown
         if (yearSelect) {
-            yearSelect.innerHTML = '<option value="">-- ' + i18n.fields?.select + ' --</option>';
+            yearSelect.innerHTML = '<option value="">-- ' + i18nStrings.fields.select + ' --</option>';
             for (let year = 1950; year <= 2049; year++) {
                 const yy = String(year % 100).padStart(2, '0');
                 yearSelect.innerHTML += `<option value="${yy}">${year}</option>`;
@@ -143,7 +123,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Populate observer dropdown
     function populateObserverSelect() {
-        const placeholder = '-- ' + i18n.observers?.select_prompt + ' --';
+        const placeholder = '-- ' + i18nStrings.observers.select_prompt + ' --';
         observerSelect.innerHTML = `<option value="">${placeholder}</option>`;
 
         // Get unique observers (latest record per KK)
@@ -180,7 +160,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             const fixedKK = parseInt(fixedObserver);
             if (observerMap.has(fixedKK)) {
                 observerSelect.value = fixedKK;
-
+                // Disable dropdown when fixed observer is set
+                observerSelect.disabled = true;
             }
         }
     }
@@ -193,7 +174,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const jj = yearSelect.value;
         
         if (!mm || !jj) {
-            const msg = i18n.monthly_report?.error_month_year_required;
+            const msg = i18nStrings.monthly_report.error_month_year_required;
             monthYearError.textContent = msg;
             monthYearError.style.display = 'block';
             return null;
@@ -211,7 +192,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         // Validate observer selection
         if (!selectedKK) {
-            alert(i18n.monthly_report?.error_no_observer);
+            showWarningModal(i18nStrings.monthly_report.error_no_observer);
             observerSelect.focus;
             return;
         }
@@ -249,8 +230,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         } catch (error) {
             console.error('Error generating report:', error);
-            const errorMsg = i18n.ui.messages.error;
-            alert(errorMsg);
+            showWarningModal(error.message || i18nStrings.common.error_loading);
         } finally {
             applySpinner.style.display = 'none';
             btnApply.disabled = false;
@@ -396,7 +376,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         // Modal title shows i18n title
-        reportTitle.textContent = i18n.output?.monthly_report;
+        reportTitle.textContent = i18nStrings.output.monthly_report;
         
         // Expose output mode for save/print helpers
         window.currentOutputMode = outputMode;
@@ -458,11 +438,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Build HTML-Tabellen format report (implementation)
     function buildHTMLTableReport(data, i18n) {
         // Use i18n month names
-        const monthName = i18n.months?.[data.mm] || data.mm;
+        const monthName = i18nStrings.months.[data.mm] || data.mm;
         
         // Format title
         const year = data.jj < 50 ? 2000 + data.jj : 1900 + data.jj;
-        const title = i18n.monthly_report.report_title_template
+        const title = i18nStrings.monthly_report.report_title_template
             .replace('{observer}', data.observer_name)
             .replace('{month}', monthName)
             .replace('{year}', year);
@@ -476,14 +456,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         html += '<table class="table table-bordered analysis-table">';
         html += '<thead>';
         html += '<tr>';
-        html += '<th class="monthly-report-header" style="font-family: monospace; white-space: pre;">KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18n.monthly_report.sectors + ' ' + i18n.monthly_report.remarks + '</th>';
+        html += '<th class="monthly-report-header" style="font-family: monospace; white-space: pre;">KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18nStrings.monthly_report.sectors + ' ' + i18nStrings.monthly_report.remarks + '</th>';
         html += '</tr>';
         html += '</thead>';
         html += '<tbody>';
         
         // Observations using kurzausgabe format
         if (data.observations.length === 0) {
-            const noObsMsg = i18n.ui?.messages?.no_observations;
+            const noObsMsg = i18nStrings.ui.messages.no_observations;
             html += `<tr><td style="text-align: center; padding: 20px;">${noObsMsg}</td></tr>`;
         } else {
             for (const obs of data.observations) {
@@ -498,8 +478,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         html += '<tfoot>';
         html += '<tr>';
         html += `<td style="text-align: center; padding: 10px;">`;
-        html += `<strong>${i18n.monthly_report.main_location}:</strong> ${data.observer_hbort}<br>`;
-        html += `<strong>${i18n.monthly_report.secondary_location}:</strong> ${data.observer_nbort}`;
+        html += `<strong>${i18nStrings.monthly_report.main_location}:</strong> ${data.observer_hbort}<br>`;
+        html += `<strong>${i18nStrings.monthly_report.secondary_location}:</strong> ${data.observer_nbort}`;
         html += `</td>`;
         html += '</tr>';
         html += '</tfoot>';
@@ -518,9 +498,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         let outputMode = window.currentOutputMode || 'P'; // Default: Pseudografik
         
         const data = currentReportData;
-        const monthName = i18n.months[data.mm];
+        const monthName = i18nStrings.months[data.mm];
         const year = data.jj < 50 ? 2000 + data.jj : 1900 + data.jj;
-        const title = i18n.monthly_report.report_title_template
+        const title = i18nStrings.monthly_report.report_title_template
             .replace('{observer}', data.observer_name)
             .replace('{month}', monthName)
             .replace('{year}', year);
@@ -532,11 +512,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Markdown format
             text += `# ${title}\n\n`;
             text += '```\n';
-            text += 'KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18n.monthly_report.sectors + ' ' + i18n.monthly_report.remarks + '\n';
+            text += 'KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18nStrings.monthly_report.sectors + ' ' + i18nStrings.monthly_report.remarks + '\n';
             text += '```\n\n';
             
             if (data.observations.length === 0) {
-                const noObsMsg = i18n.ui?.messages?.no_observations;
+                const noObsMsg = i18nStrings.ui.messages.no_observations;
                 text += `**${noObsMsg}**\n\n`;
             } else {
                 text += '```\n';
@@ -551,19 +531,19 @@ document.addEventListener('DOMContentLoaded', async function() {
                 text += '```\n\n';
             }
             
-            text += `## ${i18n.monthly_report.main_location}\n`;
+            text += `## ${i18nStrings.monthly_report.main_location}\n`;
             text += `${data.observer_hbort}\n\n`;
-            text += `## ${i18n.monthly_report.secondary_location}\n`;
+            text += `## ${i18nStrings.monthly_report.secondary_location}\n`;
             text += `${data.observer_nbort}\n`;
         } else if (outputMode === 'H') {
             // HTML format - return as plain monospace text
             text += title + '\n';
             text += '═'.repeat(title.length) + '\n\n';
-            text += 'KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18n.monthly_report.sectors + ' ' + i18n.monthly_report.remarks + '\n';
+            text += 'KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18nStrings.monthly_report.sectors + ' ' + i18nStrings.monthly_report.remarks + '\n';
             text += '─'.repeat(120) + '\n';
             
             if (data.observations.length === 0) {
-                const noObsMsg = i18n.ui?.messages?.no_observations;
+                const noObsMsg = i18nStrings.ui.messages.no_observations;
                 text += noObsMsg + '\n';
             } else {
                 for (const obs of data.observations) {
@@ -577,8 +557,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
             
             text += '─'.repeat(120) + '\n';
-            text += `${i18n.monthly_report.main_location}: ${data.observer_hbort}\n`;
-            text += `${i18n.monthly_report.secondary_location}: ${data.observer_nbort}\n`;
+            text += `${i18nStrings.monthly_report.main_location}: ${data.observer_hbort}\n`;
+            text += `${i18nStrings.monthly_report.secondary_location}: ${data.observer_nbort}\n`;
         } else {
             // Pseudografik format (original)
             text = '';
@@ -588,8 +568,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             text += ' '.repeat(titlePadLeft) + title + '\n';
             text += ' '.repeat(titlePadLeft) + '═'.repeat(title.length) + '\n\n';
             text += '╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗\n';
-            const sectors = i18n.monthly_report.sectors;
-            const remarks = i18n.monthly_report.remarks;
+            const sectors = i18nStrings.monthly_report.sectors;
+            const remarks = i18nStrings.monthly_report.remarks;
             const headerLine = `KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ${sectors.padEnd(15)} ${remarks.padEnd(47)}`;
             text += '║ ' + headerLine.substring(0, 118).padEnd(118) + ' ║\n';
             text += '╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣\n';
@@ -611,7 +591,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             // No observations message
             if (data.observations.length === 0) {
-                const noObsMsg = i18n.ui?.messages?.no_observations;
+                const noObsMsg = i18nStrings.ui.messages.no_observations;
                 const padding = Math.floor((118 - noObsMsg.length) / 2);
                 text += '║' + ' '.repeat(118) + '║\n';
                 text += '║' + ' '.repeat(padding) + noObsMsg + ' '.repeat(118 - padding - noObsMsg.length) + '║\n';
@@ -620,8 +600,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             // Footer
             text += '╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣\n';
-            let hbLine = i18n.monthly_report.main_location + ': ' + data.observer_hbort;
-            let nbLine = i18n.monthly_report.secondary_location + ': ' + data.observer_nbort;
+            let hbLine = i18nStrings.monthly_report.main_location + ': ' + data.observer_hbort;
+            let nbLine = i18nStrings.monthly_report.secondary_location + ': ' + data.observer_nbort;
             const hbPadLeft = Math.floor((122 - hbLine.length) / 2);
             hbLine = ' '.repeat(hbPadLeft) + hbLine;
             nbLine = ' '.repeat(hbPadLeft) + nbLine;
@@ -668,7 +648,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             btnPrint.onclick = () => {
                 const reportContent = document.getElementById('report-content');
                 if (reportContent) {
-                    const printTitle = i18n.menus?.output?.monthly_report;
+                    const printTitle = i18nStrings.output.monthly_report;
                     const printWindow = window.open('', '_blank');
                     printWindow.document.write(`<html><head><title>${printTitle}</title>`);
                     printWindow.document.write('<style>');
@@ -699,7 +679,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const outputMode = window.currentOutputMode || 'P';
                 
                 const data = currentReportData;
-                const monthShort = i18n.months_short?.[data.mm] || String(data.mm).padStart(2, '0');
+                const monthShort = i18nStrings.months_short.[data.mm] || String(data.mm).padStart(2, '0');
                 const kkPadded = String(data.kk).padStart(2, '0');
                 const jjPadded = String(data.jj).padStart(2, '0');
                 
@@ -722,7 +702,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         URL.revokeObjectURL(url);
                     } catch (error) {
                         console.error('Error fetching markdown for save:', error);
-                        alert('Error saving markdown file');
+                        showErrorDialog('Error saving markdown file');
                     }
                 } else {
                     // Save as CSV file (lowercase filename) for H and P modes
@@ -820,7 +800,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         // No data loaded
-        const msg = i18n.dialogs.no_data.message;
+        const msg = i18nStrings.dialogs.no_data.message;
         showWarningModal(msg);
     }
 

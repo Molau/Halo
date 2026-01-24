@@ -8,13 +8,10 @@ let observersList = [];
 let regionsList = [];
 let currentPage = 1;
 const pageSize = 50;  // Show 50 observers per page
-let i18n = null;
 
 // Show filter dialog on page load
 document.addEventListener('DOMContentLoaded', () => {
     (async () => {
-        await ensureCurrentLanguage();
-        await loadI18n(window.currentLanguage);
         await loadDropdownData();
         showFilterDialog();
     })();
@@ -27,16 +24,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // Pagination event listeners
-    document.getElementById('btn-first-page')?.addEventListener('click', () => goToPage(1));
-    document.getElementById('btn-prev-page')?.addEventListener('click', () => goToPage(currentPage - 1));
-    document.getElementById('btn-next-page')?.addEventListener('click', () => goToPage(currentPage + 1));
-    document.getElementById('btn-last-page')?.addEventListener('click', () => {
+    document.getElementById('btn-first-page').addEventListener('click', () => goToPage(1));
+    document.getElementById('btn-prev-page').addEventListener('click', () => goToPage(currentPage - 1));
+    document.getElementById('btn-next-page').addEventListener('click', () => goToPage(currentPage + 1));
+    document.getElementById('btn-last-page').addEventListener('click', () => {
         const maxPage = Math.ceil(filteredObservers.length / pageSize);
         goToPage(maxPage);
     });
     
     // Exit button
-    document.getElementById('btn-exit-observers')?.addEventListener('click', () => {
+    document.getElementById('btn-exit-observers').addEventListener('click', () => {
         window.location.href = '/';
     });
     
@@ -55,32 +52,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
-
-async function loadI18n() {
-    try {
-        const response = await fetch(`/api/i18n/${window.currentLanguage || 'de'}`);
-        i18n = await response.json();
-    } catch (error) {
-        console.error('Error loading i18n:', error);
-    }
-}
-
-async function ensureCurrentLanguage() {
-    try {
-        const response = await fetch('/api/language');
-        if (response.ok) {
-            const data = await response.json();
-            if (data && data.language) {
-                window.currentLanguage = data.language;
-            }
-        }
-    } catch (error) {
-        console.error('Error ensuring current language:', error);
-    }
-    if (!window.currentLanguage) {
-        window.currentLanguage = 'de';
-    }
-}
 
 /**
  * Load dropdown data for filters
@@ -109,7 +80,7 @@ async function loadDropdownData() {
 function populateDropdowns() {
     // Populate observers dropdown
     const kkSelect = document.getElementById('filter-select-kk');
-    const prompt = (i18n && i18n.observers && i18n.observers.select_prompt) ? i18n.observers.select_prompt : 'Bitte auswählen...';
+    const prompt = (i18nStrings.observers.select_prompt) ? i18nStrings.observers.select_prompt : 'Bitte auswählen...';
     kkSelect.innerHTML = `<option value="">${prompt}</option>`;
     observersList.forEach(obs => {
         // Skip observers with missing data
@@ -136,13 +107,42 @@ function populateDropdowns() {
 /**
  * Show filter dialog
  */
-function showFilterDialog() {
+async function showFilterDialog() {
+    // Load fixed observer setting
+    let fixedObserver = '';
+    try {
+        const configResponse = await fetch('/api/config/fixed_observer');
+        const config = await configResponse.json();
+        fixedObserver = config.observer || '';
+    } catch (e) {
+        console.error('Error loading fixed observer:', e);
+    }
+    
     const modal = new bootstrap.Modal(document.getElementById('filter-dialog'));
     modal.show();
     
-    // Reset filter
-    document.getElementById('filter-type').value = 'none';
-    handleFilterTypeChange();
+    const filterTypeSelect = document.getElementById('filter-type');
+    const kkSelect = document.getElementById('filter-select-kk');
+    
+    // If fixed observer is set, pre-select and disable
+    if (fixedObserver) {
+        // Set filter type to KK
+        filterTypeSelect.value = 'kk';
+        filterTypeSelect.disabled = true;
+        
+        // Show KK dropdown
+        handleFilterTypeChange();
+        
+        // Set observer value
+        kkSelect.value = fixedObserver;
+        kkSelect.disabled = true;
+    } else {
+        // Reset filter
+        filterTypeSelect.value = 'none';
+        filterTypeSelect.disabled = false;
+        kkSelect.disabled = false;
+        handleFilterTypeChange();
+    }
 }
 
 /**
@@ -192,8 +192,7 @@ async function applyFilter() {
     
     // Validate
     if (filterType !== 'none' && !filterValue) {
-        const msg = i18n && i18n.observers ? i18n.observers.warning_select_value : 'Bitte wählen Sie einen Wert aus.';
-        showWarning(msg);
+        showWarning(i18nStrings.observers.warning_select_value);
         return;
     }
     
@@ -222,8 +221,7 @@ async function loadObservers(filterType, filterValue, latestOnly) {
         displayObservers();
     } catch (error) {
         console.error('Error loading observers:', error);
-        const errMsg = i18n && i18n.observers ? i18n.observers.loading_error : 'Fehler beim Laden der Beobachter.';
-        showWarning(errMsg);
+        showWarning(i18nStrings.observers.loading_error);
     }
 }
 
@@ -243,14 +241,10 @@ function goToPage(page) {
  */
 function displayObservers() {
     if (filteredObservers.length === 0) {
-        showWarningModal((i18n && i18n.messages && i18n.messages.no_observers));
+        showWarningModal(i18nStrings.ui.messages.no_observers);
         return;
     }
-    
-    const yesText = (i18n && i18n.observers && i18n.observers.yes) ? i18n.observers.yes : 'Ja';
-    const noText = (i18n && i18n.observers && i18n.observers.no) ? i18n.observers.no : 'Nein';
-    const recordsLabel = i18n && i18n.observers ? i18n.observers.records_label : 'Datensätze';
-    
+        
     // Build table rows
     let rows = '';
     filteredObservers.forEach(obs => {
@@ -267,7 +261,7 @@ function displayObservers() {
                 <td>${obs.KK}</td>
                 <td>${obs.VName} ${obs.NName}</td>
                 <td>${obs.seit}</td>
-                <td>${obs.aktiv === '1' ? yesText : noText}</td>
+                <td>${obs.aktiv === '1' ? i18nStrings.common.yes : i18nStrings.common.no}</td>
                 <td>${obs.HbOrt}</td>
                 <td>${ghFormatted}</td>
                 <td style="font-size: 0.9em;">${hCoords}</td>
@@ -283,7 +277,7 @@ function displayObservers() {
             <div class="modal-dialog modal-dialog-centered modal-xl">
                 <div class="modal-content">
                     <div class="modal-header py-1">
-                        <h6 class="modal-title mb-0">${(i18n && i18n.observers && i18n.observers.title)} (${filteredObservers.length} ${recordsLabel})</h6>
+                        <h6 class="modal-title mb-0">${(i18nStrings.observers.title)} (${filteredObservers.length} ${i18nStrings.common.no})</h6>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body py-2" style="max-height: 70vh; overflow-y: auto;">
@@ -291,15 +285,15 @@ function displayObservers() {
                             <thead class="table-light sticky-top">
                                 <tr>
                                     <th>KK</th>
-                                    <th>${(i18n && i18n.observers && i18n.observers.name)}</th>
-                                    <th>${(i18n && i18n.observers && i18n.observers.since)}</th>
-                                    <th>${(i18n && i18n.observers && i18n.observers.active)}</th>
-                                    <th>${(i18n && i18n.observers && i18n.observers.primary_site)}</th>
+                                    <th>${(i18nStrings.observers.name_label)}</th>
+                                    <th>${(i18nStrings.observers.since_label)}</th>
+                                    <th>${(i18nStrings.common.active)}</th>
+                                    <th>${(i18nStrings.fields.primary_site)}</th>
                                     <th>GH</th>
-                                    <th>${(i18n && i18n.observers && i18n.observers.coordinates)}</th>
-                                    <th>${(i18n && i18n.observers && i18n.observers.secondary_site)}</th>
+                                    <th>${(i18nStrings.observers.coordinates_label)}</th>
+                                    <th>${(i18nStrings.fields.secondary_site)}</th>
                                     <th>GN</th>
-                                    <th>${(i18n && i18n.observers && i18n.observers.coordinates)}</th>
+                                    <th>${(i18nStrings.observers.coordinates_label)}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -308,7 +302,7 @@ function displayObservers() {
                         </table>
                     </div>
                     <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">${(i18n && i18n.ui && i18n.ui.buttons && i18n.ui.buttons.close)}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.ok}</button>
                     </div>
                 </div>
             </div>
