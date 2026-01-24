@@ -474,7 +474,7 @@ async function showAddObservationDialogNumeric() {
         observers = data.observers;
     } catch (e) {
         console.error(e);
-        showErrorDialog(i18nStrings.common.error_loading_observers);
+        showErrorDialog(i18nStrings.messages.error_loading_observers);
         return;
     }
 
@@ -822,7 +822,7 @@ async function showAddObservationDialogMenu() {
         observers = data.observers;
     } catch (e) {
         console.error(e);
-        showWarningModal(i18nStrings.common.error_loading_observers);
+        showWarningModal(i18nStrings.messages.error_loading_observers);
         return;
     }
     
@@ -1716,7 +1716,7 @@ async function checkForUpdates() {
                             window.location.reload();
                         }, 2000);
                     } catch (e) {
-                        showErrorDialog(title, i18nStrings.dialogs.error.title.replace('{error}', String(e)));
+                        showErrorDialog(title, i18nStrings.messages.error_loading.replace('{error}', String(e)));
                         resolve();
                     }
                 }, () => {
@@ -1810,16 +1810,16 @@ function updateMenuText() {
     });
     
     // Update dropdown menu items (i18n already contains correct language)
-    updateDropdownItem('help-version', i18nStrings.menus.help.version);
-    updateDropdownItem('help-new', i18nStrings.menus.help.whats_new);
-    updateDropdownItem('new-file', i18nStrings.menus.file.new_file);
-    updateDropdownItem('load', i18nStrings.menus.file.load);
-    updateDropdownItem('select', i18nStrings.menus.file.select);
-    updateDropdownItem('merge', i18nStrings.menus.file.merge);
-    updateDropdownItem('save', i18nStrings.menus.file.save);
-    updateDropdownItem('save-as', i18nStrings.menus.file.save_as);
-    updateDropdownItem('upload', i18nStrings.menus.file.upload);
-    updateDropdownItem('download', i18nStrings.menus.file.download);
+    updateDropdownItem('help-version', i18nStrings.help.version);
+    updateDropdownItem('help-new', i18nStrings.help.whats_new);
+    updateDropdownItem('new-file', i18nStrings.file.new_file);
+    updateDropdownItem('load', i18nStrings.file.load);
+    updateDropdownItem('select', i18nStrings.file.select);
+    updateDropdownItem('merge', i18nStrings.file.merge);
+    updateDropdownItem('save', i18nStrings.file.save);
+    updateDropdownItem('save-as', i18nStrings.file.save_as);
+    updateDropdownItem('upload', i18nStrings.file.upload);
+    updateDropdownItem('download', i18nStrings.file.download);
     updateDropdownItem('obs-display', i18nStrings.observations.display);
     updateDropdownItem('obs-add', i18nStrings.observations.add);
     updateDropdownItem('obs-modify', i18nStrings.observations.modify);
@@ -1830,17 +1830,17 @@ function updateMenuText() {
     updateDropdownItem('output-monthly-report', i18nStrings.output.monthly_report);
     updateDropdownItem('output-monthly-stats', i18nStrings.output.monthly_stats);
     updateDropdownItem('output-yearly-stats', i18nStrings.output.yearly_stats);
-    updateDropdownItem('settings-fixed-observer', i18nStrings.menus.settings.fixed_observer);
-    updateDropdownItem('settings-eingabeart', i18nStrings.menus.settings.input_type);
-    if (i18nStrings.menus.settings.active_observers) {
-        updateDropdownItem('settings-active-observers', i18nStrings.menus.settings.active_observers);
+    updateDropdownItem('settings-fixed-observer', i18nStrings.settings.fixed_observer);
+    updateDropdownItem('settings-eingabeart', i18nStrings.settings.input_type);
+    if (i18nStrings.settings.active_observers) {
+        updateDropdownItem('settings-active-observers', i18nStrings.settings.active_observers);
     }
     
     // Update link text for observations (has href, not data-action)
     const obsLink = document.querySelector('a[href="/observations"]');
     if (obsLink) obsLink.textContent = i18nStrings.observations.display;
     const returnLink = document.querySelector('a[href="/"]');
-    if (returnLink) returnLink.textContent = i18nStrings.common.back_to_main;
+    if (returnLink) returnLink.textContent = i18nStrings.messages.back_to_main;
 }
 
 function updateDropdownItem(action, text) {
@@ -1896,17 +1896,17 @@ async function showModifyObservationsDialog() {
     try {
         const response = await fetch('/api/observations?limit=1');
         if (!response.ok) {
-            showWarningModal(i18nStrings.dialogs.no_data.message);
+            showWarningModal(   ta);
             return;
         }
         const data = await response.json();
         if (!data.total || data.total === 0) {
-            showWarningModal(i18nStrings.dialogs.no_data.message);
+            showWarningModal(i18nStrings.messages.no_data);
             return;
         }
     } catch (error) {
         console.error('Error checking observations:', error);
-        showWarningModal(i18nStrings.dialogs.no_data.message);
+        showWarningModal(i18nStrings.messages.no_data);
         return;
     }
     
@@ -1986,7 +1986,7 @@ async function showModifySingleObservations(filterState) {
     const filteredObs = await applyFilterToObservations(filterState);
     
     if (filteredObs.length === 0) {
-        showWarningModal(i18nStrings.ui.messages.no_observations);
+        showWarningModal(i18nStrings.messages.no_observations);
         return;
     }
     
@@ -2025,7 +2025,7 @@ async function showModifyGroupObservations(filterState) {
     const filteredObs = await applyFilterToObservations(filterState);
     
     if (filteredObs.length === 0) {
-        showWarningModal(i18nStrings.ui.messages.no_observations);
+        showWarningModal(i18nStrings.messages.no_observations);
         return;
     }
     
@@ -2055,7 +2055,7 @@ async function showGroupModifyDialogMenu(filteredObs) {
         }
     } catch (e) {
         console.error(e);
-        showWarningModal(i18nStrings.common.error_loading_observers);
+        showWarningModal(i18nStrings.messages.error_loading_observers);
         return;
     }
     
@@ -2076,7 +2076,7 @@ async function showGroupModifyDialogMenu(filteredObs) {
             <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content">
                     <div class="modal-header py-1">
-                        <h6 class="modal-title mb-0">${i18nStrings.observations.modify_groups_title} (${filteredObs.length} ${i18nStrings.common.observations_count})</h6>
+                        <h6 class="modal-title mb-0">${i18nStrings.observations.modify_groups_title} (${filteredObs.length} ${i18nStrings.common.observations})</h6>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body py-2">
@@ -2433,17 +2433,17 @@ async function showDeleteObservationsDialog() {
     try {
         const response = await fetch('/api/observations?limit=1');
         if (!response.ok) {
-            showWarningModal(i18nStrings.dialogs.no_data.message);
+            showWarningModal(i18nStrings.messages.no_data);
             return;
         }
         const data = await response.json();
         if (!data.total || data.total === 0) {
-            showWarningModal(i18nStrings.dialogs.no_data.message);
+            showWarningModal(i18nStrings.messages.no_data);
             return;
         }
     } catch (error) {
         console.error('Error checking observations:', error);
-        showWarningModal(i18nStrings.dialogs.no_data.message);
+        showWarningModal(i18nStrings.messages.no_data);
         return;
     }
 
@@ -2468,7 +2468,7 @@ async function showDeleteSingleObservations(filterState) {
     const filteredObs = await applyFilterToObservations(filterState);
 
     if (filteredObs.length === 0) {
-        showWarningModal(i18nStrings.ui.messages.no_observations);
+        showWarningModal(i18nStrings.messages.no_observations);
         return;
     }
 
@@ -2912,7 +2912,7 @@ async function showObservationFormForEdit(obs, currentNum, totalNum, onModified,
             // Trigger autosave
             await triggerAutosave();
             
-            const successMsg = i18nStrings.dialogs.success.observation_modified;
+            const successMsg = i18nStrings.messages.observation_modified;
             showMessage(successMsg, 'success');
             
             // Delay before calling onModified (which redirects)
@@ -2943,17 +2943,17 @@ async function showDisplayObservationsDialog() {
     try {
         const response = await fetch('/api/observations?limit=1');
         if (!response.ok) {
-            showWarningModal(i18nStrings.dialogs.no_data.message);
+            showWarningModal(i18nStrings.messages.no_data);
             return;
         }
         const data = await response.json();
         if (!data.total || data.total === 0) {
-            showWarningModal(i18nStrings.dialogs.no_data.message);
+            showWarningModal(i18nStrings.messages.no_data);
             return;
         }
     } catch (error) {
         console.error('Error checking observations:', error);
-        showWarningModal(i18nStrings.dialogs.no_data.message);
+        showWarningModal(i18nStrings.messages.no_data);
         return;
     }
     
@@ -2996,7 +2996,7 @@ async function showDisplayCompactList(filterState) {
     const filteredObs = await applyFilterToObservations(filterState);
     
     if (filteredObs.length === 0) {
-        showWarningModal(i18nStrings.ui.messages.no_observations);
+        showWarningModal(i18nStrings.messages.no_observations);
         return;
     }
     
@@ -3066,10 +3066,10 @@ async function showDisplayCompactList(filterState) {
         document.getElementById('compact-list-content').textContent = lines.join('\n');
         
         // Update page info
-        document.getElementById('page-info').textContent = `${i18nStrings.ui.messages.page} ${currentPage} ${i18nStrings.ui.messages.of} ${maxPage}`;
+        document.getElementById('page-info').textContent = `${i18nStrings.common.page} ${currentPage} ${i18nStrings.common.of} ${maxPage}`;
         
         // Update record info
-        document.getElementById('record-info').textContent = `${i18nStrings.ui.messages.row} ${startIndex + 1}-${endIndex} ${i18nStrings.ui.messages.of} ${filteredObs.length}`;
+        document.getElementById('record-info').textContent = `${i18nStrings.common.row} ${startIndex + 1}-${endIndex} ${i18nStrings.common.of} ${filteredObs.length}`;
         
         // Update button states
         document.getElementById('btn-first').disabled = currentPage === 1;
@@ -3276,7 +3276,7 @@ async function showDisplaySingleObservations(filterState) {
     const filteredObs = await applyFilterToObservations(filterState);
     
     if (filteredObs.length === 0) {
-        showWarningModal(i18nStrings.ui.messages.no_observations);
+        showWarningModal(i18nStrings.messages.no_observations);
         return;
     }
     
@@ -3324,7 +3324,7 @@ async function showActiveObserversDialog() {
         const config = await response.json();
         const enabled = !!config.enabled;
 
-        const title = i18nStrings.menus.settings.active_observers_question;
+        const title = i18nStrings.settings.active_observers_question;
         const i18nStrings.common.yes = i18nStrings.common.yes;
         const i18nStrings.common.no = i18nStrings.common.no;
 
@@ -3394,11 +3394,11 @@ async function showStartupFileDialog() {
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">${i18nStrings.menus.settings.startup_file_title}</h5>
+                            <h5 class="modal-title">${i18nStrings.settings.startup_file_title}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
-                            <p class="mb-3">${i18nStrings.menus.settings.startup_file_question}</p>
+                            <p class="mb-3">${i18nStrings.settings.startup_file_question}</p>
                             <div class="form-check form-check-inline mb-3">
                                 <input class="form-check-input" type="radio" name="startup_file" id="startup-yes" value="1" ${enabled ? 'checked' : ''}>
                                 <label class="form-check-label" for="startup-yes">${i18nStrings.common.yes}</label>
@@ -3449,7 +3449,7 @@ async function showStartupFileDialog() {
                             body: JSON.stringify({enabled: true, file_path: file.name})
                         });
                         // Show success message
-                        showNotification(`<strong>✓</strong> ${i18nStrings.menus.settings.startup_file_changed}`);
+                        showNotification(`<strong>✓</strong> ${i18nStrings.settings.startup_file_changed}`);
                     }
                 };
                 fileInput.click();
@@ -3461,7 +3461,7 @@ async function showStartupFileDialog() {
                     body: JSON.stringify({enabled: false, file_path: ''})
                 });
                 // Show success message
-                showNotification(`<strong>✓</strong> ${i18nStrings.menus.settings.startup_file_disabled}`);
+                showNotification(`<strong>✓</strong> ${i18nStrings.settings.startup_file_disabled}`);
             }
         });
 
@@ -3487,7 +3487,7 @@ async function showSelectDialog() {
     const obsData = await obsResp.json();
     
     if (!obsData.observations || obsData.observations.length === 0) {
-        showWarningModal(i18nStrings.dialogs.no_data.message);
+        showWarningModal(i18nStrings.messages.no_data);
         return;
     }
 
@@ -3682,7 +3682,7 @@ async function showSelectDialog() {
                         <!-- New filename input -->
                         <div class="mb-3">
                             <label for="select-filename" class="form-label">${i18nStrings.observations.new_filename}:</label>
-                            <input type="text" id="select-filename" class="form-control" placeholder="${i18nStrings.common.enter_filename_placeholder}">
+                            <input type="text" id="select-filename" class="form-control" placeholder="${i18nStrings.messages.enter_filename_placeholder}">
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -4073,7 +4073,7 @@ async function showSelectDialog() {
         }
 
         if (!filename) {
-            showWarningModal(i18nStrings.common.please_enter_filename);
+            showWarningModal(i18nStrings.messages.please_enter_filename);
             return;
         }
         
@@ -4141,15 +4141,15 @@ async function showSelectDialog() {
                 if (status.dirty) {
                     // File has unsaved changes - ask to save first
                     showConfirmDialog(
-                        i18nStrings.dialogs.unsaved_changes.title,
-                        i18nStrings.dialogs.unsaved_changes.message,
+                        i18nStrings.messages.unsaved_changes_title,
+                        i18nStrings.messages.unsaved_changes_message,
                         async () => {
                             // Save the file first
                             const saveResp = await fetch('/api/file/save', { method: 'POST' });
                             if (saveResp.ok) {
                                 callback();
                             } else {
-                                showWarningModal(i18nStrings.dialogs.save_failed);
+                                showWarningModal(i18nStrings.messages.save_failed);
                             }
                         },
                         () => {
@@ -4178,7 +4178,7 @@ async function showSelectDialog() {
                 <div class="modal-content">
                     <div class="modal-body text-center py-4">
                         <div class="spinner-border text-primary mb-3" role="status">
-                            <span class="visually-hidden">${i18nStrings.dialogs.loading.loading}</span>
+                            <span class="visually-hidden">${i18nStrings.messages.loading_spinner}</span>
                         </div>
                         <p class="mb-0">${i18nStrings.observations.select_processing}</p>
                     </div>
@@ -4246,7 +4246,7 @@ async function showSelectDialog() {
             
             // Check if result is empty
             if (keptCount === 0) {
-                const emptyMessage = i18nStrings.dialogs.empty_filter_result;
+                const emptyMessage = i18nStrings.messages.empty_filter_result;
                 showWarningModal(emptyMessage);
                 bsLoadingModal.hide();
                 loadingModal.remove();
@@ -4257,7 +4257,7 @@ async function showSelectDialog() {
             
             // Function to show selection results
             function showSelectionResults(filename, keptCount, deletedCount) {
-                const message = i18nStrings.dialogs.success.selection_result
+                const message = i18nStrings.messages.selection_result
                     .replace('{kept}', keptCount)
                     .replace('{deleted}', deletedCount)
                     .replace('{filename}', filename);
@@ -4297,8 +4297,8 @@ async function showSelectDialog() {
             if (saveResult.exists) {
                 // File exists - ask for overwrite confirmation
                 showConfirmDialog(
-                    i18nStrings.dialogs.file_exists.title,
-                    i18nStrings.dialogs.file_exists.message,
+                    i18nStrings.messages.file_exists_title,
+                    i18nStrings.messages.file_exists_message,
                     async () => {
                         // User confirmed overwrite
                         // Recreate loading modal
@@ -4309,9 +4309,9 @@ async function showSelectDialog() {
                                 <div class="modal-content">
                                     <div class="modal-body text-center py-4">
                                         <div class="spinner-border text-primary mb-3" role="status">
-                                            <span class="visually-hidden">${i18nStrings.dialogs.loading.loading}</span>
+                                            <span class="visually-hidden">${i18nStrings.messages.loading_spinner}</span>
                                         </div>
-                                        <p class="mb-0">${i18nStrings.common.saving}</p>
+                                        <p class="mb-0">${i18nStrings.messages.saving}</p>
                                     </div>
                                 </div>
                             </div>
@@ -4454,11 +4454,11 @@ async function showNewFileDialog() {
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">${i18nStrings.dialogs.new_file.title}</h5>
+                        <h5 class="modal-title">${i18nStrings.messages.new_file_title}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <p>${i18nStrings.dialogs.new_file.prompt}</p>
+                        <p>${i18nStrings.messages.new_file_prompt}</p>
                         <input type="text" id="new-filename" class="form-control">
                     </div>
                     <div class="modal-footer">
@@ -4481,7 +4481,7 @@ async function showNewFileDialog() {
     document.getElementById('ok-new').onclick = async () => {
         const filename = input.value.trim();
         if (!filename) {
-            showErrorDialog(i18nStrings.common.please_enter_filename);
+            showErrorDialog(i18nStrings.messages.please_enter_filename);
             return;
         }
         
@@ -4539,7 +4539,7 @@ async function saveFile() {
         const status = await statusResponse.json();
         
         if (!status.filename) {
-            showErrorDialog(i18nStrings.common.no_file_loaded);
+            showErrorDialog(i18nStrings.messages.no_file_loaded);
             return;
         }
         
@@ -4570,7 +4570,7 @@ async function showSaveAsDialog() {
         const status = await statusResponse.json();
         
         if (!status.filename) {
-            showErrorDialog(i18nStrings.common.no_file_loaded);
+            showErrorDialog(i18nStrings.messages.no_file_loaded);
             return;
         }
     } catch (error) {
@@ -4584,11 +4584,11 @@ async function showSaveAsDialog() {
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">${i18nStrings.menus.file.save_as}</h5>
+                        <h5 class="modal-title">${i18nStrings.file.save_as}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <label class="form-label">${i18nStrings.common.save_as_prompt}</label>
+                        <label class="form-label">${i18nStrings.messages.save_as_prompt}</label>
                         <input type="text" class="form-control" id="saveas-filename" placeholder="${(window.haloData.fileName || 'alle.csv').replace(/\.[^.]+$/, '')}" value="${(window.haloData.fileName || '').replace(/\.[^.]+$/, '')}">
                     </div>
                     <div class="modal-footer">
@@ -4651,9 +4651,9 @@ async function processSaveAs(filename) {
         let result = await response.json();
         
         if (result.exists) {
-            const overwriteMsg = result.message + ' ' + (i18nStrings.common.overwrite_confirm);
+            const overwriteMsg = result.message + ' ' + (i18nStrings.messages.overwrite_confirm);
             showConfirmDialog(
-                i18nStrings.common.overwrite_confirm,
+                i18nStrings.messages.overwrite_confirm,
                 overwriteMsg,
                 async () => {
                     // User confirmed - proceed with overwrite
@@ -4715,7 +4715,7 @@ async function showUploadDialog() {
         const status = await statusResponse.json();
         
         if (!status.filename) {
-            showErrorDialog(i18nStrings.common.no_file_loaded);
+            showErrorDialog(i18nStrings.messages.no_file_loaded);
             return;
         }
         
@@ -4916,13 +4916,13 @@ async function checkAutosaveRecovery() {
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">${i18nStrings.dialogs.autosave_recovery.title}</h5>
+                            <h5 class="modal-title">${i18nStrings.messages.autosave_recovery_title}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
-                            <p>${i18nStrings.dialogs.autosave_recovery.message}</p>
+                            <p>${i18nStrings.messages.autosave_recovery_message}</p>
                             <p><strong>${data.original_file}</strong></p>
-                            <p>${i18nStrings.dialogs.autosave_recovery.prompt}</p>
+                            <p>${i18nStrings.messages.autosave_recovery_prompt}</p>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary btn-sm px-3" id="btn-dismiss-autosave">
@@ -4977,7 +4977,7 @@ async function checkAutosaveRecovery() {
                 modal.hide();
                 showMessage(result.message, 'success');
             } catch (error) {
-                showErrorDialog(i18nStrings.dialogs.autosave_recovery.error + ': ' + error.message);
+                showErrorDialog(i18nStrings.messages.autosave_recovery_error + ': ' + error.message);
             }
         });
         
@@ -5083,9 +5083,9 @@ async function showLoadFileDialog() {
     // Check if current file has unsaved changes
     if (window.haloData && window.haloData.isDirty) {
         warningShown = true;
-        const message = i18nStrings.dialogs.unsaved_changes.message;
+        const message = i18nStrings.messages.unsaved_changes_message;
         showConfirmDialog(
-            i18nStrings.dialogs.unsaved_changes.title,
+            i18nStrings.messages.unsaved_changes_title,
             message,
             () => continueLoadFile()
         );
@@ -5133,9 +5133,9 @@ async function continueLoadFile() {
                 <div class="modal-content">
                     <div class="modal-body text-center py-4">
                         <div class="spinner-border text-primary mb-3" role="status">
-                            <span class="visually-hidden">${i18nStrings.dialogs.loading.loading}</span>
+                            <span class="visually-hidden">${i18nStrings.messages.loading_spinner}</span>
                         </div>
-                        <p class="mb-0">${i18nStrings.dialogs.loading.loading_file} "${file.name}" ...</p>
+                        <p class="mb-0">${i18nStrings.messages.loading_file} "${file.name}" ...</p>
                     </div>
                 </div>
             </div>
@@ -5183,13 +5183,13 @@ async function continueLoadFile() {
             setTimeout(() => loadingModal.remove(), 300);
             
             // Show success message
-            showNotification(`<strong>✓</strong> ${window.haloData.observations.length} ${i18nStrings.ui.messages.observations} ${i18nStrings.dialogs.success.loaded_from} "${file.name}" ${i18nStrings.dialogs.success.geladen}`);
+            showNotification(`<strong>✓</strong> ${window.haloData.observations.length} ${i18nStrings.common.observations} ${i18nStrings.messages.loaded_from} "${file.name}" ${i18nStrings.messages.loaded}`);
         } catch (error) {
             bsModal.hide();
             setTimeout(() => loadingModal.remove(), 300);
             console.error('Error loading file:', error);
             
-            showNotification(`<strong>✗</strong> ${i18nStrings.dialogs.file_error.error_loading_file}: ${error.message}`, 'danger', 5000);
+            showNotification(`<strong>✗</strong> ${i18nStrings.messages.error_loading}: ${error.message}`, 'danger', 5000);
         }
     });
     
@@ -5210,9 +5210,9 @@ async function showMergeFileDialog() {
     
     // Check if current file has unsaved changes
     if (window.haloData && window.haloData.isDirty) {
-        const message = i18nStrings.dialogs.unsaved_changes.message;
+        const message = i18nStrings.messages.unsaved_changes_message;
         showConfirmDialog(
-            i18nStrings.dialogs.unsaved_changes.title,
+            i18nStrings.messages.unsaved_changes_title,
             message,
             () => continueMergeFile()
         );
@@ -5250,9 +5250,9 @@ async function continueMergeFile() {
                 <div class="modal-content">
                     <div class="modal-body text-center py-4">
                         <div class="spinner-border text-primary mb-3" role="status">
-                            <span class="visually-hidden">${i18nStrings.dialogs.loading.loading}</span>
+                            <span class="visually-hidden">${i18nStrings.messages.loading_spinner}</span>
                         </div>
-                        <p class="mb-0">${i18nStrings.dialogs.loading.merging_file} "${file.name}" ...</p>
+                        <p class="mb-0">${i18nStrings.messages.merging_file} "${file.name}" ...</p>
                     </div>
                 </div>
             </div>
@@ -5300,13 +5300,13 @@ async function continueMergeFile() {
             
             // Show success message with count of added observations
             // (addedCount already computed above)
-            showNotification(`<strong>✓</strong> ${addedCount} ${i18nStrings.ui.messages.observations} ${i18nStrings.dialogs.success.hinzugefuegt} "${file.name}"`);
+            showNotification(`<strong>✓</strong> ${addedCount} ${i18nStrings.common.observations} ${i18nStrings.messages.added} "${file.name}"`);
         } catch (error) {
             bsModal.hide();
             setTimeout(() => loadingModal.remove(), 300);
             console.error('Error merging file:', error);
             
-            showNotification(`<strong>✗</strong> ${i18nStrings.dialogs.file_error.error_loading_file}: ${error.message}`, 'danger', 5000);
+            showNotification(`<strong>✗</strong> ${i18nStrings.messages.merge_error}: ${error.message}`, 'danger', 5000);
             document.body.appendChild(errorMsg);
             setTimeout(() => errorMsg.remove(), 5000);
         }
@@ -5323,10 +5323,10 @@ function updateFileInfoDisplay(fileName, count) {
     const fileNameElem = document.getElementById('file-name');
     const obsCountElem = document.getElementById('obs-count');
     
-    if (fileInfo && fileNameElem && obsCountElem && i18nStrings.ui) {
+    if (fileInfo && fileNameElem && obsCountElem) {
         const dirtyMarker = window.haloData.isDirty ? '*' : '';
         fileNameElem.textContent = dirtyMarker + fileName;
-        obsCountElem.textContent = `${count} ${i18nStrings.common.observations_count}`;
+        obsCountElem.textContent = `${count} ${i18nStrings.common.observations}`;
         fileInfo.style.display = 'flex';
     }
 }
@@ -5368,7 +5368,7 @@ async function checkAndDisplayFileInfo() {
                 
                 // Show notification if file was auto-loaded
                 if (status.auto_loaded) {
-                    showNotification(`<strong>✓</strong> ${status.filename} ${i18nStrings.dialogs.success.geladen} (${status.count} ${i18nStrings.observations.records_label})`);
+                    showNotification(`<strong>✓</strong> ${status.filename} ${i18nStrings.messages.loaded} (${status.count} ${i18nStrings.observations.records_label})`);
                 }
             } else {
                 // No data loaded
@@ -5463,7 +5463,7 @@ async function showFixedObserverDialog() {
         const observers = obsData.observers || [];
         
         // Build dropdown options
-        let options = `<option value="">${i18nStrings.menus.settings.no_fixed_observer}</option>`;
+        let options = `<option value="">${i18nStrings.settings.no_fixed_observer}</option>`;
         observers.forEach(obs => {
             const selected = String(obs.KK) === String(currentObserver) ? 'selected' : '';
             options += `<option value="${obs.KK}" ${selected}>${obs.KK} - ${obs.VName} ${obs.NName}</option>`;
@@ -5475,11 +5475,11 @@ async function showFixedObserverDialog() {
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">${i18nStrings.menus.settings.fixed_observer_title}</h5>
+                            <h5 class="modal-title">${i18nStrings.settings.fixed_observer}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
-                            <p class="mb-3">${i18nStrings.menus.settings.fixed_observer_question}</p>
+                            <p class="mb-3">${i18nStrings.settings.fixed_observer_question}</p>
                             <select class="form-select" id="fixed-observer-select">
                                 ${options}
                             </select>
@@ -5533,7 +5533,7 @@ async function showDatumDialog() {
         // Generate month options
         const monthOptions = [];
         for (let m = 1; m <= 12; m++) {
-            const monthName = i18nStrings.months[m] || `Month ${m}`;
+            const monthName = i18nStrings.months[m];
             monthOptions.push(`<option value="${m}" ${m === currentMonth ? 'selected' : ''}>${monthName}</option>`);
         }
         
@@ -5549,22 +5549,22 @@ async function showDatumDialog() {
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">${i18nStrings.menus.settings.date_setting_title}</h5>
+                            <h5 class="modal-title">${i18nStrings.settings.date_setting_title}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
-                            <p class="mb-3">${i18nStrings.menus.settings.date_setting_question}</p>
+                            <p class="mb-3">${i18nStrings.settings.date_setting_question}</p>
                             <div class="row mb-2">
                                 <div class="col-6">
                                     <div class="form-check">
                                         <input class="form-check-input" type="radio" name="datum" id="date-none" value="none" ${currentSetting === 'none' ? 'checked' : ''}>
-                                        <label class="form-check-label" for="date-none">${i18nStrings.menus.settings.date_none}</label>
+                                        <label class="form-check-label" for="date-none">${i18nStrings.settings.date_none}</label>
                                     </div>
                                 </div>
                                 <div class="col-6">
                                     <div class="form-check">
                                         <input class="form-check-input" type="radio" name="datum" id="date-current" value="current" ${currentSetting === 'current' ? 'checked' : ''}>
-                                        <label class="form-check-label" for="date-current">${i18nStrings.menus.settings.date_current_month}</label>
+                                        <label class="form-check-label" for="date-current">${i18nStrings.settings.date_current_month}</label>
                                     </div>
                                 </div>
                             </div>
@@ -5572,18 +5572,18 @@ async function showDatumDialog() {
                                 <div class="col-6">
                                     <div class="form-check">
                                         <input class="form-check-input" type="radio" name="datum" id="date-previous" value="previous" ${currentSetting === 'previous' ? 'checked' : ''}>
-                                        <label class="form-check-label" for="date-previous">${i18nStrings.menus.settings.date_previous_month}</label>
+                                        <label class="form-check-label" for="date-previous">${i18nStrings.settings.date_previous_month}</label>
                                     </div>
                                 </div>
                                 <div class="col-6">
                                     <div class="form-check">
                                         <input class="form-check-input" type="radio" name="datum" id="date-constant" value="constant" ${currentSetting === 'constant' ? 'checked' : ''}>
-                                        <label class="form-check-label" for="date-constant">${i18nStrings.menus.settings.date_constant_month}</label>
+                                        <label class="form-check-label" for="date-constant">${i18nStrings.settings.date_constant_month}</label>
                                     </div>
                                 </div>
                             </div>
                             <div id="constant-month-inputs" style="display: ${currentSetting === 'constant' ? 'block' : 'none'}; margin-left: 25px;">
-                                <label class="form-label mb-2">${i18nStrings.menus.settings.date_select_month}</label>
+                                <label class="form-label mb-2">${i18nStrings.settings.date_select_month}</label>
                                 <div class="row g-2">
                                     <div class="col-7">
                                         <select class="form-select" id="constant-month">
@@ -5659,18 +5659,18 @@ async function showEingabeartDialog() {
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">${i18nStrings.menus.settings.input_mode_title}</h5>
+                            <h5 class="modal-title">${i18nStrings.settings.input_mode_title}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
-                            <p class="mb-3">${i18nStrings.menus.settings.input_mode_question}</p>
+                            <p class="mb-3">${i18nStrings.settings.input_mode_question}</p>
                             <div class="form-check form-check-inline mb-0">
                                 <input class="form-check-input" type="radio" name="eingabeart" id="mode-m" value="M" ${currentMode === 'M' ? 'checked' : ''}>
-                                <label class="form-check-label" for="mode-m">${i18nStrings.menus.settings.input_mode_menu}</label>
+                                <label class="form-check-label" for="mode-m">${i18nStrings.settings.input_mode_menu}</label>
                             </div>
                             <div class="form-check form-check-inline mb-0">
                                 <input class="form-check-input" type="radio" name="eingabeart" id="mode-n" value="N" ${currentMode === 'N' ? 'checked' : ''}>
-                                <label class="form-check-label" for="mode-n">${i18nStrings.menus.settings.input_mode_number}</label>
+                                <label class="form-check-label" for="mode-n">${i18nStrings.settings.input_mode_number}</label>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -5725,22 +5725,22 @@ async function showAusgabeartDialog() {
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">${i18nStrings.menus.settings.output_type_title}</h5>
+                            <h5 class="modal-title">${i18nStrings.settings.output_type_title}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
-                            <p class="mb-3">${i18nStrings.menus.settings.output_type_question}</p>
+                            <p class="mb-3">${i18nStrings.settings.output_type_question}</p>
                             <div class="form-check form-check-inline mb-0">
                                 <input class="form-check-input" type="radio" name="ausgabeart" id="mode-h" value="H" ${currentMode === 'H' ? 'checked' : ''}>
-                                <label class="form-check-label" for="mode-h">${i18nStrings.menus.settings.output_type_html}</label>
+                                <label class="form-check-label" for="mode-h">${i18nStrings.settings.output_type_html}</label>
                             </div>
                             <div class="form-check form-check-inline mb-0">
                                 <input class="form-check-input" type="radio" name="ausgabeart" id="mode-p" value="P" ${currentMode === 'P' ? 'checked' : ''}>
-                                <label class="form-check-label" for="mode-p">${i18nStrings.menus.settings.output_type_pseudo}</label>
+                                <label class="form-check-label" for="mode-p">${i18nStrings.settings.output_type_pseudo}</label>
                             </div>
                             <div class="form-check form-check-inline mb-0">
                                 <input class="form-check-input" type="radio" name="ausgabeart" id="mode-m" value="M" ${currentMode === 'M' ? 'checked' : ''}>
-                                <label class="form-check-label" for="mode-m">${i18nStrings.menus.settings.output_type_markdown}</label>
+                                <label class="form-check-label" for="mode-m">${i18nStrings.settings.output_type_markdown}</label>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -5785,14 +5785,14 @@ async function showAusgabeartDialog() {
 
 // Show version information dialog
 function showVersionDialog() {
-    const v = i18nStrings.menus.help.version_dialog;
+    const v = i18nStrings.app.version_dialog;
     const versionNumber = i18nStrings.app.version;
     const versionDate = i18nStrings.app.version_date;
     const versionTitle = `${i18nStrings.app.title} ${versionNumber}`;
 
     const versionText = `<h4 class="text-center mb-4">${versionTitle}</h4>
            <p class="mb-2"><strong>${v.date_label}:</strong> ${versionDate}</p>
-           <p class="mb-3"><strong>${v.author_label}:</strong> ${v.author}</p>
+           <p class="mb-3"><strong>${v.author_label}:</strong> ${v.contact_name}</p>
            <hr class="my-3">
            <p class="mb-2">${v.description}</p>
            <p class="mb-3">${v.workgroup}</p>
@@ -5808,7 +5808,7 @@ function showVersionDialog() {
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">${i18nStrings.menus.help.version}</h5>
+                        <h5 class="modal-title">${i18nStrings.help.version}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
@@ -5841,7 +5841,7 @@ async function showWhatsNewDialog() {
         const data = await response.json();
         
         if (!response.ok) {
-            showErrorDialog(i18nStrings.common.error_loading + ': ' + data.error);
+            showErrorDialog(i18nStrings.messages.error_loading + ': ' + data.error);
             return;
         }
         
@@ -5867,7 +5867,7 @@ async function showWhatsNewDialog() {
                 <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">${i18nStrings.menus.help.whats_new}</h5>
+                            <h5 class="modal-title">${i18nStrings.help.whats_new}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body" style="font-size: 14px; line-height: 1.6;">
@@ -5901,7 +5901,7 @@ async function showHelpDialog() {
         const data = await response.json();
         
         if (!response.ok) {
-            showErrorDialog(i18nStrings.common.error_loading + ': ' + data.error);
+            showErrorDialog(i18nStrings.messages.error_loading + ': ' + data.error);
             return;
         }
         
@@ -6365,7 +6365,7 @@ async function showDeleteObserverDialog() {
         const data = await resp.json();
         
         if (!data.observers || data.observers.length === 0) {
-            showErrorDialog(i18nStrings.common.error_loading_observers);
+            showErrorDialog(i18nStrings.messages.error_loading_observers);
             return;
         }
         
@@ -6594,7 +6594,7 @@ async function showEditObserverDialog() {
         const data = await resp.json();
         
         if (!data.observers || data.observers.length === 0) {
-            showErrorDialog(i18nStrings.common.error_loading_observers);
+            showErrorDialog(i18nStrings.messages.error_loading_observers);
             return;
         }
         
@@ -6618,7 +6618,7 @@ async function showEditObserverDialog() {
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header py-2">
-                            <h5 class="modal-title">${i18nStrings.common.select_observer}</h5>
+                            <h5 class="modal-title">${i18nStrings.messages.select_observer}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">

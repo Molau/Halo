@@ -471,7 +471,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Special handling for SE (sectors) - count by octant letter
         if (paramCode === 'SE') {
             if (rawValue === 'keine Angabe') {
-                return i18nStrings.fields.not_applicable || rawValue;
+                return i18nStrings.fields.not_applicable;
             }
             return String(rawValue).toLowerCase();
         }
@@ -1646,7 +1646,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <div class="modal-dialog modal-dialog-scrollable" style="max-width: 800px;">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">${i18nStrings.dialogs.analysis_title}</h5>
+                            <h5 class="modal-title">${i18nStrings.menu_titles.analysis}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body" id="resultModalBody" style="overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 250px);">
@@ -2998,7 +2998,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const cellWidths = [];
         const countColWidths = [];
         const percColWidths = [];
-        const obsAbbr = i18nStrings.analysis_results.observation_abbr || 'B';
+        const obsAbbr = i18nStrings.analysis_results.observation_abbr;
         const alignNumericParam1 = param1Code === 'DD' || param1Code === 'zz';
         
         columns.forEach(col => {

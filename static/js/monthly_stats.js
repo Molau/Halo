@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         // No data loaded - show same warning as monthly_report
-        showWarningModal(i18nStrings.dialogs.no_data.message);
+        showWarningModal(i18nStrings.messages.no_data);
         return false;
     }
 
@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         } catch (error) {
             console.error('Error generating statistics:', error);
-            showWarningModal(error.message || i18nStrings.common.error_loading);
+            showWarningModal(error.message || i18nStrings.messages.error_loading);
         } finally {
             applySpinner.style.display = 'none';
             btnApply.disabled = false;
@@ -309,7 +309,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Table footer
         html += '╠════╩══════════╩══════════╩══════════╩══════════╩══════════╩═════════════╩════════════╣\n';
-        html += '║  ' + i18nStrings.ui.statistics.footnote_ee_days.replace(/&nbsp;/g, ' ').replace(/<[^>]*>/g, '') + '         ║\n';
+        html += '║  ' + i18nStrings.statistics.footnote_ee_days.replace(/&nbsp;/g, ' ').replace(/<[^>]*>/g, '') + '         ║\n';
         html += '╚' + '═'.repeat(86) + '╝\n\n';
         
         return html;
@@ -465,7 +465,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         html += '╠═════╦════════════════════════╦════════════════════════╦════════════════════════╦═════╣\n';
         
         // First table: Days 1-16
-        html += '║ ' + i18nStrings.ui.statistics.table_day.padEnd(3) + ' ║  1.   2.   3.   4.   5.║  6.   7.   8.   9.  10.║ 11.  12.  13.  14.  15.║ 16. ║\n';
+        html += '║ ' + i18nStrings.statistics.table_day.padEnd(3) + ' ║  1.   2.   3.   4.   5.║  6.   7.   8.   9.  10.║ 11.  12.  13.  14.  15.║ 16. ║\n';
         html += '╠═════╬════════════════════════╬════════════════════════╬════════════════════════╬═════╣\n';
         
         // Real activity row (days 1-16)
@@ -506,7 +506,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Second table: Days 17-31 with total
         html += '╔═════╦═══════════════════╦════════════════════════╦════════════════════════╦════╦═════╗\n';
-        html += '║ ' + i18nStrings.ui.statistics.table_day.padEnd(3) + ' ║ 17.  18.  19.  20.║ 21.  22.  23.  24.  25.║ 26.  27.  28.  29.  30.║ 31.║ ges ║\n';
+        html += '║ ' + i18nStrings.statistics.table_day.padEnd(3) + ' ║ 17.  18.  19.  20.║ 21.  22.  23.  24.  25.║ 26.  27.  28.  29.  30.║ 31.║ ges ║\n';
         html += '╠═════╬═══════════════════╬════════════════════════╬════════════════════════╬════╬═════╣\n';
         
         // Real activity row (days 17-31)
@@ -642,7 +642,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (!currentStatsData) return;
                 
                 const data = currentStatsData;
-                const monthShort = i18nStrings.months_short.[data.mm] || String(data.mm).padStart(2, '0');
+                const monthShort = i18nStrings.months_short.[data.mm];
                 const jjPadded = String(data.jj).padStart(2, '0');
                 
                 // Check output mode
@@ -660,7 +660,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 } else if (outputMode === 'M') {
                     // Markdown mode: save as Markdown with pipe tables
                     filename = `${monthShort.toLowerCase()}19${jjPadded}.md`;
-                    content = buildMarkdownMonthlyStats(data, i18nStrings.months.[data.mm] || monthShort, parseInt(data.jj) + 1900, i18n);
+                    content = buildMarkdownMonthlyStats(data, i18nStrings.months.[data.mm], parseInt(data.jj) + 1900, i18n);
                     mimeType = 'text/markdown;charset=utf-8';
                 } else {
                     // Pseudografik mode: save as TXT with formatted statistics
@@ -703,7 +703,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Show activity chart - render with Chart.js for interactive display
     function showActivityChart(data) {
         const months = i18nStrings.months || {};
-        const monthName = months[data.mm] || months[data.mm.toString()];
+        const monthName = months[data.mm];
         const year = data.jj >= 50 ? `19${data.jj.toString().padStart(2, '0')}` : 
                      `20${data.jj.toString().padStart(2, '0')}`;
         
@@ -823,8 +823,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     
     function showActivityBarChart(data) {
-        const months = i18nStrings.months || {};
-        const monthName = months[data.mm] || months[data.mm.toString()];
+        const monthName = i18nStrings.months[data.mm];
         const year = data.jj >= 50 ? `19${data.jj.toString().padStart(2, '0')}` : 
                      `20${data.jj.toString().padStart(2, '0')}`;
         
@@ -975,7 +974,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (!window.chartData) return;
                 try {
                     const data = window.chartData;
-                    const monthShort = i18nStrings.months_short.[data.mm] || String(data.mm).padStart(2, '0');
+                    const monthShort = i18nStrings.months_short.[data.mm];
                     const jjPadded = String(data.jj).padStart(2, '0');
                     const filename = `Haloaktivitaet_${monthShort.toLowerCase()}${jjPadded}.png`;
                     
@@ -1031,7 +1030,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (!window.chartData) return;
                 try {
                     const data = window.chartData;
-                    const monthShort = i18nStrings.months_short.[data.mm] || String(data.mm).padStart(2, '0');
+                    const monthShort = i18nStrings.months_short.[data.mm];
                     const jjPadded = String(data.jj).padStart(2, '0');
                     const filename = `Haloaktivitaet_${monthShort.toLowerCase()}${jjPadded}_Balken.png`;
                     
@@ -1062,8 +1061,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!currentStatsData) return '';
         
         const data = currentStatsData;
-        const months = i18nStrings.months || {};
-        const monthName = months[data.mm] || months[data.mm.toString()];
+        const monthName = i18nStrings.months[data.mm];
         const year = data.jj >= 50 ? `19${data.jj.toString().padStart(2, '0')}` : 
                      `20${data.jj.toString().padStart(2, '0')}`;
         
@@ -1103,7 +1101,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!currentStatsData) return;
         
         const data = currentStatsData;
-        const monthShort = i18nStrings.months_short.[data.mm] || String(data.mm).padStart(2, '0');
+        const monthShort = i18nStrings.months_short.[data.mm];
         const jjPadded = String(data.jj).padStart(2, '0');
         const filename = `Haloaktivitaet_Balken_${monthShort.toLowerCase()}${jjPadded}.png`;
         
@@ -1132,7 +1130,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!currentStatsData) return;
         
         const data = currentStatsData;
-        const monthShort = i18nStrings.months_short.[data.mm] || String(data.mm).padStart(2, '0');
+        const monthShort = i18nStrings.months_short.[data.mm];
         const jjPadded = String(data.jj).padStart(2, '0');
         const filename = `Haloaktivitaet_${monthShort.toLowerCase()}${jjPadded}.png`;
         
@@ -1160,7 +1158,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     function generateStatsCSV(data) {
         let csv = '';
         const months = i18nStrings.months || {};
-        const monthName = months[data.mm] || months[data.mm.toString()];
+        const monthName = months[data.mm];
         const year = data.jj >= 50 ? `19${data.jj.toString().padStart(2, '0')}` : 
                      `20${data.jj.toString().padStart(2, '0')}`;
         
@@ -1171,7 +1169,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             for (let d = 1; d <= 31; d++) {
                 csv += ',' + d;
             }
-            csv += ',' + i18nStrings.ui.statistics.table_ee_sun + ',' + i18nStrings.ui.statistics.table_days_sun + ',' + i18nStrings.ui.statistics.table_days_moon + ',' + i18nStrings.ui.statistics.table_days_total + '\n';
+            csv += ',' + i18nStrings.statistics.table_ee_sun + ',' + i18nStrings.statistics.table_days_sun + ',' + i18nStrings.statistics.table_days_moon + ',' + i18nStrings.statistics.table_days_total + '\n';
             
             for (const obs of data.observer_overview) {
                 const kk = obs.kk.toString().padStart(2, '0');
@@ -1243,7 +1241,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Table 4: Activity
         if (data.activity_real && data.activity_relative && data.activity_totals) {
             csv += `"${i18nStrings.monthly_stats.activity_title} ${monthName} ${year}"\n`;
-            csv += i18nStrings.ui.statistics.table_day;
+            csv += i18nStrings.statistics.table_day;
             for (let d = 1; d <= 31; d++) {
                 csv += ',' + d;
             }
@@ -1368,7 +1366,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 
                 md += ' ' + obs.total_solar + ' | ' + obs.days_solar + ' | ' + obs.days_lunar + ' | ' + obs.total_days + ' |\n';
             }
-            md += '\n_' + i18nStrings.ui.statistics.footnote_ee_days + '_\n\n';
+            md += '\n_' + i18nStrings.statistics.footnote_ee_days + '_\n\n';
         }
         
         // Table 2: EE Overview
@@ -1534,7 +1532,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             html += '</tbody>';
             html += '<tfoot>';
             html += '<tr><td colspan="36" style="text-align: left; font-size: 90%;">';
-            html += i18nStrings.ui.statistics.footnote_ee_days;
+            html += i18nStrings.statistics.footnote_ee_days;
             html += '</td></tr>';
             html += '</tfoot>';
             html += '</table>';
@@ -1645,7 +1643,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     i18nStrings.monthly_stats.activity_title + ' ' + monthName + ' ' + year + '</th>';
             html += '</tr>';
             html += '<tr>';
-            html += '<th>' + i18nStrings.ui.statistics.table_day + '</th>';
+            html += '<th>' + i18nStrings.statistics.table_day + '</th>';
             for (let d = 1; d <= 31; d++) {
                 html += '<th>' + d + '</th>';
             }

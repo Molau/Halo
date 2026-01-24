@@ -8,7 +8,6 @@ class FilterDialog {
     constructor() {
         this.modalElement = null;
         this.modal = null;
-        i18nStrings = i18nStrings;
         this.observersData = null;
         
         // Filter state
@@ -187,29 +186,27 @@ class FilterDialog {
     }
     
     updateText() {
-        if (!i18nStrings || !i18nStrings.ui) return;
-        
-        const ui = i18nStrings.ui;
-        
-        document.getElementById('filterDialogLabel').textContent = ui.filter_dialog.title;
+        if (!i18nStrings) return;
+                
+        document.getElementById('filterDialogLabel').textContent = filter_dialog.title;
         
         const filter1Label = document.querySelector('#filter-criterion-1').previousElementSibling;
-        if (filter1Label) filter1Label.textContent = '1. ' + ui.filter_dialog.question_1;
+        if (filter1Label) filter1Label.textContent = '1. ' + filter_dialog.question_1;
         
         const filter1Select = document.getElementById('filter-criterion-1');
-        filter1Select.options[0].textContent = ui.filter_dialog.no_criterion;
-        filter1Select.options[1].textContent = ui.filter_dialog.observer_name || ui.filter_dialog.observer_code;
-        filter1Select.options[2].textContent = ui.filter_dialog.region;
+        filter1Select.options[0].textContent = filter_dialog.no_criterion;
+        filter1Select.options[1].textContent = common.observer;
+        filter1Select.options[2].textContent = filter_dialog.region;
         
         const filter2Label = document.querySelector('#filter-criterion-2').previousElementSibling;
-        if (filter2Label) filter2Label.textContent = '2. ' + ui.filter_dialog.question_2;
+        if (filter2Label) filter2Label.textContent = '2. ' + filter_dialog.question_2;
         
         const filter2Select = document.getElementById('filter-criterion-2');
-        filter2Select.options[0].textContent = ui.filter_dialog.no_criterion;
-        filter2Select.options[1].textContent = ui.filter_dialog.date;
-        filter2Select.options[2].textContent = ui.filter_dialog.month;
-        filter2Select.options[3].textContent = ui.filter_dialog.year;
-        filter2Select.options[4].textContent = ui.filter_dialog.halo_type;
+        filter2Select.options[0].textContent = filter_dialog.no_criterion;
+        filter2Select.options[1].textContent = filter_dialog.date;
+        filter2Select.options[2].textContent = filter_dialog.month;
+        filter2Select.options[3].textContent = filter_dialog.year;
+        filter2Select.options[4].textContent = filter_dialog.halo_type;
         
         document.getElementById('btn-cancel-filter').textContent = i18nStrings.common.cancel;
         const applyBtn = document.getElementById('btn-apply-filter');
@@ -248,19 +245,19 @@ class FilterDialog {
             filter2Input.style.display = 'block';
             filter2Value.style.display = 'block';
             filter2SelectElem.style.display = 'none';
-            filter2Value.placeholder = i18nStrings && i18nStrings.ui ? i18nStrings.ui.placeholders.date : '';
+            filter2Value.placeholder = i18nStrings.filter_dialog.date;
             setTimeout(() => filter2Value.focus(), 50);
         } else if (value === 'month') {
             filter2Input.style.display = 'block';
             filter2Value.style.display = 'block';
             filter2SelectElem.style.display = 'none';
-            filter2Value.placeholder = i18nStrings && i18nStrings.ui ? i18nStrings.ui.placeholders.month : '';
+            filter2Value.placeholder = i18nStrings.filter_dialog.month;
             setTimeout(() => filter2Value.focus(), 50);
         } else if (value === 'year') {
             filter2Input.style.display = 'block';
             filter2Value.style.display = 'block';
             filter2SelectElem.style.display = 'none';
-            filter2Value.placeholder = i18nStrings && i18nStrings.ui ? i18nStrings.ui.placeholders.year : '';
+            filter2Value.placeholder = i18nStrings.filter_dialog.year;
             setTimeout(() => filter2Value.focus(), 50);
         } else if (value === 'halo-type') {
             filter2Input.style.display = 'block';
@@ -308,31 +305,26 @@ class FilterDialog {
         const filter1SelectElem = document.getElementById('filter-1-select');
         filter1SelectElem.innerHTML = '';
         
-        if (i18nStrings && i18nStrings.geographic_regions) {
-            for (let i = 1; i <= 39; i++) {
-                const regionName = i18nStrings.geographic_regions[String(i)];
-                if (regionName && regionName.trim()) {
-                    const option = document.createElement('option');
-                    option.value = i;
-                    option.textContent = `${String(i).padStart(2, '0')} - ${regionName}`;
-                    filter1SelectElem.appendChild(option);
-                }
+        for (let i = 1; i <= 39; i++) {
+            const regionName = i18nStrings.geographic_regions[String(i)];
+            if (regionName && regionName.trim()) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `${String(i).padStart(2, '0')} - ${regionName}`;
+                filter1SelectElem.appendChild(option);
             }
         }
     }
     
     populateHaloTypeSelect() {
         const filter2SelectElem = document.getElementById('filter-2-select');
-        const unknown = i18nStrings && i18nStrings.ui ? i18nStrings.ui.filter_dialog.unknown : 'Unknown';
         filter2SelectElem.innerHTML = '';
         
-        if (i18nStrings && i18nStrings.halo_types) {
-            for (let i = 1; i <= 99; i++) {
-                const option = document.createElement('option');
-                option.value = i;
-                option.textContent = `${String(i).padStart(2, '0')} - ${i18nStrings.halo_types[i] || unknown}`;
-                filter2SelectElem.appendChild(option);
-            }
+        for (let i = 1; i <= 99; i++) {
+            const option = document.createElement('option');
+            option.value = i;
+            option.textContent = `${String(i).padStart(2, '0')} - ${i18nStrings.halo_types[i] || i18nStrings.common.unknown}`;
+            filter2SelectElem.appendChild(option);
         }
     }
     
@@ -349,7 +341,7 @@ class FilterDialog {
         // Validate filter 1
         if (this.filterCriterion1 !== 'none') {
             if (!filter1SelectElem.value || filter1SelectElem.value === '') {
-                this.showWarning(i18nStrings && i18nStrings.ui ? i18nStrings.ui.messages.filter_value_required : 'Bitte geben Sie einen Filterwert ein!');
+                this.showWarning(i18nStrings.messages.filter_value_required);
                 return;
             }
         }
@@ -358,12 +350,12 @@ class FilterDialog {
         if (this.filterCriterion2 !== 'none') {
             if (this.filterCriterion2 === 'date' || this.filterCriterion2 === 'month' || this.filterCriterion2 === 'year') {
                 if (!filter2Value.value.trim()) {
-                    this.showWarning(i18nStrings && i18nStrings.ui ? i18nStrings.ui.messages.filter_value_required : 'Bitte geben Sie einen Filterwert ein!');
+                    this.showWarning(i18nStrings.messages.filter_value_required);
                     return;
                 }
             } else if (this.filterCriterion2 === 'halo-type') {
                 if (!filter2SelectElem.value || filter2SelectElem.value === '') {
-                    this.showWarning(i18nStrings && i18nStrings.ui ? i18nStrings.ui.messages.filter_value_required : 'Bitte geben Sie einen Filterwert ein!');
+                    this.showWarning(i18nStrings.messages.filter_value_required);
                     return;
                 }
             }

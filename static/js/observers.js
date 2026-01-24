@@ -241,7 +241,7 @@ function goToPage(page) {
  */
 function displayObservers() {
     if (filteredObservers.length === 0) {
-        showWarningModal(i18nStrings.ui.messages.no_observers);
+        showWarningModal(i18nStrings.messages.no_observers);
         return;
     }
         

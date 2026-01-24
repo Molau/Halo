@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         } catch (error) {
             console.error('Error generating report:', error);
-            showWarningModal(error.message || i18nStrings.common.error_loading);
+            showWarningModal(i18nStrings.messages.error_loading);
         } finally {
             applySpinner.style.display = 'none';
             btnApply.disabled = false;
@@ -438,7 +438,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Build HTML-Tabellen format report (implementation)
     function buildHTMLTableReport(data, i18n) {
         // Use i18n month names
-        const monthName = i18nStrings.months.[data.mm] || data.mm;
+        const monthName = i18nStrings.months.[data.mm];
         
         // Format title
         const year = data.jj < 50 ? 2000 + data.jj : 1900 + data.jj;
@@ -456,14 +456,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         html += '<table class="table table-bordered analysis-table">';
         html += '<thead>';
         html += '<tr>';
-        html += '<th class="monthly-report-header" style="font-family: monospace; white-space: pre;">KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18nStrings.monthly_report.sectors + ' ' + i18nStrings.fields.remarks + '</th>';
+        html += '<th class="monthly-report-header" style="font-family: monospace; white-space: pre;">KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18nStrings.fields.sectors + ' ' + i18nStrings.fields.remarks + '</th>';
         html += '</tr>';
         html += '</thead>';
         html += '<tbody>';
         
         // Observations using kurzausgabe format
         if (data.observations.length === 0) {
-            const noObsMsg = i18nStrings.ui.messages.no_observations;
+            const noObsMsg = i18nStrings.messages.no_observations;
             html += `<tr><td style="text-align: center; padding: 20px;">${noObsMsg}</td></tr>`;
         } else {
             for (const obs of data.observations) {
@@ -512,11 +512,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Markdown format
             text += `# ${title}\n\n`;
             text += '```\n';
-            text += 'KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18nStrings.monthly_report.sectors + ' ' + i18nStrings.fields.remarks + '\n';
+            text += 'KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18nStrings.fields.sectors + ' ' + i18nStrings.fields.remarks + '\n';
             text += '```\n\n';
             
             if (data.observations.length === 0) {
-                const noObsMsg = i18nStrings.ui.messages.no_observations;
+                const noObsMsg = i18nStrings.messages.no_observations;
                 text += `**${noObsMsg}**\n\n`;
             } else {
                 text += '```\n';
@@ -539,11 +539,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             // HTML format - return as plain monospace text
             text += title + '\n';
             text += '═'.repeat(title.length) + '\n\n';
-            text += 'KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18nStrings.monthly_report.sectors + ' ' + i18nStrings.fields.remarks + '\n';
+            text += 'KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ' + i18nStrings.fields.sectors + ' ' + i18nStrings.fields.remarks + '\n';
             text += '─'.repeat(120) + '\n';
             
             if (data.observations.length === 0) {
-                const noObsMsg = i18nStrings.ui.messages.no_observations;
+                const noObsMsg = i18nStrings.messages.no_observations;
                 text += noObsMsg + '\n';
             } else {
                 for (const obs of data.observations) {
@@ -568,7 +568,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             text += ' '.repeat(titlePadLeft) + title + '\n';
             text += ' '.repeat(titlePadLeft) + '═'.repeat(title.length) + '\n\n';
             text += '╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗\n';
-            const sectors = i18nStrings.monthly_report.sectors;
+            const sectors = i18nStrings.fields.sectors;
             const remarks = i18nStrings.fields.remarks;
             const headerLine = `KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH ${sectors.padEnd(15)} ${remarks.padEnd(47)}`;
             text += '║ ' + headerLine.substring(0, 118).padEnd(118) + ' ║\n';
@@ -591,7 +591,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             // No observations message
             if (data.observations.length === 0) {
-                const noObsMsg = i18nStrings.ui.messages.no_observations;
+                const noObsMsg = i18nStrings.messages.no_observations;
                 const padding = Math.floor((118 - noObsMsg.length) / 2);
                 text += '║' + ' '.repeat(118) + '║\n';
                 text += '║' + ' '.repeat(padding) + noObsMsg + ' '.repeat(118 - padding - noObsMsg.length) + '║\n';
@@ -679,7 +679,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const outputMode = window.currentOutputMode || 'P';
                 
                 const data = currentReportData;
-                const monthShort = i18nStrings.months_short.[data.mm] || String(data.mm).padStart(2, '0');
+                const monthShort = i18nStrings.months_short.[data.mm];
                 const kkPadded = String(data.kk).padStart(2, '0');
                 const jjPadded = String(data.jj).padStart(2, '0');
                 
@@ -800,7 +800,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         // No data loaded
-        const msg = i18nStrings.dialogs.no_data.message;
+        const msg = i18nStrings.messages.no_data;
         showWarningModal(msg);
     }
 

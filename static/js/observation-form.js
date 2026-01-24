@@ -278,7 +278,7 @@ class ObservationForm {
                 <select class="form-select form-select-sm" id="form-n">
                     <option value="-1">--</option>
                     ${Array.from({length: 10}, (_, i) => {
-                        const label = i18nStrings.cloud_cover.[i.toString()] || `${i}/8`;
+                        const label = i18nStrings.cloud_cover.[i.toString()];
                         return `<option value="${i}">${i} - ${label}</option>`;
                     }).join('')}
                 </select>
@@ -288,7 +288,7 @@ class ObservationForm {
                 <select class="form-select form-select-sm" id="form-C">
                     <option value="-1">--</option>
                     ${Array.from({length: 8}, (_, i) => {
-                        const label = i18nStrings.cirrus_types.[i.toString()] || i.toString();
+                        const label = i18nStrings.cirrus_types.[i.toString()];
                         return `<option value="${i}">${i} - ${label}</option>`;
                     }).join('')}
                 </select>
@@ -298,7 +298,7 @@ class ObservationForm {
                 <select class="form-select form-select-sm" id="form-c">
                     <option value="-1">--</option>
                     ${Array.from({length: 10}, (_, i) => {
-                        const label = i18nStrings.low_clouds.[i.toString()] || i.toString();
+                        const label = i18nStrings.low_clouds.[i.toString()];
                         return `<option value="${i}">${i} - ${label}</option>`;
                     }).join('')}
                 </select>
@@ -315,7 +315,7 @@ class ObservationForm {
                 <select class="form-select form-select-sm" id="form-h">
                     <option value="-1">--</option>
                     ${Array.from({length: 4}, (_, i) => {
-                        const label = i18nStrings.brightness.[i.toString()] || i.toString();
+                        const label = i18nStrings.brightness.[i.toString()];
                         return `<option value="${i}">${i} - ${label}</option>`;
                     }).join('')}
                 </select>
@@ -325,7 +325,7 @@ class ObservationForm {
                 <select class="form-select form-select-sm" id="form-F">
                     <option value="-1">--</option>
                     ${Array.from({length: 6}, (_, i) => {
-                        const label = i18nStrings.color.[i.toString()] || i.toString();
+                        const label = i18nStrings.color.[i.toString()];
                         return `<option value="${i}">${i} - ${label}</option>`;
                     }).join('')}
                 </select>
@@ -343,7 +343,7 @@ class ObservationForm {
                 <select class="form-select form-select-sm" id="form-weather_front">
                     <option value="-1">--</option>
                     ${Array.from({length: 9}, (_, i) => {
-                        const label = i18nStrings.weather_front.[i.toString()] || i.toString();
+                        const label = i18nStrings.weather_front.[i.toString()];
                         return `<option value="${i}">${i} - ${label}</option>`;
                     }).join('')}
                 </select>

@@ -91,8 +91,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         // No data loaded - show same warning as monthly_report
-        const msg = i18nStrings.dialogs.no_data.message;
-        showWarningModal(msg);
+        showWarningModal(i18nStrings.messages.no_data);
         return false;
     }
 
