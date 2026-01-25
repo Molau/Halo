@@ -258,10 +258,12 @@ def get_observations() -> Dict[str, Any]:
     Get observations from the currently loaded file (in memory) with optional pagination.
 
     Query parameters:
-    - limit: Maximum number of results (default 100, <=0 returns all)
+    - limit: Maximum number of results (default from constants.DEFAULT_OBSERVATION_LIMIT, <=0 returns all)
     - offset: Pagination offset (default 0)
     """
-    limit = int(request.args.get('limit', 100))
+    from halo.models.constants import DEFAULT_OBSERVATION_LIMIT
+    
+    limit = int(request.args.get('limit', DEFAULT_OBSERVATION_LIMIT))
     offset = int(request.args.get('offset', 0))
 
     # Get in-memory data loaded via /file/upload or /file/load
@@ -1370,6 +1372,37 @@ def fixed_observer() -> Dict[str, Any]:
         observer = current_app.config.get('FIXED_OBSERVER', '')
         return jsonify({
             'observer': observer
+        })
+
+
+@api_blueprint.route('/config/upload_password', methods=['GET', 'POST'])
+def upload_password() -> Dict[str, Any]:
+    """Get or set upload password (obfuscated)."""
+    from flask import current_app, request
+    from halo.services.settings import Settings
+    from pathlib import Path
+    
+    if request.method == 'POST':
+        data = request.get_json()
+        password = data.get('password', '')
+        
+        # Obfuscate password before storing
+        obfuscated = Settings.obfuscate(password) if password else ''
+        
+        current_app.config['UPLOAD_PASSWORD'] = obfuscated
+        # Persist setting
+        root_path = Path(__file__).parent.parent.parent.parent
+        Settings.save_key(current_app.config, root_path, 'UPLOAD_PASSWORD', obfuscated)
+        
+        return jsonify({
+            'success': True
+        })
+    else:
+        # Get obfuscated password and deobfuscate it
+        obfuscated = current_app.config.get('UPLOAD_PASSWORD', '')
+        password = Settings.deobfuscate(obfuscated) if obfuscated else ''
+        return jsonify({
+            'password': password
         })
 
 

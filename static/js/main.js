@@ -4727,7 +4727,169 @@ async function processSaveAs(filename) {
     }
 }
 
-// Upload file to halo.online
+// Authentication modal for HALO server login
+async function showAuthenticationModal(onSuccess) {
+    // Load observers, fixed observer, and saved password
+    let observers = [];
+    let fixedObserver = '';
+    let savedPassword = '';
+    
+    try {
+        const [obsResponse, configResponse, passwordResponse] = await Promise.all([
+            fetch('/api/observers'),
+            fetch('/api/config/fixed_observer'),
+            fetch('/api/config/upload_password')
+        ]);
+        
+        if (obsResponse.ok) {
+            const data = await obsResponse.json();
+            observers = data.observers || [];
+        }
+        
+        if (configResponse.ok) {
+            const config = await configResponse.json();
+            fixedObserver = config.observer || '';
+        }
+        
+        if (passwordResponse.ok) {
+            const passwordData = await passwordResponse.json();
+            savedPassword = passwordData.password || '';
+        }
+    } catch (error) {
+        console.error('Error loading data for auth modal:', error);
+    }
+    
+    const observerDisabled = fixedObserver ? 'disabled' : '';
+    
+    const modalHtml = `
+        <div class="modal fade" id="auth-modal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">${i18nStrings.upload_download.upload_auth_title}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>${i18nStrings.upload_download.upload_auth_message}</p>
+                        <div class="mb-3">
+                            <label for="auth-observer" class="form-label">${i18nStrings.upload_download.upload_auth_username}</label>
+                            <select class="form-select" id="auth-observer" ${observerDisabled}></select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="auth-password" class="form-label">${i18nStrings.upload_download.upload_auth_password}</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="auth-password" autocomplete="current-password" value="${savedPassword}">
+                                <button class="btn btn-outline-secondary" type="button" id="toggle-password">
+                                    <i class="bi bi-eye" id="password-icon"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                        <button type="button" class="btn btn-primary btn-sm px-3" id="btn-login">${i18nStrings.upload_download.upload_auth_login}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const modalEl = document.createElement('div');
+    modalEl.innerHTML = modalHtml;
+    document.body.appendChild(modalEl.firstElementChild);
+    
+    const modal = new bootstrap.Modal(document.getElementById('auth-modal'));
+    const observerSelect = document.getElementById('auth-observer');
+    const passwordInput = document.getElementById('auth-password');
+    const togglePasswordBtn = document.getElementById('toggle-password');
+    const passwordIcon = document.getElementById('password-icon');
+    const loginBtn = document.getElementById('btn-login');
+    
+    // Populate observer dropdown
+    observers.sort((a, b) => parseInt(a.KK) - parseInt(b.KK)).forEach(obs => {
+        const option = document.createElement('option');
+        option.value = obs.KK;
+        const selected = obs.KK === fixedObserver ? 'selected' : '';
+        option.selected = selected === 'selected';
+        option.textContent = `${String(obs.KK).padStart(2, '0')} - ${obs.VName || ''} ${obs.NName || ''}`.trim();
+        observerSelect.appendChild(option);
+    });
+    
+    // Toggle password visibility
+    togglePasswordBtn.addEventListener('click', () => {
+        const type = passwordInput.type === 'password' ? 'text' : 'password';
+        passwordInput.type = type;
+        
+        // Toggle icon
+        if (type === 'password') {
+            passwordIcon.className = 'bi bi-eye';
+        } else {
+            passwordIcon.className = 'bi bi-eye-slash';
+        }
+    });
+    
+    // Focus password field when modal opens (since observer is pre-selected if fixed)
+    document.getElementById('auth-modal').addEventListener('shown.bs.modal', () => {
+        if (fixedObserver) {
+            passwordInput.focus();
+        } else {
+            observerSelect.focus();
+        }
+    });
+    
+    // Handle Enter key in password field
+    passwordInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            loginBtn.click();
+        }
+    });
+    
+    // Handle login button click
+    loginBtn.addEventListener('click', async () => {
+        const observerKK = observerSelect.value;
+        const password = passwordInput.value;
+        
+        if (!observerKK || !password) {
+            showErrorDialog(i18nStrings.observers.error_missing_required);
+            return;
+        }
+        
+        // Save password to halo.cfg (obfuscated)
+        try {
+            await fetch('/api/config/upload_password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: password })
+            });
+        } catch (error) {
+            console.error('Error saving password:', error);
+        }
+        
+        // TODO: Validate credentials against HALO server API
+        // For now, we'll just pass the credentials to the callback
+        // In production, you would verify them here first
+        
+        modal.hide();
+        setTimeout(() => {
+            const modalEl = document.getElementById('auth-modal');
+            if (modalEl) modalEl.remove();
+            onSuccess(observerKK, password);
+        }, 300);
+    });
+    
+    // Clean up when modal is closed
+    document.getElementById('auth-modal').addEventListener('hidden.bs.modal', () => {
+        setTimeout(() => {
+            const modalEl = document.getElementById('auth-modal');
+            if (modalEl) modalEl.remove();
+        }, 300);
+    });
+    
+    modal.show();
+}
+
+// Upload file to HALO server
 async function showUploadDialog() {
     try {
         // Check if file is loaded
@@ -4739,50 +4901,133 @@ async function showUploadDialog() {
             return;
         }
         
-        // Get observation count
-        const count = status.count || 0;
+        // Get total observation count
+        const totalCount = status.count || 0;
         
-        // Show confirmation dialog
-        const confirmMessage = i18nStrings.upload_download.upload_confirm.replace('{0}', count);
-        
-        showConfirmDialog(i18nStrings.upload_download.upload_title, confirmMessage, async () => {
-            // User confirmed - proceed with upload
+        // Step 1: Show authentication modal
+        showAuthenticationModal(async (observerKK, password) => {
+            // Step 2: Load observers to get the observer name
+            const observersResponse = await fetch('/api/observers');
+            const observersData = await observersResponse.json();
+            const observers = observersData.observers || [];
             
-            // Show progress spinner
-            const spinner = showInfoModal(i18nStrings.upload_download.upload_title, i18nStrings.upload_download.upload_progress);
+            // Find the observer's name
+            const observer = observers.find(obs => String(obs.KK) === String(observerKK));
+            const observerName = observer ? `${observer.VName || ''} ${observer.NName || ''}`.trim() : '';
+            const observerDisplay = observerName ? `${observerKK} - ${observerName}` : observerKK;
             
-            try {
-                // Upload to halo.online API
-                // TODO: Define exact API endpoint URL
-                const uploadUrl = 'https://halo.online/api/upload'; // Placeholder URL
-                
-                const response = await fetch('/api/file/upload', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        targetUrl: uploadUrl
-                    })
-                });
-                
-                const result = await response.json();
-                
-                // Hide spinner
-                spinner.modal.hide();
-                setTimeout(() => spinner.modalEl.remove(), 300);
-                
-                if (response.ok && result.success) {
-                    // Success - show toast notification
-                    const successMessage = i18nStrings.upload_download.upload_success.replace('{0}', result.count);
-                    showNotification(successMessage, 'success');
-                } else {
-                    showErrorDialog(i18nStrings.common.error + ': ' + (result.error));
-                }
-            } catch (error) {
-                // Hide spinner on error
-                spinner.modal.hide();
-                setTimeout(() => spinner.modalEl.remove(), 300);
-                showErrorDialog(i18nStrings.common.error + ': ' + error.message);
+            // Step 3: Filter observations by observer KK
+            const allObservationsResponse = await fetch('/api/observations?limit=200000');
+            const allData = await allObservationsResponse.json();
+            const allObservations = allData.observations || [];
+            
+            // Filter for this observer only - use String comparison to handle both string and number KK
+            const filteredObservations = allObservations.filter(obs => String(obs.KK) === String(observerKK));
+            const filteredCount = filteredObservations.length;
+            
+            // Check if observer has any observations
+            if (filteredCount === 0) {
+                showErrorDialog(i18nStrings.upload_download.upload_no_observations.replace('{0}', observerDisplay));
+                return;
             }
+            
+            // Prepare confirmation message
+            let confirmMessage;
+            if (filteredCount === totalCount) {
+                // All observations belong to this observer
+                confirmMessage = i18nStrings.upload_download.upload_confirm.replace('{0}', filteredCount);
+            } else {
+                // Some observations filtered out
+                confirmMessage = i18nStrings.upload_download.upload_confirm_filtered
+                    .replace('{0}', filteredCount)
+                    .replace('{1}', totalCount)
+                    .replace('{2}', observerDisplay);
+            }
+            
+            // Create custom modal with radio buttons for upload mode
+            const modalHtml = `
+                <div class="modal fade" id="upload-confirm-modal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">${i18nStrings.upload_download.upload_title}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="mb-3">${confirmMessage}</p>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="upload_mode" id="upload-add" value="add" checked>
+                                    <label class="form-check-label" for="upload-add">${i18nStrings.upload_download.upload_mode_add}</label>
+                                </div>
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="radio" name="upload_mode" id="upload-replace" value="replace">
+                                    <label class="form-check-label" for="upload-replace">${i18nStrings.upload_download.upload_mode_replace}</label>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
+                                <button type="button" class="btn btn-primary btn-sm px-3" id="btn-upload-confirm">${i18nStrings.common.ok}</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const uploadModal = new bootstrap.Modal(document.getElementById('upload-confirm-modal'));
+            
+            document.getElementById('btn-upload-confirm').addEventListener('click', async () => {
+                // Get selected upload mode
+                const uploadMode = document.querySelector('input[name="upload_mode"]:checked').value;
+                
+                // Hide modal
+                uploadModal.hide();
+                setTimeout(() => document.getElementById('upload-confirm-modal').remove(), 300);
+                
+                // User confirmed - proceed with upload
+                
+                // Show progress spinner
+                const spinner = showInfoModal(i18nStrings.upload_download.upload_title, i18nStrings.upload_download.upload_progress);
+                
+                try {
+                    // Upload to HALO server API with filtered observations
+                    const uploadUrl = 'https://halo.online/api/upload'; // Placeholder URL
+                    
+                    const response = await fetch('/api/file/upload', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            targetUrl: uploadUrl,
+                            observerKK: observerKK,
+                            password: password,
+                            observations: filteredObservations,
+                            mode: uploadMode
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    // Hide spinner
+                    spinner.modal.hide();
+                    setTimeout(() => spinner.modalEl.remove(), 300);
+                    
+                    if (response.ok && result.success) {
+                        // Success - show toast notification with filtered count
+                        const successMessage = i18nStrings.upload_download.upload_success.replace('{0}', filteredCount);
+                        showNotification(successMessage, 'success');
+                    } else {
+                        showErrorDialog(i18nStrings.common.error + ': ' + (result.error));
+                    }
+                } catch (error) {
+                    // Hide spinner on error
+                    spinner.modal.hide();
+                    setTimeout(() => spinner.modalEl.remove(), 300);
+                    showErrorDialog(i18nStrings.common.error + ': ' + error.message);
+                }
+            });
+            
+            // Show modal
+            uploadModal.show();
         });
         
     } catch (error) {
@@ -4790,7 +5035,7 @@ async function showUploadDialog() {
     }
 }
 
-// Download file from halo.online
+// Download file from HALO server
 async function showDownloadDialog() {
     // Show filename input dialog
     const modalHtml = `
@@ -4857,7 +5102,7 @@ async function processDownload(filename) {
         // Show progress spinner
         spinner = showInfoModal(i18nStrings.upload_download.download_title, i18nStrings.upload_download.download_progress);
         
-        // Download from halo.online API
+        // Download from HALO server API
         // TODO: Define exact API endpoint URL
         const downloadUrl = 'https://halo.online/api/download'; // Placeholder URL
         

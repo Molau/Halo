@@ -308,7 +308,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             updateFileInfo(obsData.file, allObservations.length);
         } catch (error) {
             console.error('Error loading observations:', error);
-            compactTbody.textContent = i18nStrings.messages.error_loading;
+            compactTbody.textContent = i18nStrings.messages.error_loading_data;
         }
     }
     

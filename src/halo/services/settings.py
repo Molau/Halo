@@ -62,6 +62,8 @@ class Settings:
                             app_config['DATE_DEFAULT_YEAR'] = int(value)
                         except ValueError:
                             app_config['DATE_DEFAULT_YEAR'] = 2026
+                    elif key == 'UPLOAD_PASSWORD':
+                        app_config['UPLOAD_PASSWORD'] = value
         except Exception:
             # On any error, keep existing defaults
             pass
@@ -79,6 +81,7 @@ class Settings:
             ['DATE_DEFAULT_MODE', app_config.get('DATE_DEFAULT_MODE', 'none')],
             ['DATE_DEFAULT_MONTH', str(app_config.get('DATE_DEFAULT_MONTH', 1))],
             ['DATE_DEFAULT_YEAR', str(app_config.get('DATE_DEFAULT_YEAR', 2026))],
+            ['UPLOAD_PASSWORD', app_config.get('UPLOAD_PASSWORD', '')],
         ]
         with open(cfg_file, 'w', encoding='utf-8', newline='') as f:
             writer = csv.writer(f)
@@ -89,3 +92,26 @@ class Settings:
         # Update app_config, then write full set
         app_config[key] = value
         Settings.save_from(app_config, root_path)
+
+    @staticmethod
+    def obfuscate(text: str) -> str:
+        """Simple obfuscation using base64 and character shift."""
+        import base64
+        # Shift characters by 13 (simple ROT13-like)
+        shifted = ''.join(chr(ord(c) + 13) for c in text)
+        # Base64 encode
+        encoded = base64.b64encode(shifted.encode('utf-8')).decode('utf-8')
+        return encoded
+
+    @staticmethod
+    def deobfuscate(text: str) -> str:
+        """Reverse the obfuscation."""
+        import base64
+        try:
+            # Base64 decode
+            decoded = base64.b64decode(text.encode('utf-8')).decode('utf-8')
+            # Reverse character shift
+            unshifted = ''.join(chr(ord(c) - 13) for c in decoded)
+            return unshifted
+        except Exception:
+            return ''

@@ -3,6 +3,9 @@ Constants and configuration values
 Translated from H_TYPES.PAS
 """
 
+# API Configuration
+DEFAULT_OBSERVATION_LIMIT = 200000  # Default maximum observations returned by API
+
 # Mapping of combined halo types to their individual components
 # Combined type splits into (left, right) for statistics
 # Pattern: EE N splits into (N-2, N-1)
