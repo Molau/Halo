@@ -6,6 +6,23 @@ window.currentLanguage = currentLanguage;
 let i18nStrings = {};
 let observerData = null; // cache of observer data with regions
 
+// Wait for i18nStrings to be loaded - reusable helper function
+// Usage: await waitForI18n() in any module's DOMContentLoaded handler
+window.waitForI18n = function() {
+    return new Promise((resolve) => {
+        if (typeof i18nStrings !== 'undefined' && Object.keys(i18nStrings).length > 0) {
+            resolve();
+        } else {
+            const checkInterval = setInterval(() => {
+                if (typeof i18nStrings !== 'undefined' && Object.keys(i18nStrings).length > 0) {
+                    clearInterval(checkInterval);
+                    resolve();
+                }
+            }, 50);
+        }
+    });
+};
+
 // Global data store for loaded observations
 window.haloData = {
     observations: [],

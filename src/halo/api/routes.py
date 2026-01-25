@@ -1563,8 +1563,8 @@ def _format_monthly_report_text(data: Dict[str, Any], i18n) -> str:
     lines.append('')
     lines.append('╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗')
     
-    sectors = i18n.get('monthly_report.sectors')
-    remarks = i18n.get('monthly_report.remarks')
+    sectors = i18n.get('fields.sectors')
+    remarks = i18n.get('fields.remarks')
     header_line = f"KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH {sectors.ljust(15)[:15]} {remarks.ljust(47)[:47]}"
     lines.append('║ ' + header_line[:118].ljust(118) + ' ║')
     lines.append('╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣')
@@ -1624,7 +1624,7 @@ def _format_monthly_report_text(data: Dict[str, Any], i18n) -> str:
     
     # No observations message
     if len(obs_objects) == 0:
-        no_obs_msg = i18n.get('ui.messages.no_observations')
+        no_obs_msg = i18n.get('messages.no_observations')
         padding = (118 - len(no_obs_msg)) // 2
         lines.append('║' + ' ' * 120 + '║')
         lines.append('║' + ' ' * padding + no_obs_msg + ' ' * (120 - padding - len(no_obs_msg)) + '║')
@@ -1633,8 +1633,8 @@ def _format_monthly_report_text(data: Dict[str, Any], i18n) -> str:
     # Footer
     lines.append('╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣')
     
-    hb_line = i18n.get('monthly_report.main_location', 'Hauptbeobachtungsort') + ': ' + data['observer_hbort']
-    nb_line = i18n.get('monthly_report.secondary_location', 'Nebenbeobachtungsort') + ': ' + data['observer_nbort']
+    hb_line = i18n.get('fields.primary_site') + ': ' + data['observer_hbort']
+    nb_line = i18n.get('fields.secondary_site') + ': ' + data['observer_nbort']
     hb_pad_left = (122 - len(hb_line)) // 2
     nb_pad_left = (122 - len(nb_line)) // 2
     hb_line = ' ' * hb_pad_left + hb_line
@@ -1666,8 +1666,8 @@ def _format_monthly_report_markdown(data: Dict[str, Any], i18n) -> str:
     
     # Header line (HALO key format) with fixed padding to align columns
     md += '```\n'
-    sectors_label = i18n.get('monthly_report.sectors')
-    remarks_label = i18n.get('monthly_report.remarks')
+    sectors_label = i18n.get('fields.sectors')
+    remarks_label = i18n.get('fields.remarks')
     header_line = f"KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH {sectors_label.ljust(15)[:15]} {remarks_label.ljust(47)[:47]}"
     md += header_line + '\n'
     md += '```\n\n'
@@ -1676,7 +1676,7 @@ def _format_monthly_report_markdown(data: Dict[str, Any], i18n) -> str:
     observations = data.get('observations', [])
     
     if len(observations) == 0:
-        no_obs_msg = i18n.get('ui.messages.no_observations')
+        no_obs_msg = i18n.get('messages.no_observations')
         md += f"**{no_obs_msg}**\n\n"
     else:
         md += '```\n'
@@ -1720,9 +1720,9 @@ def _format_monthly_report_markdown(data: Dict[str, Any], i18n) -> str:
         md += '```\n\n'
     
     # Footer with observer locations
-    md += f"## {i18n.get('monthly_report.main_location', 'Hauptbeobachtungsort')}\n"
+    md += f"## {i18n.get('fields.primary_site')}\n"
     md += f"{data['observer_hbort']}\n\n"
-    md += f"## {i18n.get('monthly_report.secondary_location', 'Nebenbeobachtungsort')}\n"
+    md += f"## {i18n.get('fields.secondary_site')}\n"
     md += f"{data['observer_nbort']}\n"
     
     return md
@@ -1944,7 +1944,7 @@ def _format_monthly_stats_text(data: Dict[str, Any], month_name: str, year: str,
             if row_count % 5 == 0 and row_count < len(data['observer_overview']):
                 lines.append('╠════╬══════════╬══════════╬══════════╬══════════╬══════════╬════════════╬═════════════╣')
         
-        footnote = i18n.get('ui.statistics.footnote_ee_days').replace('&nbsp;', ' ')
+        footnote = i18n.get('statistics.footnote_ee_days').replace('&nbsp;', ' ')
         footnote = footnote.replace('<br>', '\n║  ')
         lines.append('╠════╩══════════╩══════════╩══════════╩══════════╩══════════╩════════════╩═════════════╣')
         # Calculate correct padding: total width = 88, borders = 2, content = 86, indent = 2
@@ -2057,7 +2057,7 @@ def _format_monthly_stats_text(data: Dict[str, Any], month_name: str, year: str,
         lines.append('╠═════╦════════════════════════╦════════════════════════╦════════════════════════╦═════╣')
         
         # First table: Days 1-16
-        day_label = i18n.get('ui.statistics.table_day')
+        day_label = i18n.get('statistics.table_day')
         lines.append(f'║ {day_label:3s} ║  1.   2.   3.   4.   5.║  6.   7.   8.   9.  10.║ 11.  12.  13.  14.  15.║ 16. ║')
         lines.append('╠═════╬════════════════════════╬════════════════════════╬════════════════════════╬═════╣')
         
@@ -2189,7 +2189,7 @@ def _format_monthly_stats_markdown(data: Dict[str, Any], month_name: str, year: 
             row += f" {obs['total_days']} |"
             lines.append(row)
         
-        footnote = i18n.get('ui.statistics.footnote_ee_days', '1) = EE (Sonne)  2) = Tage (Sonne)  3) = Tage (Mond)  4) = Tage (gesamt)').replace('<br>', ' ')
+        footnote = i18n.get('statistics.footnote_ee_days', '1) = EE (Sonne)  2) = Tage (Sonne)  3) = Tage (Mond)  4) = Tage (gesamt)').replace('<br>', ' ')
         footnote = footnote.replace('&nbsp;', ' ')
         lines.append('')
         lines.append(f'_{footnote}_')
@@ -2258,7 +2258,7 @@ def _format_monthly_stats_markdown(data: Dict[str, Any], month_name: str, year: 
         lines.append(f"## {i18n.get('monthly_stats.activity_title')} {month_name} {year}")
         lines.append('')
         
-        day_label = i18n.get('ui.statistics.table_day')
+        day_label = i18n.get('statistics.table_day')
         
         # Header row
         header = f'| {day_label} |'

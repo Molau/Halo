@@ -1,6 +1,8 @@
 // Analysis (Auswertung) functionality
-document.addEventListener('DOMContentLoaded', async function() {
 
+document.addEventListener('DOMContentLoaded', async function() {
+    // Wait for i18nStrings to be loaded (from main.js)
+    await window.waitForI18n();
 
     let observers = [];
 
@@ -1618,7 +1620,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         } else {
             // Pseudografik format (title and restrictions are included in the table itself)
-            resultHtml = buildPseudografikAnalysisTable(result, params, param1Name, param2Name, restrictions, i18n);
+            resultHtml = buildPseudografikAnalysisTable(result, params, param1Name, param2Name, restrictions, i18nStrings);
         }
         
         // Combine all parts
@@ -1902,7 +1904,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         const layout = {
             title: {
-                text: titleText,
+                text: titleText.replace(/\n/g, '<br>'),
                 font: { size: 16 }
             },
             scene: {
@@ -2250,7 +2252,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         const layout = {
             title: {
-                text: titleText,
+                text: titleText.replace(/\n/g, '<br>'),
                 font: { size: 16 }
             },
             scene: {
@@ -2782,7 +2784,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     // Build Pseudografik format analysis table (full implementation)
-    function buildPseudografikAnalysisTable(result, params, param1Name, param2Name, restrictions, i18n) {
+    function buildPseudografikAnalysisTable(result, params, param1Name, param2Name, restrictions, i18nStrings) {
         let html = '<div style="font-family: monospace; white-space: pre; font-size: 11px; line-height: 1.0;">';
         
         // Build table first to get its width, then add centered title
@@ -2791,12 +2793,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         if (!params.param2) {
             // Single parameter - simple two-column table
-            const tableResult = buildSingleParameterPseudografikWithWidth(result.data, param1Name, result.total, params.param1, i18n);
+            const tableResult = buildSingleParameterPseudografikWithWidth(result.data, param1Name, result.total, params.param1, i18nStrings);
             tableHtml = tableResult.html;
             tableWidth = tableResult.width;
         } else {
             // Two parameters - cross-tabulation
-            const tableResult = buildTwoParameterPseudografikWithWidth(result.data, param1Name, param2Name, result.total, params.percentage_mode, params.param1, params.param2, i18n);
+            const tableResult = buildTwoParameterPseudografikWithWidth(result.data, param1Name, param2Name, result.total, params.percentage_mode, params.param1, params.param2, i18nStrings);
             tableHtml = tableResult.html;
             tableWidth = tableResult.width;
         }
@@ -2823,7 +2825,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     // Build single parameter pseudo-graphics table
-    function buildSingleParameterPseudografikWithWidth(data, paramName, total, paramCode, i18n) {
+    function buildSingleParameterPseudografikWithWidth(data, paramName, total, paramCode, i18nStrings) {
         let html = '';
         // Keep local alias for clarity and to avoid undefined references
         const param1Code = paramCode;
@@ -2899,7 +2901,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     // Build two parameter cross-tabulation pseudo-graphics table
-    function buildTwoParameterPseudografikWithWidth(data, param1Name, param2Name, total, percentageMode, param1Code, param2Code, i18n) {
+    function buildTwoParameterPseudografikWithWidth(data, param1Name, param2Name, total, percentageMode, param1Code, param2Code, i18nStrings) {
         let html = '';
         
         // Extract all unique param2 values (columns) and sort them

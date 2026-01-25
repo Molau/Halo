@@ -1,5 +1,7 @@
 // Annual Statistics (Jahresstatistik) functionality
 document.addEventListener('DOMContentLoaded', async function() {
+    // Wait for i18nStrings to be loaded (from main.js)
+    await window.waitForI18n();
 
     // Use global i18n from main.js
     let currentStatsData = null; // Store current stats data for save/print
@@ -217,7 +219,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (formatParam === 'html') {
                 // HTML format returns JSON; convert to HTML tables
                 const jsonData = await response.json();
-                html = buildHTMLTableAnnualStats(jsonData, year, i18n);
+                html = buildHTMLTableAnnualStats(jsonData, year, i18nStrings);
             } else {
                 // Text and markdown formats return text
                 content = await response.text();
@@ -676,8 +678,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         const months = Array.from({length: 12}, (_, i) => i + 1);
         
         // Extract real and relative activity from monthly_stats
-        const realData = months.map(mm => currentStatsData.monthly_stats.[mm.toString()].real || 0);
-        const relativeData = months.map(mm => currentStatsData.monthly_stats.[mm.toString()].relative || 0);
+        const realData = months.map(mm => currentStatsData.monthly_stats[mm.toString()].real || 0);
+        const relativeData = months.map(mm => currentStatsData.monthly_stats[mm.toString()].relative || 0);
         
         // Create chart
         const canvas = document.getElementById('activity-chart-line');
@@ -756,6 +758,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Show chart modal
         const chartModalElement = document.getElementById('chart-modal-line');
+        chartModalElement.setAttribute('tabindex', '-1');
+        chartModalElement.addEventListener('shown.bs.modal', () => {
+            chartModalElement.focus({ preventScroll: true });
+        }, { once: true });
         const chartModal = new bootstrap.Modal(chartModalElement);
         
         // Store data for print/save buttons
@@ -795,8 +801,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         const monthLabels = Object.values(i18nStrings.months_short);
         const months = Array.from({length: 12}, (_, i) => i + 1);
         
-        const realData = months.map(mm => currentStatsData.monthly_stats.[mm.toString()].real || 0);
-        const relativeData = months.map(mm => currentStatsData.monthly_stats.[mm.toString()].relative || 0);
+        const realData = months.map(mm => currentStatsData.monthly_stats[mm.toString()].real || 0);
+        const relativeData = months.map(mm => currentStatsData.monthly_stats[mm.toString()].relative || 0);
         
         // Create chart
         const canvas = document.getElementById('activity-chart-bar');
@@ -871,6 +877,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Show chart modal
         const chartModalElement = document.getElementById('chart-modal-bar');
+        chartModalElement.setAttribute('tabindex', '-1');
+        chartModalElement.addEventListener('shown.bs.modal', () => {
+            chartModalElement.focus({ preventScroll: true });
+        }, { once: true });
         const chartModal = new bootstrap.Modal(chartModalElement);
         
         // Store data for print/save buttons
@@ -1024,7 +1034,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (outputMode === 'M') {
             // Markdown mode: save as .md
             filename = `${year}.md`;
-            content = buildMarkdownAnnualStats(currentStatsData, year, i18n);
+            content = buildMarkdownAnnualStats(currentStatsData, year, i18nStrings);
             mimeType = 'text/markdown;charset=utf-8';
         } else if (outputMode === 'H') {
             // HTML-Tabellen mode: save as CSV
@@ -1226,7 +1236,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     // Build Pseudografik format annual statistics (original implementation)
-    function buildPseudografikAnnualStats(data, year, i18n) {
+    function buildPseudografikAnnualStats(data, year, i18nStrings) {
         let html = '<pre style="font-family: \'Courier New\', Courier, monospace; font-size: 11px; color: #000000; line-height: 1.2; overflow-x: auto; padding: 20px; background-color: #f5f5f5; border-radius: 4px; letter-spacing: 0; word-spacing: normal;">';
         
         // Title (centered)
@@ -1260,7 +1270,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     // Build HTML-Tabellen format annual statistics
-    function buildHTMLTableAnnualStats(data, year, i18n) {
+    function buildHTMLTableAnnualStats(data, year, i18nStrings) {
         let html = '<div style="padding: 20px;">';
         
         // Title
@@ -1489,7 +1499,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     // Build Markdown format annual statistics (pipe tables from HTML format)
-    function buildMarkdownAnnualStats(data, year, i18n) {
+    function buildMarkdownAnnualStats(data, year, i18nStrings) {
         let md = `# ${i18nStrings.annual_stats.title_with_year.replace('{year}', year)}\n\n`;
         
         // Table 1: Monthly Activity

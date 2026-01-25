@@ -1,6 +1,7 @@
 // Monthly Statistics (Monatsstatistik) functionality
 document.addEventListener('DOMContentLoaded', async function() {
-
+    // Wait for i18nStrings to be loaded (from main.js)
+    await window.waitForI18n();
 
     let currentStatsData = null; // Store current stats data for save/print
 
@@ -182,7 +183,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             console.error('Error fetching output mode:', error);
         }
         
-        // Get month name (months array is 1-indexed in i18n)
+        // Get month name (months array is 1-indexed in i18nStrings)
         const months = i18nStrings.months || {};
         const monthName = months[data.mm] || months[data.mm.toString()];
         
@@ -215,7 +216,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (formatParam === 'html') {
                 // HTML format returns JSON; convert to HTML tables
                 const jsonData = await response.json();
-                html = buildHTMLTableMonthlyStats(jsonData, monthName, year, i18n);
+                html = buildHTMLTableMonthlyStats(jsonData, monthName, year, i18nStrings);
             } else {
                 // Text and markdown formats return text
                 content = await response.text();
@@ -642,7 +643,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (!currentStatsData) return;
                 
                 const data = currentStatsData;
-                const monthShort = i18nStrings.months_short.[data.mm];
+                const monthShort = i18nStrings.months_short[data.mm];
                 const jjPadded = String(data.jj).padStart(2, '0');
                 
                 // Check output mode
@@ -660,7 +661,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 } else if (outputMode === 'M') {
                     // Markdown mode: save as Markdown with pipe tables
                     filename = `${monthShort.toLowerCase()}19${jjPadded}.md`;
-                    content = buildMarkdownMonthlyStats(data, i18nStrings.months.[data.mm], parseInt(data.jj) + 1900, i18n);
+                    content = buildMarkdownMonthlyStats(data, i18nStrings.months[data.mm], parseInt(data.jj) + 1900, i18nStrings);
                     mimeType = 'text/markdown;charset=utf-8';
                 } else {
                     // Pseudografik mode: save as TXT with formatted statistics
@@ -724,8 +725,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Prepare chart data - days 1-31
         const days = Array.from({length: 31}, (_, i) => i + 1);
-        const realData = days.map(d => data.activity_real.[d] || 0);
-        const relativeData = days.map(d => data.activity_relative.[d] || 0);
+        const realData = days.map(d => data.activity_real[d] || 0);
+        const relativeData = days.map(d => data.activity_relative[d] || 0);
         
         // Create chart - LINE CHART
         const canvas = document.getElementById('activity-chart-line');
@@ -807,6 +808,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Show chart modal - LINE CHART VERSION
         const chartModalElement = document.getElementById('chart-modal-line');
+        chartModalElement.setAttribute('tabindex', '-1');
+        chartModalElement.addEventListener('shown.bs.modal', () => {
+            chartModalElement.focus({ preventScroll: true });
+        }, { once: true });
         const chartModal = new bootstrap.Modal(chartModalElement);
         
         // Store data for print/save buttons
@@ -844,8 +849,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Prepare chart data - days 1-31
         const days = Array.from({length: 31}, (_, i) => i + 1);
-        const realData = days.map(d => data.activity_real.[d] || 0);
-        const relativeData = days.map(d => data.activity_relative.[d] || 0);
+        const realData = days.map(d => data.activity_real[d] || 0);
+        const relativeData = days.map(d => data.activity_relative[d] || 0);
         
         // Create chart - BAR CHART
         const canvas = document.getElementById('activity-chart-bar');
@@ -923,6 +928,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Show chart modal - BAR CHART VERSION
         const chartModalElement = document.getElementById('chart-modal-bar');
+        chartModalElement.setAttribute('tabindex', '-1');
+        chartModalElement.addEventListener('shown.bs.modal', () => {
+            chartModalElement.focus({ preventScroll: true });
+        }, { once: true });
         const chartModal = new bootstrap.Modal(chartModalElement);
         
         // Store data for print/save buttons
@@ -974,7 +983,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (!window.chartData) return;
                 try {
                     const data = window.chartData;
-                    const monthShort = i18nStrings.months_short.[data.mm];
+                    const monthShort = i18nStrings.months_short[data.mm];
                     const jjPadded = String(data.jj).padStart(2, '0');
                     const filename = `Haloaktivitaet_${monthShort.toLowerCase()}${jjPadded}.png`;
                     
@@ -1030,7 +1039,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (!window.chartData) return;
                 try {
                     const data = window.chartData;
-                    const monthShort = i18nStrings.months_short.[data.mm];
+                    const monthShort = i18nStrings.months_short[data.mm];
                     const jjPadded = String(data.jj).padStart(2, '0');
                     const filename = `Haloaktivitaet_${monthShort.toLowerCase()}${jjPadded}_Balken.png`;
                     
@@ -1101,7 +1110,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!currentStatsData) return;
         
         const data = currentStatsData;
-        const monthShort = i18nStrings.months_short.[data.mm];
+        const monthShort = i18nStrings.months_short[data.mm];
         const jjPadded = String(data.jj).padStart(2, '0');
         const filename = `Haloaktivitaet_Balken_${monthShort.toLowerCase()}${jjPadded}.png`;
         
@@ -1130,7 +1139,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!currentStatsData) return;
         
         const data = currentStatsData;
-        const monthShort = i18nStrings.months_short.[data.mm];
+        const monthShort = i18nStrings.months_short[data.mm];
         const jjPadded = String(data.jj).padStart(2, '0');
         const filename = `Haloaktivitaet_${monthShort.toLowerCase()}${jjPadded}.png`;
         
@@ -1299,7 +1308,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     setupActionButtons();
 
     // Build Pseudografik format statistics (original implementation)
-    function buildPseudografikMonthlyStats(data, monthName, year, i18n) {
+    function buildPseudografikMonthlyStats(data, monthName, year, i18nStrings) {
         let html = '<div class="statistics-report" style="font-family: monospace; white-space: pre; font-size: 11px; color: #000000; line-height: 1;">';
         
         // Title (centered)
@@ -1333,7 +1342,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     // Build Markdown format statistics
-    function buildMarkdownMonthlyStats(data, monthName, year, i18n) {
+    function buildMarkdownMonthlyStats(data, monthName, year, i18nStrings) {
         let md = `# ${i18nStrings.monthly_stats.title} ${monthName} ${year}\n\n`;
         
         // Table 1: Observer Overview
@@ -1477,7 +1486,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     // Build HTML-Tabellen format statistics
-    function buildHTMLTableMonthlyStats(data, monthName, year, i18n) {
+    function buildHTMLTableMonthlyStats(data, monthName, year, i18nStrings) {
         let html = '<div style="padding: 20px;">';
         
         // Title

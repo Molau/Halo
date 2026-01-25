@@ -50,6 +50,9 @@ class FilterDialog {
      * @param {Function} onCancelCallback - Called when dialog is cancelled
      */
     async show(onApplyCallback, onCancelCallback) {
+        // Wait for i18nStrings to be loaded (from main.js)
+        await window.waitForI18n();
+        
         this.onApply = onApplyCallback;
         this.onCancel = onCancelCallback;
         

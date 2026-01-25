@@ -1,6 +1,7 @@
 // Monthly Report (Monatsmeldung) functionality
 document.addEventListener('DOMContentLoaded', async function() {
-
+    // Wait for i18nStrings to be loaded (from main.js)
+    await window.waitForI18n();
 
     let allObservers = [];
     let fixedObserver = '';
@@ -400,7 +401,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (formatParam === 'html') {
                 // HTML format returns JSON; convert to HTML table
                 const jsonData = await response.json();
-                html = buildHTMLTableReport(jsonData, i18n);
+                html = buildHTMLTableReport(jsonData, i18nStrings);
             } else {
                 // Text and markdown formats return text
                 content = await response.text();
@@ -436,7 +437,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     
     // Build HTML-Tabellen format report (implementation)
-    function buildHTMLTableReport(data, i18n) {
+    function buildHTMLTableReport(data, i18nStrings) {
         // Use i18n month names
         const monthName = i18nStrings.months[data.mm];
         
@@ -771,8 +772,6 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Initialize
     async function initialize() {
-        await loadI18n();
-        
         // Check if data is already loaded on the server (same as observations.js)
         try {
             const response = await fetch('/api/observations?limit=1');
@@ -780,6 +779,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const data = await response.json();
                 if (data.total > 0 && data.file) {
                     // Data is loaded on server
+                    
+                    // Update UI text to populate dropdowns
+                    updateUIText();
                     
                     // Load observers and show filter dialog
                     await loadFixedObserver();

@@ -1,5 +1,7 @@
 // Observations page functionality - Exact translation from H_BEOBNG.PAS zeibeobachtung()
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    // Wait for i18nStrings to be loaded (from main.js)
+    await window.waitForI18n();
 
     let currentPage = 1;
     const pageSize = 50;  // Pascal shows 50 rows at a time (zeile variable)

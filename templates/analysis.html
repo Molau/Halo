@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ g.i18n.get('menu_titles.auswertung') }} - HALO</title>
+    <title>{{ g.i18n.get('menu_titles.analysis') }} - HALO</title>
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='fonts/bootstrap-icons/bootstrap-icons.css') }}" rel="stylesheet">
@@ -135,7 +135,7 @@
                             {{ g.i18n.get('analysis_dialog.first_param') }} <span class="text-danger">*</span>
                         </label>
                         <select class="form-select" id="param1-select" required autofocus>
-                            <option value="">{{ g.i18n.get('analysis_dialog.please_select') }}</option>
+                            <option value="">{{ g.i18n.get('common.please_select') }}</option>
                             <!-- Will be populated by JavaScript -->
                         </select>
                     </div>
@@ -294,8 +294,6 @@
                                 <input class="form-check-input" type="radio" name="param1-ee-split" id="param1-ee-nosplit" value="nosplit">
                                 <label class="form-check-label" for="param1-ee-nosplit">
                                     {{ g.i18n.get('common.dont_split') }}
-                                    Don't split
-                                    {% endif %}
                                 </label>
                             </div>
                         </div>
