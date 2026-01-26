@@ -420,7 +420,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     function populateRegionSelectForFilter1() {
         filter1SelectElem.innerHTML = '';
         for (let i = 1; i <= 39; i++) {
-            const regionName = i18n.geographic_regions[String(i)];
+            const regionName = i18nStrings.geographic_regions[String(i)];
             if (regionName && regionName.trim()) {
                 const option = document.createElement('option');
                 option.value = i;
@@ -436,7 +436,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         for (let i = 1; i <= 99; i++) {
             const option = document.createElement('option');
             option.value = i;
-            option.textContent = `${String(i).padStart(2, '0')} - ${i18n.halo_types[i] || i18nStrings.common.unknown}`;
+            option.textContent = `${String(i).padStart(2, '0')} - ${i18nStrings.halo_types[i] || i18nStrings.common.unknown}`;
             filter2SelectElem.appendChild(option);
         }
     }
@@ -445,7 +445,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         filter2SelectElem.innerHTML = '';
         for (let i = 1; i <= 39; i++) {
-            const regionName = i18n.geographic_regions[String(i)];
+            const regionName = i18nStrings.geographic_regions[String(i)];
             // Skip empty regions
             if (regionName && regionName.trim()) {
                 const option = document.createElement('option');
@@ -806,38 +806,45 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // 8HHHH - light pillar heights (Pascal lines 271-290)
         if (obs.EE === 8) {
+            // Upper light pillar only
             if (obs.HO === null || obs.HO === -1) {
-                erg += '8////';
+                erg += '8  //';  // HO not observed
+            } else if (obs.HO === 0) {
+                erg += '8  //';  // HO not relevant
             } else {
                 erg += '8' + String(Math.floor(obs.HO / 10)) + String(obs.HO % 10) + '//';
             }
         } else if (obs.EE === 9) {
+            // Lower light pillar only
             if (obs.HU === null || obs.HU === -1) {
-                erg += '8////';
+                erg += '8//  ';  // HU not observed
+            } else if (obs.HU === 0) {
+                erg += '8//  ';  // HU not relevant
             } else {
                 erg += '8//' + String(Math.floor(obs.HU / 10)) + String(obs.HU % 10);
             }
         } else if (obs.EE === 10) {
+            // Both upper and lower light pillars
             erg += '8';
-            if (obs.HO === null || obs.HO === -1) {
-                erg += '//';
+            if (obs.HO === null || obs.HO === -1 || obs.HO === 0) {
+                erg += '  ';  // HO not observed or not relevant
             } else {
                 erg += String(Math.floor(obs.HO / 10)) + String(obs.HO % 10);
             }
-            if (obs.HU === null || obs.HU === -1) {
-                erg += '//';
+            if (obs.HU === null || obs.HU === -1 || obs.HU === 0) {
+                erg += '  ';  // HU not observed or not relevant
             } else {
                 erg += String(Math.floor(obs.HU / 10)) + String(obs.HU % 10);
             }
         } else {
-            erg += '/////';
+            // No light pillar - use empty field not slashes
+            erg += '     ';
         }
         
         // Separator after 8HHHH block
         erg += ' ';
         
         // Sectors - always exactly 15 chars (pad with spaces if shorter)
-        // The sectors field from CSV might have leading/trailing spaces
         let sectors = obs.sectors || '';
         // Trim and then pad to exactly 15 chars
         sectors = sectors.trim().substring(0, 15).padEnd(15, ' ');

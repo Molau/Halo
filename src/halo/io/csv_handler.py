@@ -4,8 +4,9 @@ Simpler alternative to binary format for initial development
 """
 
 import csv
+import re
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 from ..models.types import Observation
 
 
@@ -14,187 +15,257 @@ class ObservationCSV:
     Handle CSV import/export of observations
     Format: KK,O,JJ,MM,TT,g,ZS,ZM,d,DD,N,C,c,EE,H,F,V,f,zz,GG,8HHHH,sectors,remarks
     Note: 8HHHH is a combined field (5 chars), not separate ho/hu
+    
+    Two CSV formats are supported:
+    - Legacy format: Fixed positions with spaces (from original HALO program)
+    - Modern format: Proper CSV with quoted remarks field
     """
     
     @staticmethod
-    def _parse_int(value: str, default: int = -1) -> int:
-        """Parse integer, handling '/' and spaces as unknown (-1)"""
-        value = value.strip()
-        if not value or value == '/' or value == ' ':
-            return default
+    def _parse_int(value: str, default: int = -1, slash_as_not_present: bool = False) -> int:
+        """
+        Parse integer, handling special values.
+        
+        Standard behavior (for most fields):
+        - '/' or ' ' or '' = not observed/unknown → -1
+        
+        Special behavior for d and 8HHHH (when slash_as_not_present=True):
+        - '/' = observed but not present → 0 (no cirrus for d, not relevant for HO/HU)
+        - ' ' or '' = not observed/unknown → -1
+        
+        Args:
+            value: String value to parse
+            default: Default value for empty/space (-1 by default)
+            slash_as_not_present: If True, treat '/' as 0 (for d and 8HHHH fields only)
+            
+        Returns:
+            Parsed integer or special value (-1 or 0)
+        """
+        value_stripped = value.strip()
+        
+        # Empty or space = unknown (always -1)
+        if not value_stripped or value_stripped == ' ':
+            return -1
+        
+        # Slash: either 0 (for d, 8HHHH) or -1 (for all other fields)
+        if value_stripped == '/':
+            return 0 if slash_as_not_present else -1
+        
         try:
             return int(value)
         except ValueError:
             return default
     
     @staticmethod
-    def read_observations(filepath: Path) -> List[Observation]:
+    def _detect_legacy_format(filepath: Path) -> bool:
         """
-        Read observations from CSV file
+        Detect if CSV file is in legacy format (from original HALO program).
+        Legacy format has spaces in the sectors field.
         
         Args:
             filepath: Path to CSV file
             
         Returns:
-            List of Observation objects
+            True if legacy format detected, False for modern format
         """
-        observations = []
-        
         with open(filepath, 'r', encoding='latin-1') as f:
             for line in f:
                 parts = line.rstrip(',\n').split(',')
-                if len(parts) < 20:
-                    continue
-                
-                obs = Observation()
-                obs.vers = 25
-                obs.KK = ObservationCSV._parse_int(parts[0], -1)
-                obs.O = ObservationCSV._parse_int(parts[1], -1)
-                obs.JJ = ObservationCSV._parse_int(parts[2], -1)
-                obs.MM = ObservationCSV._parse_int(parts[3], -1)
-                obs.TT = ObservationCSV._parse_int(parts[4], -1)
-                obs.g = ObservationCSV._parse_int(parts[5], -1)
-                obs.ZS = ObservationCSV._parse_int(parts[6], -1)
-                obs.ZM = ObservationCSV._parse_int(parts[7], -1)
-                # Order per spec: ..., ZS, ZM, d, DD, N, C, c, ...
-                obs.d = ObservationCSV._parse_int(parts[8], -1)
-                obs.DD = ObservationCSV._parse_int(parts[9], -1)
-                
-                obs.N = ObservationCSV._parse_int(parts[10], -1)
-                obs.C = ObservationCSV._parse_int(parts[11], -1)
-                obs.c = ObservationCSV._parse_int(parts[12], -1)
-                obs.EE = ObservationCSV._parse_int(parts[13], -1)
-                obs.H = ObservationCSV._parse_int(parts[14], -1)
-                obs.F = ObservationCSV._parse_int(parts[15], -1)
-                obs.V = ObservationCSV._parse_int(parts[16], -1)
-                
-                # f and zz: space means unknown/-1
-                ff_str = parts[17].strip()
-                obs.f = -1 if not ff_str or ff_str == '/' else ObservationCSV._parse_int(ff_str, -1)
-                
-                zz_str = parts[18].strip()
-                obs.zz = -1 if not zz_str or zz_str == '/' else ObservationCSV._parse_int(zz_str, -1)
-                
-                obs.GG = ObservationCSV._parse_int(parts[19], -1)
-                
-                # Parse 8HHHH field (field 20) to extract ho and hu
-                # Format: 8HHHH where first two H are ho, last two H are hu
-                # Examples: /////=no data, 8////=E=8 no data, 810//=E=8 ho=10, 8//15=E=9 hu=15
-                ho_hu_field = parts[20] if len(parts) > 20 else "/////"
-                if len(ho_hu_field) >= 5:
-                    # ho is chars 1-2 (0-indexed), hu is chars 3-4
-                    ho_str = ho_hu_field[1:3]
-                    hu_str = ho_hu_field[3:5]
-                    obs.HO = ObservationCSV._parse_int(ho_str, -1)
-                    obs.HU = ObservationCSV._parse_int(hu_str, -1)
-                else:
-                    obs.HO = -1
-                    obs.HU = -1
-                
-                # Sectors (field 21) and remarks (field 22)
-                obs.sectors = parts[21] if len(parts) > 21 else ""
-                obs.remarks = parts[22] if len(parts) > 22 else ""
-                
-                observations.append(obs)
+                if len(parts) > 21:
+                    sectors_field = parts[21]  # Don't strip - we need to detect spaces!
+                    # Legacy format: sectors field contains spaces (e.g., "a-b-c          " or "               ")
+                    # Modern format: sectors field has no extra spaces (e.g., "a-b-c" or "/////")
+                    # Check if field has leading or trailing spaces
+                    if len(sectors_field) > len(sectors_field.strip()):
+                        return True
+                    else:
+                        return False  # First valid line has no spaces = modern format
+        return False  # No valid lines found
+    
+    @staticmethod
+    def read_observations(filepath: Path) -> Tuple[List[Observation], bool]:
+        """
+        Read observations from CSV file (legacy or modern format).
         
-        return observations
+        Args:
+            filepath: Path to CSV file
+            
+        Returns:
+            Tuple of (observations list, needs_conversion flag)
+            needs_conversion=True if file was in legacy format
+        """
+        is_legacy = ObservationCSV._detect_legacy_format(filepath)
+        observations = []
+        
+        with open(filepath, 'r', encoding='latin-1') as f:
+            if is_legacy:
+                # Legacy format: simple comma split (spaces between fields)
+                for line in f:
+                    parts = line.rstrip(',\n').split(',')
+                    if len(parts) < 20:
+                        continue
+                    obs = ObservationCSV._parse_observation_parts(parts)
+                    if obs:
+                        observations.append(obs)
+            else:
+                # Modern format: proper CSV with quoted remarks
+                reader = csv.reader(f)
+                for parts in reader:
+                    if len(parts) < 20:
+                        continue
+                    obs = ObservationCSV._parse_observation_parts(parts)
+                    if obs:
+                        observations.append(obs)
+        
+        return observations, is_legacy
+    
+    @staticmethod
+    def _parse_observation_parts(parts: List[str]) -> Observation:
+        """Parse observation from CSV field parts."""
+        obs = Observation()
+        obs.vers = 25
+        obs.KK = ObservationCSV._parse_int(parts[0], -1)
+        obs.O = ObservationCSV._parse_int(parts[1], -1)
+        obs.JJ = ObservationCSV._parse_int(parts[2], -1)
+        obs.MM = ObservationCSV._parse_int(parts[3], -1)
+        obs.TT = ObservationCSV._parse_int(parts[4], -1)
+        obs.g = ObservationCSV._parse_int(parts[5], -1)
+        obs.ZS = ObservationCSV._parse_int(parts[6], -1)
+        obs.ZM = ObservationCSV._parse_int(parts[7], -1)
+        obs.d = ObservationCSV._parse_int(parts[8], -1, slash_as_not_present=True)  # d allows '/' → 0 (no cirrus)
+        obs.DD = ObservationCSV._parse_int(parts[9], -1)
+        obs.N = ObservationCSV._parse_int(parts[10], -1)
+        obs.C = ObservationCSV._parse_int(parts[11], -1)
+        obs.c = ObservationCSV._parse_int(parts[12], -1)
+        obs.EE = ObservationCSV._parse_int(parts[13], -1)
+        obs.H = ObservationCSV._parse_int(parts[14], -1)
+        obs.F = ObservationCSV._parse_int(parts[15], -1)
+        obs.V = ObservationCSV._parse_int(parts[16], -1)
+        
+        ff_str = parts[17].strip()
+        obs.f = -1 if not ff_str or ff_str == '/' else ObservationCSV._parse_int(ff_str, -1)
+        
+        zz_str = parts[18].strip()
+        obs.zz = -1 if not zz_str or zz_str == '/' else ObservationCSV._parse_int(zz_str, -1)
+        
+        obs.GG = ObservationCSV._parse_int(parts[19], -1)
+        
+        # Parse 8HHHH field
+        ho_hu_field = parts[20] if len(parts) > 20 else "/////"
+        if len(ho_hu_field) >= 5:
+            ho_str = ho_hu_field[1:3]
+            hu_str = ho_hu_field[3:5]
+            obs.HO = ObservationCSV._parse_int(ho_str, -1, slash_as_not_present=True)  # HO allows '//' → 0 (not relevant)
+            obs.HU = ObservationCSV._parse_int(hu_str, -1, slash_as_not_present=True)  # HU allows '//' → 0 (not relevant)
+        else:
+            obs.HO = -1
+            obs.HU = -1
+        
+        # Sectors and remarks
+        obs.sectors = parts[21].strip() if len(parts) > 21 else ""
+        obs.remarks = parts[22].strip() if len(parts) > 22 else ""
+        
+        return obs
 
     @staticmethod
     def read_observations_from_stream(stream) -> List[Observation]:
-        """Read observations from an in-memory text stream (CSV format)."""
+        """
+        Read observations from in-memory text stream (CSV format).
+        Uses _parse_observation_parts for consistency.
+        """
         observations = []
         for line in stream:
             parts = line.rstrip(',\n').split(',')
             if len(parts) < 20:
                 continue
-
-            obs = Observation()
-            obs.vers = 25
-            obs.KK = ObservationCSV._parse_int(parts[0], -1)
-            obs.O = ObservationCSV._parse_int(parts[1], -1)
-            obs.JJ = ObservationCSV._parse_int(parts[2], -1)
-            obs.MM = ObservationCSV._parse_int(parts[3], -1)
-            obs.TT = ObservationCSV._parse_int(parts[4], -1)
-            obs.g = ObservationCSV._parse_int(parts[5], -1)
-            obs.ZS = ObservationCSV._parse_int(parts[6], -1)
-            obs.ZM = ObservationCSV._parse_int(parts[7], -1)
-            # Order per spec: ..., ZS, ZM, d, DD, N, C, c, ...
-            obs.d = ObservationCSV._parse_int(parts[8], -1)
-            obs.DD = ObservationCSV._parse_int(parts[9], -1)
-            obs.N = ObservationCSV._parse_int(parts[10], -1)
-            obs.C = ObservationCSV._parse_int(parts[11], -1)
-            obs.c = ObservationCSV._parse_int(parts[12], -1)
-            obs.EE = ObservationCSV._parse_int(parts[13], -1)
-            obs.H = ObservationCSV._parse_int(parts[14], -1)
-            obs.F = ObservationCSV._parse_int(parts[15], -1)
-            obs.V = ObservationCSV._parse_int(parts[16], -1)
-
-            ff_str = parts[17].strip()
-            obs.f = -1 if not ff_str or ff_str == '/' else ObservationCSV._parse_int(ff_str, -1)
-
-            zz_str = parts[18].strip()
-            obs.zz = -1 if not zz_str or zz_str == '/' else ObservationCSV._parse_int(zz_str, -1)
-
-            obs.GG = ObservationCSV._parse_int(parts[19], -1)
-
-            # Parse 8HHHH field (field 20) to extract ho and hu
-            ho_hu_field = parts[20] if len(parts) > 20 else "/////"
-            if len(ho_hu_field) >= 5:
-                ho_str = ho_hu_field[1:3]
-                hu_str = ho_hu_field[3:5]
-                obs.HO = ObservationCSV._parse_int(ho_str, -1)
-                obs.HU = ObservationCSV._parse_int(hu_str, -1)
-            else:
-                obs.HO = -1
-                obs.HU = -1
-
-            # Sectors (field 21) and remarks (field 22)
-            obs.sectors = parts[21] if len(parts) > 21 else ""
-            obs.remarks = parts[22] if len(parts) > 22 else ""
-
-            observations.append(obs)
-
+            obs = ObservationCSV._parse_observation_parts(parts)
+            if obs:
+                observations.append(obs)
         return observations
     
     @staticmethod
     def write_observations(filepath: Path, observations: List[Observation]) -> None:
         """
-        Write observations to CSV file
+        Write observations to modern CSV format.
+        
+        Modern format:
+        - No spaces between commas, no unnecessary spaces in fields
+        - No leading zeros (except where semantically required)
+        - Remarks field enclosed in double quotes when needed (handles embedded commas)
+        - Standard CSV escaping
+        - Special values: -1 = not observed (empty/space), 0 = not present (/) for d/HO/HU
         
         Args:
             filepath: Path to CSV file
             observations: List of Observation objects
         """
         with open(filepath, 'w', encoding='latin-1', newline='') as f:
+            writer = csv.writer(f, quoting=csv.QUOTE_MINIMAL)
+            
             for obs in observations:
-                # Format each field
-                d_str = '/' if obs.d == 255 else f'{obs.d:02d}'
-                ff_str = ' ' if obs.f == -1 else f'{obs.f:02d}'
-                zz_str = '  ' if obs.zz == -1 else f'{obs.zz:02d}'
+                # Helper function to format field values
+                def format_field(value):
+                    """Format field: -1→empty, -2→'/', else→number"""
+                    if value == -1:
+                        return ''  # Not observed/unknown
+                    elif value == -2:
+                        return '/'  # Observed but not present
+                    else:
+                        return str(value)
+                
+                # Format fields with proper encoding of special values
+                d_str = '/' if obs.d == 255 else format_field(obs.d)
+                
+                # Format 8HHHH field - special handling for double slash
+                e_digit = str(obs.EE) if hasattr(obs, 'EE') else ''
+                
+                # For HO and HU: -1→empty, 0→'//', else→number
+                ho_str = ''
+                if obs.HO == -1:
+                    ho_str = ''
+                elif obs.HO == 0:
+                    ho_str = '//'
+                else:
+                    ho_str = str(obs.HO)
+                
+                hu_str = ''
+                if obs.HU == -1:
+                    hu_str = ''
+                elif obs.HU == 0:
+                    hu_str = '//'
+                else:
+                    hu_str = str(obs.HU)
+                
+                # Combine to 8HHHH field
+                if not ho_str and not hu_str:
+                    ho_hu_field = '/////'
+                else:
+                    ho_hu_field = f'{e_digit}{ho_str or ""}{hu_str or ""}'
                 
                 fields = [
-                    f'{obs.KK:02d}',
-                    str(obs.O),
-                    f'{obs.JJ:02d}',
-                    f'{obs.MM:02d}',
-                    f'{obs.TT:02d}',
-                    f'{obs.g:01d}',
-                    f'{obs.ZS:02d}',
-                    f'{obs.ZM:02d}',
+                    str(obs.KK),
+                    format_field(obs.O),
+                    str(obs.JJ),
+                    str(obs.MM),
+                    str(obs.TT),
+                    str(obs.g),
+                    format_field(obs.ZS),
+                    format_field(obs.ZM),
                     d_str,
-                    f'{obs.DD:02d}',
-                    str(obs.N) if obs.N != -1 else '/',
-                    str(obs.C) if obs.C != -1 else '/',
-                    str(obs.c) if obs.c != -1 else '/',
-                    f'{obs.EE:02d}',
-                    str(obs.H),
-                    str(obs.F) if obs.F != -1 else '/',
-                    str(obs.V) if obs.V != -1 else '/',
-                    ff_str,
-                    zz_str,
-                    f'{obs.GG:02d}',
-                    obs.sectors.ljust(5, '/'),
-                    obs.remarks.ljust(15),
+                    format_field(obs.DD),
+                    format_field(obs.N),
+                    format_field(obs.C),
+                    format_field(obs.c),
+                    str(obs.EE),
+                    format_field(obs.H),
+                    format_field(obs.F),
+                    format_field(obs.V),
+                    format_field(obs.f),
+                    format_field(obs.zz),
+                    str(obs.GG),
+                    ho_hu_field,
+                    obs.sectors if obs.sectors else '',  # Empty if no sectors
+                    obs.remarks  # csv.writer handles quoting automatically
                 ]
                 
-                f.write(','.join(fields) + ',\n')
+                writer.writerow(fields)

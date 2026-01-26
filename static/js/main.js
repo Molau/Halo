@@ -836,550 +836,49 @@ async function showAddObservationDialogMenu() {
         return;
     }
 
-    // Load observer codes
-    let observerCodes, observers;
-    try {
-        const data = await loadObserverCodes();
-        observerCodes = data.codeSet;
-        observers = data.observers;
-    } catch (e) {
-        console.error(e);
-        showWarningModal(i18nStrings.messages.error_loading_observers);
-        return;
-    }
+    // Use the ObservationForm class for consistency
+    const form = new ObservationForm();
+    await form.initialize('add');
     
-    // Get fixed observer setting
-    let fixedObserver = '';
-    try {
-        const configResponse = await fetch('/api/config/fixed_observer');
-        const config = await configResponse.json();
-        fixedObserver = config.observer;
-    } catch (e) {
-        console.error('Error loading fixed observer:', e);
-    }
-
-    // Get date default setting
-    let dateDefault = null;
-    try {
-        dateDefault = await getDateDefault();
-    } catch (e) {
-        console.error('Error loading date default:', e);
-    }
-
-    
-    // Build observer options with fixed observer pre-selected
-    const observerOptions = observers.map(obs => {
-        const selected = obs.KK === fixedObserver ? 'selected' : '';
-        return `<option value="${obs.KK}" ${selected}>${obs.KK} - ${obs.VName} ${obs.NName}</option>`;
-    }).join('');
-    
-    // Disable observer dropdown if fixed observer is set
-    const observerDisabled = fixedObserver ? 'disabled' : '';
-    
-    // Build year options (1950-2049)
-    const yearOptions = Array.from({length: 100}, (_, i) => {
-        const year = 50 + i; // 50-149
-        const displayYear = year < 50 ? 2000 + year : 1900 + year;
-        return `<option value="${year}">${displayYear}</option>`;
-    }).join('');
-    
-    const modalHtml = `
-        <div class="modal fade" id="add-observation-menu-modal" tabindex="-1">
-            <div class="modal-dialog modal-dialog-centered modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header py-1">
-                        <h6 class="modal-title mb-0">${i18nStrings.observations.add_observation}</h6>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body py-2">
-                        <div class="row g-2">
-                            <div class="col-md-6">
-                                <label class="form-label">KK - ${i18nStrings.fields.observer} <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" id="menu-kk" ${observerDisabled} required>
-                                    <option value="">-- ${i18nStrings.fields.select} --</option>
-                                    ${observerOptions}
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">O - ${i18nStrings.fields.object} <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" id="menu-o" required>
-                                    <option value="">-- ${i18nStrings.fields.select} --</option>
-                                    <option value="1">1 - ${i18nStrings.object_types['1']}</option>
-                                    <option value="2">2 - ${i18nStrings.object_types['2']}</option>
-                                    <option value="3">3 - ${i18nStrings.object_types['3']}</option>
-                                    <option value="4">4 - ${i18nStrings.object_types['4']}</option>
-                                    <option value="5">5 - ${i18nStrings.object_types['5']}</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">JJ - ${i18nStrings.fields.year} <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" id="menu-jj" required>
-                                    <option value="">-- ${i18nStrings.fields.select} --</option>
-                                    ${yearOptions}
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">MM - ${i18nStrings.fields.month} <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" id="menu-mm" required>
-                                    <option value="">-- ${i18nStrings.fields.select} --</option>
-                                    ${Array.from({length: 12}, (_, i) => {
-                                        const monthNum = i + 1;
-                                        const monthName = i18nStrings.months[monthNum];
-                                        return `<option value="${monthNum}">${String(monthNum).padStart(2, '0')} - ${monthName}</option>`;
-                                    }).join('')}
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">TT - ${i18nStrings.fields.day} <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" id="menu-tt" required>
-                                    <option value="">-- ${i18nStrings.fields.select} --</option>
-                                    ${Array.from({length: 31}, (_, i) => `<option value="${i+1}">${String(i+1).padStart(2, '0')}</option>`).join('')}
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">g - ${i18nStrings.fields.observing_area} <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" id="menu-g" required>
-                                    <option value="">-- ${i18nStrings.fields.select} --</option>
-                                    <option value="0">0 - ${i18nStrings.location_types['0']}</option>
-                                    <option value="1">1 - ${i18nStrings.location_types['1']}</option>
-                                    <option value="2">2 - ${i18nStrings.location_types['2']}</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">ZS - ${i18nStrings.fields.hour}</label>
-                                <select class="form-select form-select-sm" id="menu-zs">
-                                    <option value="">--</option>
-                                    ${Array.from({length: 24}, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')}</option>`).join('')}
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">ZM - ${i18nStrings.fields.minute}</label>
-                                <select class="form-select form-select-sm" id="menu-zm">
-                                    <option value="">--</option>
-                                    ${Array.from({length: 60}, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')}</option>`).join('')}
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">d - ${i18nStrings.fields.cirrus_density}</label>
-                                <select class="form-select form-select-sm" id="menu-d">
-                                    <option value="-1">-- ${i18nStrings.fields.not_specified} --</option>
-                                    <option value="0">0 - ${i18nStrings.cirrus_density['0']}</option>
-                                    <option value="1">1 - ${i18nStrings.cirrus_density['1']}</option>
-                                    <option value="2">2 - ${i18nStrings.cirrus_density['2']}</option>
-                                    <option value="4">4 - ${i18nStrings.cirrus_density['4']}</option>
-                                    <option value="5">5 - ${i18nStrings.cirrus_density['5']}</option>
-                                    <option value="6">6 - ${i18nStrings.cirrus_density['6']}</option>
-                                    <option value="7">7 - ${i18nStrings.cirrus_density['7']}</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">DD - ${i18nStrings.fields.duration}</label>
-                                <select class="form-select form-select-sm" id="menu-dd">
-                                    <option value="-1">--</option>
-                                    ${Array.from({length: 100}, (_, i) => `<option value="${i}">${i * 10} min</option>`).join('')}
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">N - ${i18nStrings.fields.cloud_cover}</label>
-                                <select class="form-select form-select-sm" id="menu-n">
-                                    <option value="-1">-- ${i18nStrings.fields.not_specified} --</option>
-                                    ${Array.from({length: 10}, (_, i) => {
-                                        const label = i18nStrings.cloud_cover[i.toString()];
-                                        return `<option value="${i}">${i} - ${label}</option>`;
-                                    }).join('')}
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">C - ${i18nStrings.fields.cirrus_type}</label>
-                                <select class="form-select form-select-sm" id="menu-C">
-                                    <option value="-1">-- ${i18nStrings.fields.not_specified} --</option>
-                                    ${Array.from({length: 8}, (_, i) => {
-                                        const label = i18nStrings.cirrus_types[i.toString()];
-                                        return `<option value="${i}">${i} - ${label}</option>`;
-                                    }).join('')}
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">c - ${i18nStrings.fields.low_clouds}</label>
-                                <select class="form-select form-select-sm" id="menu-c">
-                                    <option value="-1">-- ${i18nStrings.fields.not_specified} --</option>
-                                    ${Array.from({length: 10}, (_, i) => {
-                                        const label = i18nStrings.low_clouds[i.toString()];
-                                        return `<option value="${i}">${i} - ${label}</option>`;
-                                    }).join('')}
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">EE - ${i18nStrings.fields.phenomenon} <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" id="menu-ee" required>
-                                    <option value="">-- ${i18nStrings.fields.select} --</option>
-                                    ${Array.from({length: 77}, (_, i) => {
-                                        const ee = i + 1;
-                                        const label = i18nStrings.halo_types[ee.toString()];
-                                        return `<option value="${ee}">${String(ee).padStart(2, '0')} - ${label}</option>`;
-                                    }).join('')}
-                                    <option value="99">99 - ${i18nStrings.halo_types['99']}</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">H - ${i18nStrings.fields.brightness}</label>
-                                <select class="form-select form-select-sm" id="menu-h">
-                                    <option value="-1">-- ${i18nStrings.fields.not_specified} --</option>
-                                    ${Array.from({length: 4}, (_, i) => {
-                                        const label = i18nStrings.brightness[i.toString()];
-                                        return `<option value="${i}">${i} - ${label}</option>`;
-                                    }).join('')}
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">F - ${i18nStrings.fields.color}</label>
-                                <select class="form-select form-select-sm" id="menu-f">
-                                    <option value="-1">-- ${i18nStrings.fields.not_specified} --</option>
-                                    ${Array.from({length: 6}, (_, i) => {
-                                        const label = i18nStrings.color[i.toString()];
-                                        return `<option value="${i}">${i} - ${label}</option>`;
-                                    }).join('')}
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">V - ${i18nStrings.fields.completeness}</label>
-                                <select class="form-select form-select-sm" id="menu-v">
-                                    <option value="-1">-- ${i18nStrings.fields.not_specified} --</option>
-                                    <option value="1">1 - ${i18nStrings.completeness['1']}</option>
-                                    <option value="2">2 - ${i18nStrings.completeness['2']}</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">f - ${i18nStrings.fields.weather_front}</label>
-                                <select class="form-select form-select-sm" id="menu-f">
-                                    <option value="-1">-- ${i18nStrings.fields.not_specified} --</option>
-                                    ${Array.from({length: 9}, (_, i) => {
-                                        const label = i18nStrings.weather_front[i.toString()];
-                                        return `<option value="${i}">${i} - ${label}</option>`;
-                                    }).join('')}
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">zz - ${i18nStrings.fields.precipitation}</label>
-                                <select class="form-select form-select-sm" id="menu-zz">
-                                    <option value="-1">-- ${i18nStrings.fields.not_specified} --</option>
-                                    ${Array.from({length: 99}, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')} h</option>`).join('')}
-                                    <option value="99">99 - ${i18nStrings.fields.not_specified}</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">GG - ${i18nStrings.fields.region} <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" id="menu-gg" required>
-                                    <option value="">-- ${i18nStrings.fields.select} --</option>
-                                    ${[1,2,3,4,5,6,7,8,9,10,11,16,17,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39].map(gg => {
-                                        const label = i18nStrings.geographic_regions[gg.toString()];
-                                        return `<option value="${gg}">${String(gg).padStart(2, '0')} - ${label}</option>`;
-                                    }).join('')}
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="row g-1">
-                                    <div class="col-6">
-                                        <label class="form-label">8HO (obere Lichtsäule)</label>
-                                        <select class="form-select form-select-sm" id="menu-ho">
-                                            <option value="-1">--</option>
-                                            ${Array.from({length: 90}, (_, i) => `<option value="${i+1}">${String(i+1).padStart(2, '0')}°</option>`).join('')}
-                                        </select>
-                                    </div>
-                                    <div class="col-6">
-                                        <label class="form-label">HU (untere Lichtsäule)</label>
-                                        <select class="form-select form-select-sm" id="menu-hu">
-                                            <option value="-1">--</option>
-                                            ${Array.from({length: 90}, (_, i) => `<option value="${i+1}">${String(i+1).padStart(2, '0')}°</option>`).join('')}
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">${i18nStrings.fields.sectors} (${i18nStrings.fields.max_15_chars})</label>
-                                <input type="text" class="form-control form-control-sm" id="menu-sectors" maxlength="15">
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">${i18nStrings.fields.remarks} (${i18nStrings.fields.max_60_chars})</label>
-                                <input type="text" class="form-control form-control-sm" id="menu-remarks" maxlength="60">
-                            </div>
-                        </div>
-                        <div class="alert alert-danger mt-2" id="menu-obs-error" style="display:none;"></div>
-                    </div>
-                    <div class="modal-footer py-1">
-                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">${i18nStrings.common.cancel}</button>
-                        <button type="button" class="btn btn-primary btn-sm px-3" id="btn-add-obs-menu-ok" disabled>${i18nStrings.common.ok}</button>
-                    </div>
-                </div>
-            </div>
-        </div>`;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    const modalEl = document.getElementById('add-observation-menu-modal');
-    const modal = new bootstrap.Modal(modalEl);
-    modal.show();
-    
-    // Pre-fill MM and JJ with date default if available
-    if (dateDefault) {
-        setTimeout(() => {
-            const mmField = document.getElementById('menu-mm');
-            const jjField = document.getElementById('menu-jj');
-            if (mmField) {
-                mmField.value = dateDefault.month;
-            }
-            if (jjField) {
-                jjField.value = dateDefault.jj;
-            }
-        }, 100);
-    }
-    
-    const errEl = document.getElementById('menu-obs-error');
-    const okBtn = document.getElementById('btn-add-obs-menu-ok');
-    
-    // Get all fields
-    const fields = {
-        kk: document.getElementById('menu-kk'),
-        o: document.getElementById('menu-o'),
-        jj: document.getElementById('menu-jj'),
-        mm: document.getElementById('menu-mm'),
-        tt: document.getElementById('menu-tt'),
-        g: document.getElementById('menu-g'),
-        zs: document.getElementById('menu-zs'),
-        zm: document.getElementById('menu-zm'),
-        d: document.getElementById('menu-d'),
-        dd: document.getElementById('menu-dd'),
-        n: document.getElementById('menu-n'),
-        C: document.getElementById('menu-C'),
-        c: document.getElementById('menu-c'),
-        ee: document.getElementById('menu-ee'),
-        h: document.getElementById('menu-h'),
-        f: document.getElementById('menu-f'),
-        v: document.getElementById('menu-v'),
-        zz: document.getElementById('menu-zz'),
-        gg: document.getElementById('menu-gg'),
-        ho: document.getElementById('menu-ho'),
-        hu: document.getElementById('menu-hu'),
-        sectors: document.getElementById('menu-sectors'),
-        remarks: document.getElementById('menu-remarks')
-    };
-    
-    // Check required fields and enable/disable OK button
-    function checkRequired() {
-        const required = ['kk', 'o', 'jj', 'mm', 'tt', 'g', 'ee', 'gg'];
-        const allFilled = required.every(key => fields[key].value !== '');
-        okBtn.disabled = !allFilled;
-    }
-    
-    // Auto-fill GG when g is selected
-    async function autoFillGG() {
-        const g = parseInt(fields.g.value);
-        
-        if (g === 0 || g === 2) {
-            // Auto-fill GG based on observer and date
-            const kk = fields.kk.value;
-            const jjRaw = fields.jj.value;
-            const mm = fields.mm.value;
-
-            if (kk && jjRaw && mm) {
-                // Convert year to 2-digit format (126 -> 26, 86 -> 86)
-                const jj = parseInt(jjRaw) % 100;
-                const url = `/api/observers?kk=${kk}&jj=${jj}&mm=${mm}`;
-
-                try {
-                    const resp = await fetch(url);
-
-                    if (resp.ok) {
-                        const data = await resp.json();
-
-                        if (data.observer && data.observer.GH !== undefined && data.observer.GN !== undefined) {
-                            const ggRaw = g === 0 ? data.observer.GH : data.observer.GN;
-                            const gg = parseInt(ggRaw); // Parse as integer to match dropdown option values
-
-                            fields.gg.value = gg;
-                            fields.gg.disabled = true;
-                            checkRequired();
-                        }
-                    }
-                } catch (e) {
-                    console.error('Error fetching observer GG:', e);
-                }
-            }
-        } else {
-            fields.gg.disabled = false;
-            fields.gg.value = '';
-        }
-        checkRequired();
-    }
-    
-    fields.g.addEventListener('change', autoFillGG);
-    fields.kk.addEventListener('change', autoFillGG);
-    fields.jj.addEventListener('change', autoFillGG);
-    fields.mm.addEventListener('change', autoFillGG);
-    
-    // Auto-fill 8HHHH when EE is selected
-    fields.ee.addEventListener('change', () => {
-        const ee = parseInt(fields.ee.value);
-        if (ee && ![8, 9, 10].includes(ee)) {
-            // For non-pillar halos, set both to "not specified"
-            fields.ho.value = '-1';
-            fields.hu.value = '-1';
-            fields.ho.disabled = true;
-            fields.hu.disabled = true;
-        } else {
-            // For pillar halos (8, 9, 10), enable the fields
-            fields.ho.disabled = false;
-            fields.hu.disabled = false;
-            if (ee === 8) {
-                // Upper pillar only
-                fields.ho.disabled = false;
-                fields.hu.value = '-1';
-                fields.hu.disabled = true;
-            } else if (ee === 9) {
-                // Lower pillar only
-                fields.ho.value = '-1';
-                fields.ho.disabled = true;
-                fields.hu.disabled = false;
-            } else if (ee === 10) {
-                // Both pillars
-                fields.ho.disabled = false;
-                fields.hu.disabled = false;
-            }
-        }
-    });
-    
-    // Auto-fill sectors when EE or V change
-    function checkSectorsAutoFill() {
-        const ee = parseInt(fields.ee.value);
-        const v = parseInt(fields.v.value);
-        const circularHalos = [1, 7, 12, 31, 32, 33, 34, 35, 36, 40];
-        
-        // Sectors are only relevant for circular halos
-        if (ee && circularHalos.includes(ee)) {
-            // Circular halo - enable sectors field
-            if (v === 1) {
-                // Incomplete - sectors field is editable
-                fields.sectors.value = '';
-                fields.sectors.disabled = false;
-            } else if (v === 2) {
-                // Complete - sectors not applicable, disable
-                fields.sectors.value = '';
-                fields.sectors.disabled = true;
-            } else {
-                // V not specified yet - allow editing
-                fields.sectors.value = '';
-                fields.sectors.disabled = false;
-            }
-        } else {
-            // Non-circular halo - sectors field is empty and disabled
-            fields.sectors.value = '';
-            fields.sectors.disabled = true;
-        }
-    }
-    fields.ee.addEventListener('change', checkSectorsAutoFill);
-    fields.v.addEventListener('change', checkSectorsAutoFill);
-    
-    // Validate sectors field - delete invalid input
-    fields.sectors.addEventListener('input', (e) => {
-        const result = validateSectorInput(e.target.value, true);
-        e.target.value = result.cleaned;
-    });
-    
-    // Listen to all required fields
-    ['kk', 'o', 'jj', 'mm', 'tt', 'g', 'ee', 'gg'].forEach(key => {
-        fields[key].addEventListener('change', checkRequired);
-    });
-    
-    // ESC key closes modal
-    modalEl.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            modal.hide();
-        }
-    });
-    
-    // Enter key triggers OK (if enabled)
-    modalEl.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !okBtn.disabled) {
-            e.preventDefault();
-            okBtn.click();
-        }
-    });
-    
-    // OK button handler
-    okBtn.addEventListener('click', async () => {
+    form.show('add', null, async (newObs) => {
+        // Observation saved callback
         try {
-            const obs = {
-                KK: parseInt(fields.kk.value),
-                O: parseInt(fields.o.value),
-                JJ: parseInt(fields.jj.value),
-                MM: parseInt(fields.mm.value),
-                TT: parseInt(fields.tt.value),
-                g: parseInt(fields.g.value),
-                GG: parseInt(fields.gg.value),
-                EE: parseInt(fields.ee.value),
-                zs: fields.zs.value ? parseInt(fields.zs.value) : 99,
-                zm: fields.zm.value ? parseInt(fields.zm.value) : 99,
-                d: fields.d.value ? parseInt(fields.d.value) : -1,
-                dd: fields.dd.value ? parseInt(fields.dd.value) : -1,
-                n: fields.n.value ? parseInt(fields.n.value) : -1,
-                C: fields.C.value ? parseInt(fields.C.value) : -1,
-                c: fields.c.value ? parseInt(fields.c.value) : -1,
-                h: fields.h.value ? parseInt(fields.h.value) : -1,
-                f: fields.f.value ? parseInt(fields.f.value) : -1,
-                v: fields.v.value ? parseInt(fields.v.value) : -1,
-                zz: fields.zz.value && fields.zz.value !== '-1' ? parseInt(fields.zz.value) : -1,
-                sectors: fields.sectors.value,
-                remarks: fields.remarks.value
-            };
-            
-            // Add pillar heights if specified
-            if (fields.ho.value && fields.ho.value !== '-1') {
-                obs.HO = parseInt(fields.ho.value);
-            }
-            if (fields.hu.value && fields.hu.value !== '-1') {
-                obs.HU = parseInt(fields.hu.value);
-            }
-            
+            // Add to observations array
             const resp = await fetch('/api/observations', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(obs)
+                body: JSON.stringify(newObs)
             });
             
             if (resp.status === 409) {
                 // Duplicate observation
-                const errEl = document.getElementById('menu-error-message');
-                if (errEl) {
-                    errEl.textContent = i18nStrings.observations.error_observation_exists;
-                    errEl.style.display = 'block';
-                }
+                showErrorDialog(i18nStrings.observations.error_observation_exists);
                 return;
             }
             
-            if (!resp.ok) throw new Error(i18nStrings.observations.error_adding);
+            if (!resp.ok) {
+                throw new Error(i18nStrings.observations.error_adding);
+            }
             
             const addedObs = await resp.json();
             
             // Add to observations array and set dirty flag
             window.haloData.observations.push(addedObs);
             window.haloData.isDirty = true;
-            saveHaloDataToSession();  // Sync to sessionStorage
+            saveHaloDataToSession();
             updateFileInfoDisplay(window.haloData.fileName, window.haloData.observations.length);
             
             // Trigger autosave
             await triggerAutosave();
             
-            modal.hide();
-            modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
-            
             // Show success notification
             showNotification(`<strong>✓</strong> 1 ${i18nStrings.common.observation} ${i18nStrings.common.added}`);
         } catch (e) {
-            errEl.textContent = e.message;
-            errEl.style.display = 'block';
+            showErrorDialog(e.message);
         }
+    }, () => {
+        // Cancel callback - nothing to do
     });
-    
-    modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
 }
 
 // Validate sector field - shared validation logic for both entry modes
@@ -1509,14 +1008,28 @@ function validateNumericProgress(s, observerCodes) {
         return v>=0 && v<=59 ? { ok: true } : { ok: false, backtrack: 1 };
     }
     // 15 dd (0-7, not 3) or '/'
-    if (len === 15) return { ok: ['0','1','2','4','5','6','7','/'].includes(s[14]) };
+    // Special rule: if C=0 or N=9 (when we get to position 19-20), values 0,1,2 are invalid
+    if (len === 15) {
+        const char = s[14];
+        if (!['0','1','2','4','5','6','7','/'].includes(char)) return { ok: false };
+        // At position 15, we can't check C or N yet (they come later at 19-20)
+        return { ok: true };
+    }
     // 16-17 D (00-99) or '//'
     if (len === 16) return { ok: digit.test(s[15]) || s[15] === '/' };
     if (len === 17) { const d = s.slice(15,17); return { ok: d === '//' || (/^\d{2}$/.test(d)) }; }
     // 18 N (0-9) or '/'
     if (len === 18) return { ok: (digit.test(s[17]) || s[17] === '/') };
     // 19 C (0-9) or '/'
-    if (len === 19) return { ok: (digit.test(s[18]) || s[18] === '/') };
+    // Special rule: if N=9, C must be '/' (encoded as -1)
+    if (len === 19) {
+        const n = s[17];
+        const c = s[18];
+        if (!(digit.test(c) || c === '/')) return { ok: false };
+        // If N=9, C should be '/' but we allow any input and will validate at the end
+        // Note: This is informational validation; strict enforcement happens at parsing
+        return { ok: true };
+    }
     // 20 c (low clouds, 0-9) or '/'
     if (len === 20) return { ok: (digit.test(s[19]) || s[19] === '/') };
     // 21-22 E (01-77 or 99)
@@ -1616,7 +1129,30 @@ function validateNumericProgress(s, observerCodes) {
 // Parse numeric observation string into JSON payload
 function parseNumericObservation(s) {
     if (s.length < 30) return null;
-    const toInt = (x) => (x === '/' || x === ' ' ? -1 : parseInt(x,10));
+    
+    // Helper function: only ' ' allowed (→ -1), '/' only for d and 8HHHH (→ -2)
+    const toInt = (x, allowSlash = false) => {
+        if (x === ' ' || x === '') return -1;  // Not observed/unknown
+        if (x === '/') {
+            if (!allowSlash) {
+                throw new Error('/ ist nur bei d und 8HHHH erlaubt');
+            }
+            return -2;  // Observed but not present (only for d and 8HHHH)
+        }
+        return parseInt(x, 10);
+    };
+    
+    const toInt2 = (x, allowSlash = false) => {
+        if (x === '  ' || x === '') return -1;  // Not observed/unknown
+        if (x === '//') {
+            if (!allowSlash) {
+                throw new Error('// ist nur bei 8HHHH erlaubt');
+            }
+            return -2;  // Observed but not present (only for 8HHHH)
+        }
+        return parseInt(x, 10);
+    };
+    
     const obs = {
         KK: parseInt(s.slice(0,2),10),
         O: parseInt(s.slice(2,3),10),
@@ -1624,32 +1160,66 @@ function parseNumericObservation(s) {
         MM: parseInt(s.slice(5,7),10),
         TT: parseInt(s.slice(7,9),10),
         g: parseInt(s.slice(9,10),10),
-        ZS: (s.slice(10,12) === '//' ? -1 : parseInt(s.slice(10,12),10)),
-        ZM: (s.slice(12,14) === '//' ? -1 : parseInt(s.slice(12,14),10)),
-        d: toInt(s.slice(14,15)),
-        DD: (s.slice(15,17) === '//' ? -1 : parseInt(s.slice(15,17),10)),
-        N: toInt(s.slice(17,18)),
-        C: toInt(s.slice(18,19)),
-        c: toInt(s.slice(19,20)),
+        ZS: toInt2(s.slice(10,12), false),  // No slash allowed
+        ZM: toInt2(s.slice(12,14), false),  // No slash allowed
+        d: toInt(s.slice(14,15), true),     // Slash allowed for d
+        DD: toInt2(s.slice(15,17), false),  // No slash allowed
+        N: toInt(s.slice(17,18), false),    // No slash allowed
+        C: toInt(s.slice(18,19), false),    // No slash allowed
+        c: toInt(s.slice(19,20), false),    // No slash allowed
         EE: parseInt(s.slice(20,22),10),
-        H: toInt(s.slice(22,23)),
-        F: toInt(s.slice(23,24)),
-        V: toInt(s.slice(24,25)),
-        f: (s.slice(25,26).trim() === '' ? -1 : toInt(s.slice(25,26))),
-        zz: (s.slice(26,28) === '//' ? 99 : (s.slice(26,28) === '  ' ? -1 : parseInt(s.slice(26,28),10))),
+        H: toInt(s.slice(22,23), false),    // No slash allowed
+        F: toInt(s.slice(23,24), false),    // No slash allowed
+        V: toInt(s.slice(24,25), false),    // No slash allowed
+        f: toInt(s.slice(25,26), false),    // No slash allowed
+        zz: toInt2(s.slice(26,28), false),  // No slash allowed
         GG: parseInt(s.slice(28,30),10),
         HO: -1,
         HU: -1,
         sectors: '',
         remarks: ''
     };
+    
+    // Validation rules
+    // If C=0 or N=9, d values 0,1,2 are invalid
+    if ((obs.C === 0 || obs.N === 9) && [0, 1, 2].includes(obs.d)) {
+        throw new Error(`Ungültiger d-Wert: ${obs.d}. Wenn C=0 oder N=9, sind nur d-Werte -1, -2, 4, 5, 6, 7 erlaubt.`);
+    }
+    
+    // Automatic rules
+    // C=0 → d=-2 (no cirrus)
+    if (obs.C === 0 && obs.d !== -2) {
+        obs.d = -2;
+    }
+    
+    // N=9 → C=-1, d=-1
+    if (obs.N === 9) {
+        obs.C = -1;
+        if (obs.d === -1) {
+            // Keep -1
+        } else if ([0, 1, 2].includes(obs.d)) {
+            // Invalid values get set to -1
+            obs.d = -1;
+        }
+        // Otherwise keep the valid value (4,5,6,7 or -2)
+    }
+    
     // Optional 8HHHH field
     if (s.length >= 35 && s[30] === '8') {
         const hoPart = s.slice(31,33);
         const huPart = s.slice(33,35);
-        obs.HO = (hoPart === '//' ? -1 : parseInt(hoPart,10));
-        obs.HU = (huPart === '//' ? -1 : parseInt(huPart,10));
+        obs.HO = toInt2(hoPart, true);  // Slash allowed for 8HHHH
+        obs.HU = toInt2(huPart, true);  // Slash allowed for 8HHHH
     }
+    
+    // EE !=8,10 → HO = 0; EE !=9,10 → HU = 0 (not relevant)
+    if (obs.EE !== 8 && obs.EE !== 10) {
+        obs.HO = 0;
+    }
+    if (obs.EE !== 9 && obs.EE !== 10) {
+        obs.HU = 0;
+    }
+    
     // Remaining content: sectors (up to first space) and remark
     if (s.length > 35) {
         const rest = s.slice(35);
@@ -4383,6 +3953,15 @@ async function showSelectDialog() {
                             
                             if (loadResponse.ok) {
                                 const loadResult = await loadResponse.json();
+                                
+                                // Check if file was converted from legacy format
+                                if (loadResult.converted) {
+                                    showSuccessModal(
+                                        i18nStrings.upload_download.legacy_format_converted_title,
+                                        i18nStrings.upload_download.legacy_format_converted_message
+                                    );
+                                }
+                                
                                 // Update file info display
                                 if (window.updateFileInfoDisplay) {
                                     window.updateFileInfoDisplay(filename, loadResult.count || keptCount);
@@ -4432,6 +4011,15 @@ async function showSelectDialog() {
                 
                 if (loadResponse.ok) {
                     const loadResult = await loadResponse.json();
+                    
+                    // Check if file was converted from legacy format
+                    if (loadResult.converted) {
+                        showSuccessModal(
+                            i18nStrings.upload_download.legacy_format_converted_title,
+                            i18nStrings.upload_download.legacy_format_converted_message
+                        );
+                    }
+                    
                     // Update file info display
                     if (window.updateFileInfoDisplay) {
                         window.updateFileInfoDisplay(filename, loadResult.count || keptCount);
@@ -5449,6 +5037,9 @@ async function continueLoadFile() {
             
             if (!uploadResponse.ok) throw new Error('Failed to upload file');
             
+            // Get response data to check conversion flag
+            const uploadResult = await uploadResponse.json();
+            
             // Load observations into global store
             const obsResponse = await fetch('/api/observations?limit=200000');
             if (!obsResponse.ok) throw new Error('Failed to load observations');
@@ -5465,6 +5056,14 @@ async function continueLoadFile() {
             // Hide loading modal
             bsModal.hide();
             setTimeout(() => loadingModal.remove(), 300);
+            
+            // Show conversion modal if legacy format was converted
+            if (uploadResult.converted) {
+                showSuccessModal(
+                    i18nStrings.upload_download.legacy_format_converted_title,
+                    i18nStrings.upload_download.legacy_format_converted_message
+                );
+            }
             
             // Show success message
             showNotification(`<strong>✓</strong> ${window.haloData.observations.length} ${i18nStrings.common.observations} ${i18nStrings.messages.loaded_from} "${file.name}" ${i18nStrings.messages.loaded}`);

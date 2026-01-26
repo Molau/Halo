@@ -171,7 +171,9 @@
       "download_filename_prompt": "Filename for downloaded observations:",
       "download_progress": "Downloading...",
       "download_success": "✓ Successfully downloaded {0} observations",
-      "download_title": "Download"
+      "download_title": "Download",
+      "legacy_format_converted_title": "File format converted",
+      "legacy_format_converted_message": "The file has been converted from the old HALO format to the current CSV format and saved."
   },
   "observations": {
     "title": "Observations",
@@ -477,6 +479,34 @@
     "4": "Street lamp",
     "5": "other"
   },
+  "months": {
+    "1": "January",
+    "2": "February",
+    "3": "March",
+    "4": "April",
+    "5": "May",
+    "6": "June",
+    "7": "July",
+    "8": "August",
+    "9": "September",
+    "10": "October",
+    "11": "November",
+    "12": "December"
+  },
+  "months_short": {
+    "1": "Jan",
+    "2": "Feb",
+    "3": "Mar",
+    "4": "Apr",
+    "5": "May",
+    "6": "Jun",
+    "7": "Jul",
+    "8": "Aug",
+    "9": "Sep",
+    "10": "Oct",
+    "11": "Nov",
+    "12": "Dec"
+  },
   "location_types": {
     "0": "unknown",
     "1": "at home",
@@ -528,67 +558,6 @@
     "7": "Altostratus (As)",
     "8": "Altocumulus (Ac)",
     "9": "As + Ac"
-  },
-  "months": {
-    "1": "January",
-    "2": "February",
-    "3": "March",
-    "4": "April",
-    "5": "May",
-    "6": "June",
-    "7": "July",
-    "8": "August",
-    "9": "September",
-    "10": "October",
-    "11": "November",
-    "12": "December"
-  },
-  "months_short": {
-    "1": "Jan",
-    "2": "Feb",
-    "3": "Mar",
-    "4": "Apr",
-    "5": "May",
-    "6": "Jun",
-    "7": "Jul",
-    "8": "Aug",
-    "9": "Sep",
-    "10": "Oct",
-    "11": "Nov",
-    "12": "Dec"
-  },
-  "brightness": {
-    "-1": "no information",
-    "0": "very faint",
-    "1": "faint, not conspicuous",
-    "2": "bright, conspicuous",
-    "3": "very bright, very conspicuous"
-  },
-  "color": {
-    "-1": "no information",
-    "0": "white",
-    "1": "colored",
-    "2": "blue component particularly conspicuous",
-    "3": "yellow component particularly conspicuous",
-    "4": "red component particularly conspicuous",
-    "5": "green component particularly conspicuous"
-  },
-  "completeness": {
-    "-1": "no information",
-    "1": "incomplete",
-    "2": "complete"
-  },
-  "weather_front": {
-    "-1": "no information",
-    "0": "other front",
-    "1": "warm front",
-    "2": "cold front",
-    "3": "occlusion",
-    "4": "trough (area/axis)",
-    "5": "heat thunderstorm/shower",
-    "6": "convergence line",
-    "7": "upper low/cold air drop",
-    "8": "jet stream"
   },
   "halo_types": {
     "1": "22° halo",
@@ -670,6 +639,39 @@
     "77": "Moilanen arc",
     "99": "unknown or unidentifiable halo"
   },
+  "brightness": {
+    "-1": "no information",
+    "0": "very faint",
+    "1": "faint, not conspicuous",
+    "2": "bright, conspicuous",
+    "3": "very bright, very conspicuous"
+  },
+  "color": {
+    "-1": "no information",
+    "0": "white",
+    "1": "colored",
+    "2": "blue component particularly conspicuous",
+    "3": "yellow component particularly conspicuous",
+    "4": "red component particularly conspicuous",
+    "5": "green component particularly conspicuous"
+  },
+  "completeness": {
+    "-1": "no information",
+    "1": "incomplete",
+    "2": "complete"
+  },
+  "weather_front": {
+    "-1": "no information",
+    "0": "other front",
+    "1": "warm front",
+    "2": "cold front",
+    "3": "occlusion",
+    "4": "trough (area/axis)",
+    "5": "heat thunderstorm/shower",
+    "6": "convergence line",
+    "7": "upper low/cold air drop",
+    "8": "jet stream"
+  },
   "geographic_regions": {
     "1": "Schleswig-Holstein/Mecklenburg-Vorpommern",
     "2": "Lower Saxony/Bremen/Hamburg",
@@ -730,6 +732,8 @@
     "weather_front": "Weather Front",
     "precipitation": "Precipitation",
     "region": "Region",
+    "ho": "upper light pillar",
+    "hu": "lower light pillar",
     "sectors": "Sectors",
     "remarks": "Remarks",
     "select": "Select",

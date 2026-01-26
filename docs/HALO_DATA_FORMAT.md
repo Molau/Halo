@@ -11,6 +11,20 @@
 ## Overview
 This document describes the HALO Key observation record format - a standardized format used by the observation community for decades. This format is **fixed and cannot be changed** as it is defined independently of any particular implementation. All validation rules, field dependencies, and data structures documented here must be strictly applied.
 
+## Special Value Encoding
+
+The HALO Key uses two distinct encodings for missing or unavailable data:
+
+- **Space or empty**: Not observed or unknown
+  - Example: Observer did not record this field
+  - Example: Information not available at time of observation
+  - Internal encoding: `-1`
+  - Used for: Most fields (ZZZZ, DD, N, C, c, H, F, V, zz, sectors)
+  
+**Important**: Most fields have their own values for "not present" (usually 0). For example:
+- N, C, c: 0 = no halo, -1 = unknown
+- f: 0 = other forms, -1 = unknown
+
 ## Record Key Format
 
 The observation data follows this format:
@@ -82,8 +96,7 @@ Complete mapping:
   - 3: Planetenhalo / a planet
   - 4: Sternhalo / a bright star
   - 5: Halo um eine irdische Lichtquelle / an earthbound light source
-- **Special Values**: 
-  - `/` = Not specified (value -1)
+- **Special Values**: None allowed (required field)
 - **Validation**: Must be 1-5
 
 ### 3. JJ - Year (Jahr)
@@ -140,7 +153,7 @@ Complete mapping:
 - **Timezone**: CET (Central European Time)
 - **Dependencies**: Both must be specified or both unspecified
 - **Special Values**: 
-    - `//` `//` = Time not specified (ZS=-1, ZM=-1)
+    - `  ` `  ` = Time not specified (ZS=-1, ZM=-1)
 - **Validation**: 
     - Hours: 0-23
     - Minutes: 0-59
@@ -151,7 +164,7 @@ Complete mapping:
 - **Type**: Integer (1 digit)
 - **Range**: 0-7 (excluding 3)
 - **Values**: See Condd array
-  - -1: keine Angabe / not observed [encoded as `/`]
+  - -1: keine Angabe / not observed [encoded as ` `]
   - 0: sehr dünner bis dünner Cirrus / very thin to thin cirrus
   - 1: normaler Cirrus / normal cirrus
   - 2: dichter bis sehr dichter Cirrus / thick to very thick cirrus
@@ -161,10 +174,9 @@ Complete mapping:
   - 6: Eisnebel/Polarschnee / ice nebulae/polar snow
   - 7: Fallstreifen (virga) / virga
 - **Dependencies**: 
-  - When d ≥ 4: Forces N=0 and C=0 (no cloud cover data)
-  - When d ≤ 2: N and C are required/allowed
+  - see below
 - **Special Values**: 
-  - `/` = Not specified (value -1)
+  - `/` = no cirrus (value -2)
 
 ### 9. DD - Duration (Dauer)
 - **Pascal Variable**: `D` (ShortInt)
@@ -177,14 +189,14 @@ Complete mapping:
   - DD=12 means 120 minutes
 - **Dependencies**: None
 - **Special Values**: 
-  - `//` = Duration not specified (value -1)
+  - `  ` = Duration not specified (value -1)
 
 ### 10. N - Cloud Cover (Himmelsbedeckung)
 - **Pascal Variable**: `N` (ShortInt)
 - **Position**: Character 18
 - **Type**: Integer (1 digit)
 - **Values**: See ConN array
-  - -1: keine Angabe / not observed [encoded as `/`]
+  - -1: keine Angabe / not observed [encoded as ` `]
   - 0: Cirrus nicht vorhanden / no cirrus clouds (only valid when d ≥ 4, automatically set)
   - 1: 1/8 mit Cirren bedeckt / 1/8 covered with cirrus
   - 2: 2/8 mit Cirren bedeckt / 2/8 covered with cirrus
@@ -196,12 +208,7 @@ Complete mapping:
   - 8: 8/8 mit Cirren bedeckt / 8/8 covered with cirrus
   - 9: wegen tiefer Wolken nicht beobachtbar / not able to determine due to lower clouds
 - **Dependencies**: 
-  - Only valid when d ≤ 2
-  - When d ≥ 4: Automatically set to 0
-  - When N=9: c cannot be 0 (forces validation)
-- **Special Values**: 
-  - `/` = Not specified (value -1)
-  - 0 = Only when forced by d ≥ 4
+  - see below
 
 ### 11. C - Cirrus Type (Cirrustyp)
 - **Pascal Variable**: `C` (ShortInt)
@@ -209,7 +216,7 @@ Complete mapping:
 - **Type**: Integer (1 digit)
 - **Range**: 0-7
 - **Values**: See ConC array
-  - -1: keine Angabe / not observed [encoded as `/`]
+  - -1: keine Angabe / not observed [encoded as ` `]
   - 0: Cirrus nicht vorhanden / no cirrus clouds (only when forced by d ≥ 4)
   - 1: Cirrus (Ci)
   - 2: Cirrocumulus (Cc)
@@ -219,12 +226,7 @@ Complete mapping:
   - 6: Cc + Cs
   - 7: Ci + Cc + Cs
 - **Dependencies**: 
-  - Only valid when d ≤ 2
-  - When d ≥ 4: Automatically set to 0
-- **Special Values**: 
-  - `/` = Not specified (value -1)
-  - 0 = Only when forced by d ≥ 4
-- **Validation**: C ≠ 8 or 9
+  - see below
 
 ### 12. c - Low Cloud Cover (tiefe Bewölkung)
 - **Pascal Variable**: `cc` (ShortInt)
@@ -232,7 +234,7 @@ Complete mapping:
 - **Type**: Integer (1 digit)
 - **Range**: 0-9
 - **Values**: See Concc array
-  - -1: keine Angabe / not observed [encoded as `/`]
+  - -1: keine Angabe / not observed [encoded as ` `]
   - 0: nicht vorhanden / no lower clouds
   - 1: Stratus (St)
   - 2: Stratocumulus (Sc)
@@ -244,10 +246,7 @@ Complete mapping:
   - 8: Altocumulus (Ac)
   - 9: As + Ac
 - **Dependencies**: 
-  - When N=9: c cannot be 0 (must specify low cloud)
-- **Special Values**: 
-  - `/` = Not specified (value -1)
-- **Validation**: If N=9, then c ≠ 0
+  - se below
 
 ### 13. EE - Halo Type (Haloart)
 - **Pascal Variable**: `E` (ShortInt)
@@ -346,14 +345,12 @@ Complete mapping:
 - **Type**: Integer (1 digit)
 - **Range**: 0-3
 - **Values**: See ConH array
-  - -1: keine Angabe / not observed [encoded as `/`]
+  - -1: keine Angabe / not observed [encoded as ` `]
   - 0: sehr schwach / very faint
   - 1: schwach, wenig auffällig / faint, barely obvious
   - 2: hell, auffällig / bright, obvious
   - 3: sehr hell, sehr auffällig / very bright, very obvious
 - **Dependencies**: None
-- **Special Values**: 
-  - `/` = Not specified (value -1)
 
 ### 15. F - Color (Farbe)
 - **Pascal Variable**: `F` (ShortInt)
@@ -361,7 +358,7 @@ Complete mapping:
 - **Type**: Integer (1 digit)
 - **Range**: 0-5
 - **Values**: See ConF array
-  - -1: keine Angabe / not observed [encoded as `/`]
+  - -1: keine Angabe / not observed [encoded as ` `]
   - 0: weiß / white
   - 1: farbig / coloured
   - 2: Blauanteil besonders auffällig / blue content very obvious
@@ -369,8 +366,6 @@ Complete mapping:
   - 4: Rotanteil besonders auffällig / red content very obvious
   - 5: Grünanteil besonders auffällig / green content very obvious
 - **Dependencies**: None
-- **Special Values**: 
-  - `/` = Not specified (value -1)
 
 ### 16. V - Completeness (Vollständigkeit)
 - **Pascal Variable**: `V` (ShortInt)
@@ -378,15 +373,13 @@ Complete mapping:
 - **Type**: Integer (1 digit)
 - **Range**: 1-2
 - **Values**: See ConV array
-  - -1: keine Angabe / not observed [encoded as `/`]
+  - -1: keine Angabe / not observed [encoded as ` `]
   - 1: unvollständig / incomplete
   - 2: vollständig / complete
 - **Dependencies**: 
   - When V=1 (incomplete): Sector information required if E ∈ Sektor set
   - When V=2 (complete): Sector information not applicable (all octants visible)
 - **Special Values**: 
-  - `/` = Not specified (value -1)
-- **Validation**: V ≠ 0
 
 ### 17. f - Weather Front (Witterungsfront)
 - **Pascal Variable**: `ff` (ShortInt)
@@ -405,8 +398,6 @@ Complete mapping:
   - 7: Höhentief/Kaltlufttropfen / upper low
   - 8: Strahlstrom / jet stream
 - **Dependencies**: None
-- **Special Values**: 
-  - ` ` (space) = Not specified (value -1)
 
 ### 18. zz - Precipitation (Niederschlag)
 - **Pascal Variable**: `zz` (ShortInt)
@@ -415,11 +406,10 @@ Complete mapping:
 - **Range**: 00-98, 99, or blank
 - **Values**:
   - 00-98: Hours after observation until precipitation
-  - 99: No precipitation occurred
+  - 99: No precipitation occurred [encoded as `//`]
   - Blank: Not specified
 - **Special Values**: 
   - `  ` (spaces) = Not specified (value -1)
-  - `//` = No precipitation (value 99)
 - **Unit**: Hours
 
 ### 19. GG - Geographic Region (Beobachtungsgebiet)
@@ -470,10 +460,6 @@ Complete mapping:
   - When g=2: Auto-filled from observer's GN field (see Observer Record Structure)
   - When g=1: Must be manually specified
 - **Special Values**: None (required field)
-- **Validation**: 
-  - Must be 01-39
-  - GG ≠ 12 (may be invalid - verification needed)
-  - ConG[GG] must not be empty (13-15, 18 are empty)
 
 ### 20. 8HHHH - Sun Pillar Heights (Lichtsäulenhöhen)
 - **Pascal Variables**: `HO` (upper pillar), `HU` (lower pillar) (both ShortInt)
@@ -483,20 +469,19 @@ Complete mapping:
   - Character 31: Always '8' (format marker)
   - HH (32-33): Upper pillar height (ho)
   - HH (34-35): Lower pillar height (hu)
-- **Range**: 01-90 degrees for each height
+- **Range**: 
+  - -1: keine Angabe / not observed [encoded as ` ` (space)]
+  - 0: not applicable [encoded as `//` (space)]
+  - 01-90 degrees for each height
 - **Dependencies**:
   - **When E=8** (upper pillar only):
-    - Format: `8HH//` (ho specified, hu blank)
+    - Format: `8HH//` (ho specified, hu not applicable)
   - **When E=9** (lower pillar only):
-    - Format: `8//HH` (ho blank, hu specified)
+    - Format: `8//HH` (ho not applicable, hu specified)
   - **When E=10** (both pillars):
     - Format: `8HHHH` (both ho and hu specified)
   - **When E ∉ {8,9,10}**:
     - Format: `/////` (all blank)
-- **Special Values**:
-  - `//` for each height = Not specified (value -1)
-  - `/////` = Not applicable (E not 8, 9, or 10)
-- **Validation**: Each height must be 01-90 degrees
 
 ### 21. Sektoren - Sectors
 - **Position**: Characters 36-50 (15 characters)
@@ -547,29 +532,42 @@ Complete mapping:
    - g=1: GG = manual input required
    - g=2: GG = Beo^[K].GN (auto)
 
-2. **dd (density) → N, C**
-   - dd < 3: N and C can be specified
-   - dd ≥ 3: N=0, C=0 (forced)
+2. **d (cirrus density) → N, C, c (mutual dependencies)**
+   - d=-1: N, C, c fully enabled
+   - d=0-2: N, C, c enabled, but N=0 and C=0 options disabled
+   - d=4-7: N, C, c all set to -1 and fields completely disabled (halo from non-cirrus source)
 
-3. **N (cloud cover) → cc (low clouds)**
-   - N=9: cc cannot be 0
+3. **N (cloud cover) → d, C, c (mutual dependencies)**
+   - N=-1: d, C, c fully enabled
+   - N=0: d values 0,1,2 disabled (if d has these, reset to -1); C=0 and disabled; c enabled
+   - N=1-8: d values 4-7 disabled (if d has these, reset to -1); C enabled but C=0 disabled; c enabled
+   - N=9: d values 4-7 disabled (if d has these, reset to -1); c option 0 disabled
 
-4. **E (halo type) → 8HHHH (heights)**
+4. **C (cirrus type) → N, d (mutual dependencies)**
+   - C=-1: N and d fully enabled
+   - C=0: N=0 and disabled; d values 4-7 disabled (if d has these, reset to -1)
+   - C=1-7: N enabled but N=0 disabled; d values 4-7 disabled (if d has these, reset to -1)
+
+5. **c (low clouds) → N (mutual dependency)**
+   - c=-1 or 1-9: N fully enabled
+   - c=0: N option 9 disabled
+
+6. **E (halo type) → 8HHHH (heights)**
    - E=8: Requires ho (upper height)
    - E=9: Requires hu (lower height)
    - E=10: Requires both ho and hu
    - E ∉ {8,9,10}: Heights not applicable
 
-5. **E (halo type), V (completeness) → Sektoren**
+7. **E (halo type), V (completeness) → Sektoren**
    - E ∈ Sektor set [1, 7, 12, 31, 32, 33, 34, 35, 36, 40] AND V=1: Sectors required
    - When V=2 (complete): Sectors not applicable (all octants visible)
    - Otherwise: Sectors not applicable
 
-6. **J, M (year, month) → Data file loading**
+8. **J, M (year, month) → Data file loading**
    - Index: 13*J + M
    - Used for loading observer data
 
-7. **K (observer) → Various location fields**
+9. **K (observer) → Various location fields**
    - Provides HbOrt, NbOrt, GH, GN from observer database (see Observer Record Structure)
 
 ---

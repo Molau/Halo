@@ -64,11 +64,15 @@ def create_app(config=None):
             try:
                 # Import here to avoid circular imports
                 from halo.io.csv_handler import ObservationCSV
-                observations = ObservationCSV.read_observations(data_path)
+                observations, needs_conversion = ObservationCSV.read_observations(data_path)
                 app.config['OBSERVATIONS'] = observations
                 app.config['LOADED_FILE'] = startup_file
-                app.config['DIRTY'] = False
+                app.config['DIRTY'] = needs_conversion  # Mark dirty if converted from legacy format
                 app.config['AUTO_LOADED'] = True  # Flag for showing notification
+                # Auto-save if converted from legacy format
+                if needs_conversion:
+                    ObservationCSV.write_observations(data_path, observations)
+                    app.config['DIRTY'] = False
             except Exception as e:
                 pass
         else:

@@ -105,7 +105,8 @@ class ObservationForm {
                 // Pre-fill date fields
                 if (this.dateDefault) {
                     if (this.fields.mm) {
-                        this.fields.mm.value = this.dateDefault.mm;
+                        // Convert "01" to 1 for dropdown value matching
+                        this.fields.mm.value = parseInt(this.dateDefault.mm, 10);
                     }
                     if (this.fields.jj) {
                         this.fields.jj.value = this.dateDefault.jj;
@@ -378,17 +379,19 @@ class ObservationForm {
                 <label class="form-label">8HHHH</label>
                 <div class="row g-1">
                     <div class="col-6">
-                        <label class="form-label small">HO (ober)</label>
+                        <label class="form-label small">HO - ${i18nStrings.fields.ho}</label>
                         <select class="form-select form-select-sm" id="form-ho">
                             <option value="-1">--</option>
-                            ${Array.from({length: 90}, (_, i) => `<option value="${i+1}">${String(i+1).padStart(2, '0')}°</option>`).join('')}
+                            <option value="0">//</option>
+                            ${Array.from({length: 90}, (_, i) => `<option value="${i+1}">${String(i+1).padStart(2, '0')}</option>`).join('')}
                         </select>
                     </div>
                     <div class="col-6">
-                        <label class="form-label small">HU (unter)</label>
+                        <label class="form-label small">HU - ${i18nStrings.fields.hu}</label>
                         <select class="form-select form-select-sm" id="form-hu">
                             <option value="-1">--</option>
-                            ${Array.from({length: 90}, (_, i) => `<option value="${i+1}">${String(i+1).padStart(2, '0')}°</option>`).join('')}
+                            <option value="0">//</option>
+                            ${Array.from({length: 90}, (_, i) => `<option value="${i+1}">${String(i+1).padStart(2, '0')}</option>`).join('')}
                         </select>
                     </div>
                 </div>
@@ -424,6 +427,12 @@ class ObservationForm {
     
     setupEventListeners() {
         // Get all field references
+        // DEBUG: Check if modal is in DOM
+        console.log("🔍 DEBUG: setupEventListeners called");
+        console.log("🔍 DEBUG: Modal element exists:", !!document.getElementById('obs-form-modal'));
+        console.log("🔍 DEBUG: form-C element exists:", !!document.getElementById('form-C'));
+        console.log("🔍 DEBUG: form-n element exists:", !!document.getElementById('form-n'));
+        
         this.fields = {
             kk: document.getElementById('form-kk'),
             o: document.getElementById('form-o'),
@@ -463,104 +472,312 @@ class ObservationForm {
             }
         };
         
-        // Auto-fill GG based on g, kk, jj, mm
-        const autoFillGG = async () => {
-            const g = parseInt(this.fields.g.value);
-            // DEBUG: Log trigger
-            console.log("🔍 DEBUG: autoFillGG triggered, g=", g);
-            if (g === 0 || g === 2) {
-                const kk = this.fields.kk.value;
-                const jj = parseInt(this.fields.jj.value) % 100;
-                const mm = this.fields.mm.value;
-                // DEBUG: Log parameters
-                console.log("🔍 DEBUG: Fetching GG for kk=", kk, "jj=", jj, "mm=", mm);
-                if (kk && jj && mm) {
-                    try {
-                        const url = `/api/observers?kk=${kk}&jj=${jj}&mm=${mm}`;
-                        console.log("🔍 DEBUG: Fetching:", url);
-                        const resp = await fetch(url);
-                        console.log("🔍 DEBUG: Response status:", resp.status);
-                        if (resp.ok) {
-                            const data = await resp.json();
-                            console.log("🔍 DEBUG: Observer data:", data);
-                            if (data.observer) {
-                                const gg = g === 0 ? data.observer.GH : data.observer.GN;
-                                console.log("🔍 DEBUG: Setting GG to", gg, "(from", g === 0 ? "GH" : "GN", ")");
-                                this.fields.gg.value = gg;
-                                this.fields.gg.disabled = true;
-                                checkRequired();
-                            } else {
-                                console.log("🔍 DEBUG: No observer data returned");
-                            }
-                        }
-                    } catch (e) {
-                        console.error('🔍 DEBUG: Error fetching GG:', e);
+        // Central field dependency management for all interdependent fields
+        // Rules implement dependencies for: d, N, C, c, EE, HO, HU, sectors, V
+        const manageFieldDependencies = (triggerField) => {
+            const dVal = this.fields.d.value;
+            const nVal = this.fields.n.value;
+            const cVal = this.fields.C.value;
+            const cLowVal = this.fields.c.value;
+            
+            const d = dVal === '-1' || dVal === '' ? -1 : parseInt(dVal);
+            const n = nVal === '-1' || nVal === '' ? -1 : parseInt(nVal);
+            const cUp = cVal === '-1' || cVal === '' ? -1 : parseInt(cVal);
+            const cLow = cLowVal === '-1' || cLowVal === '' ? -1 : parseInt(cLowVal);
+            
+            const dOpts = Array.from(this.fields.d.options);
+            const nOpts = Array.from(this.fields.n.options);
+            const cUpOpts = Array.from(this.fields.C.options);
+            const cLowOpts = Array.from(this.fields.c.options);
+            
+            // Helper: Enable/disable specific option values
+            const setOptionStates = (opts, disabledValues) => {
+                opts.forEach(opt => {
+                    const val = opt.value;
+                    opt.disabled = disabledValues.includes(val);
+                });
+            };
+            
+            // Helper: Enable all options
+            const enableAllOptions = (opts) => {
+                opts.forEach(opt => opt.disabled = false);
+            };
+            
+            // Apply rules based on which field triggered the change
+            if (triggerField === 'd') {
+                if (d === -1) {
+                    // d=-1: N, C, c fully enabled
+                    enableAllOptions(nOpts);
+                    enableAllOptions(cUpOpts);
+                    enableAllOptions(cLowOpts);
+                    this.fields.n.disabled = false;
+                    this.fields.C.disabled = false;
+                    this.fields.c.disabled = false;
+                } else if (d >= 0 && d <= 2) {
+                    // d=0-2: N, C, c enabled, but N=0 and C=0 disabled
+                    setOptionStates(nOpts, ['0']);
+                    setOptionStates(cUpOpts, ['0']);
+                    enableAllOptions(cLowOpts);
+                    this.fields.n.disabled = false;
+                    this.fields.C.disabled = false;
+                    this.fields.c.disabled = false;
+                } else if (d >= 4 && d <= 7) {
+                    // d=4-7: Set N, C, c to -1 and disable completely
+                    this.fields.n.value = '-1';
+                    this.fields.C.value = '-1';
+                    this.fields.c.value = '-1';
+                    this.fields.n.disabled = true;
+                    this.fields.C.disabled = true;
+                    this.fields.c.disabled = true;
+                }
+            } else if (triggerField === 'n') {
+                if (n === -1) {
+                    // N=-1: d, C, c fully enabled
+                    enableAllOptions(dOpts);
+                    enableAllOptions(cUpOpts);
+                    enableAllOptions(cLowOpts);
+                    this.fields.d.disabled = false;
+                    this.fields.C.disabled = false;
+                    this.fields.c.disabled = false;
+                } else if (n === 0) {
+                    // N=0: d values 0,1,2 disabled; if d has these, set d=-1; C=0 and disabled; c enabled
+                    setOptionStates(dOpts, ['0', '1', '2']);
+                    if (d >= 0 && d <= 2) {
+                        this.fields.d.value = '-1';
+                    }
+                    this.fields.C.value = '0';
+                    this.fields.C.disabled = true;
+                    enableAllOptions(cLowOpts);
+                    this.fields.c.disabled = false;
+                } else if (n >= 1 && n <= 8) {
+                    // N=1-8: d values 4-7 disabled; if d has these, set d=-1; C enabled but C=0 disabled; c enabled
+                    setOptionStates(dOpts, ['4', '5', '6', '7']);
+                    if (d >= 4 && d <= 7) {
+                        this.fields.d.value = '-1';
+                    }
+                    setOptionStates(cUpOpts, ['0']);
+                    this.fields.C.disabled = false;
+                    enableAllOptions(cLowOpts);
+                    this.fields.c.disabled = false;
+                } else if (n === 9) {
+                    // N=9: d values 4-7 disabled; if d has these, set d=-1; c option 0 disabled
+                    setOptionStates(dOpts, ['4', '5', '6', '7']);
+                    if (d >= 4 && d <= 7) {
+                        this.fields.d.value = '-1';
+                    }
+                    setOptionStates(cLowOpts, ['0']);
+                    this.fields.c.disabled = false;
+                }
+            } else if (triggerField === 'C') {
+                if (cUp === -1) {
+                    // C=-1: N and d fully enabled
+                    enableAllOptions(nOpts);
+                    enableAllOptions(dOpts);
+                    this.fields.n.disabled = false;
+                    this.fields.d.disabled = false;
+                } else if (cUp === 0) {
+                    // C=0: N=0 and disabled; d values 4-7 disabled; if d has these, set d=-1
+                    this.fields.n.value = '0';
+                    this.fields.n.disabled = true;
+                    setOptionStates(dOpts, ['4', '5', '6', '7']);
+                    if (d >= 4 && d <= 7) {
+                        this.fields.d.value = '-1';
+                    }
+                } else if (cUp >= 1 && cUp <= 7) {
+                    // C=1-7: N enabled but N=0 disabled; d values 4-7 disabled; if d has these, set d=-1
+                    setOptionStates(nOpts, ['0']);
+                    this.fields.n.disabled = false;
+                    setOptionStates(dOpts, ['4', '5', '6', '7']);
+                    if (d >= 4 && d <= 7) {
+                        this.fields.d.value = '-1';
                     }
                 }
-            } else {
-                console.log("🔍 DEBUG: g is not 0 or 2, enabling GG field");
-                this.fields.gg.disabled = false;
-                if (!this.originalObservation) {
-                    this.fields.gg.value = '';
+            } else if (triggerField === 'c') {
+                if (cLow === -1 || (cLow >= 1 && cLow <= 9)) {
+                    // c=-1 or 1-9: N fully enabled
+                    enableAllOptions(nOpts);
+                    this.fields.n.disabled = false;
+                } else if (cLow === 0) {
+                    // c=0: N option 9 disabled
+                    setOptionStates(nOpts, ['9']);
+                    this.fields.n.disabled = false;
                 }
-            }
-            checkRequired();
-        };
-        
-        this.fields.g.addEventListener('change', autoFillGG);
-        this.fields.kk.addEventListener('change', autoFillGG);
-        this.fields.jj.addEventListener('change', autoFillGG);
-        this.fields.mm.addEventListener('change', autoFillGG);
-        
-        // Auto-manage 8HHHH fields based on EE
-        this.fields.ee.addEventListener('change', () => {
-            const ee = parseInt(this.fields.ee.value);
-            if (ee && ![8, 9, 10].includes(ee)) {
-                this.fields.ho.value = '-1';
-                this.fields.hu.value = '-1';
-                this.fields.ho.disabled = true;
-                this.fields.hu.disabled = true;
-            } else {
-                this.fields.ho.disabled = false;
-                this.fields.hu.disabled = false;
-                if (ee === 8) {
+            } else if (triggerField === 'ee') {
+                // EE field: Manage 8HHHH fields (HO and HU)
+                const ee = this.fields.ee.value === '' ? -1 : parseInt(this.fields.ee.value);
+                
+                const hoOpts = Array.from(this.fields.ho.options);
+                const huOpts = Array.from(this.fields.hu.options);
+                
+                if (ee === -1 || ee === 8 || ee === 9 || ee === 10) {
+                    // EE requires height fields: enable and set to -1 (not specified)
                     this.fields.ho.disabled = false;
-                    this.fields.hu.value = '-1';
-                    this.fields.hu.disabled = true;
-                } else if (ee === 9) {
-                    this.fields.ho.value = '-1';
+                    this.fields.hu.disabled = false;
+                    
+                    if (ee === 8) {
+                        // EE=08: Obere Lichtsäule - only HO relevant, HU set to -1
+                        // Disable option "0" for HO (must specify height or // or --)
+                        setOptionStates(hoOpts, ['0']);
+                        if (this.fields.ho.value === '0') this.fields.ho.value = '-1';
+                        // HU not relevant, set to -1 and disable
+                        this.fields.hu.value = '-1';
+                        this.fields.hu.disabled = true;
+                        enableAllOptions(huOpts);
+                    } else if (ee === 9) {
+                        // EE=09: Untere Lichtsäule - only HU relevant, HO set to -1
+                        // HO not relevant, set to -1 and disable
+                        this.fields.ho.value = '-1';
+                        this.fields.ho.disabled = true;
+                        enableAllOptions(hoOpts);
+                        // Disable option "0" for HU (must specify height or // or --)
+                        setOptionStates(huOpts, ['0']);
+                        if (this.fields.hu.value === '0') this.fields.hu.value = '-1';
+                    } else if (ee === 10) {
+                        // EE=10: Both light pillars - both fields relevant
+                        // Disable option "0" for both HO and HU
+                        setOptionStates(hoOpts, ['0']);
+                        setOptionStates(huOpts, ['0']);
+                        if (this.fields.ho.value === '0') this.fields.ho.value = '-1';
+                        if (this.fields.hu.value === '0') this.fields.hu.value = '-1';
+                    } else {
+                        // ee === -1: Enable all options
+                        enableAllOptions(hoOpts);
+                        enableAllOptions(huOpts);
+                    }
+                } else if (ee >= 1 && ee <= 77 || ee === 99) {
+                    // EE does not require height fields: set both to 0 (//) and disable
+                    this.fields.ho.value = 0;
+                    this.fields.hu.value = 0;
                     this.fields.ho.disabled = true;
-                    this.fields.hu.disabled = false;
-                } else if (ee === 10) {
-                    this.fields.ho.disabled = false;
-                    this.fields.hu.disabled = false;
+                    this.fields.hu.disabled = true;
+                    enableAllOptions(hoOpts);
+                    enableAllOptions(huOpts);
                 }
-            }
-        });
-        
-        // Auto-manage sectors based on EE and V
-        const checkSectorsAutoFill = () => {
-            const ee = parseInt(this.fields.ee.value);
-            const v = parseInt(this.fields.v.value);
-            const circularHalos = [1, 7, 12, 31, 32, 33, 34, 35, 36, 40];
-            
-            if (ee && circularHalos.includes(ee)) {
-                if (v === 1) {
-                    this.fields.sectors.disabled = false;
-                } else if (v === 2) {
+            } else if (triggerField === 'g' || triggerField === 'kk' || triggerField === 'jj' || triggerField === 'mm') {
+                // g, kk, jj, mm fields: Manage GG auto-fill
+                const g = parseInt(this.fields.g.value);
+                
+                if (g === 0 || g === 2) {
+                    // g=0 (Hauptbeobachtungsort) or g=2 (Nebenbeobachtungsort): Auto-fill GG
+                    const kk = this.fields.kk.value;
+                    const jj = this.fields.jj.value ? parseInt(this.fields.jj.value) % 100 : null;
+                    const mm = this.fields.mm.value ? parseInt(this.fields.mm.value) : null;
+                    
+                    // Need at least KK to look up observer
+                    if (kk) {
+                        // Async operation - fetch observer data
+                        (async () => {
+                            try {
+                                // Build URL - if jj/mm not set, get first valid observer record
+                                let url = `/api/observers?kk=${kk}`;
+                                if (jj && mm) {
+                                    url += `&jj=${jj}&mm=${mm}`;
+                                }
+                                const resp = await fetch(url);
+                                if (resp.ok) {
+                                    const data = await resp.json();
+                                    if (data.observer) {
+                                        const gg = g === 0 ? data.observer.GH : data.observer.GN;
+                                        if (gg !== null && gg !== undefined && gg !== '') {
+                                            this.fields.gg.value = gg;
+                                            this.fields.gg.disabled = true;
+                                        } else {
+                                            // GG value is empty/null, keep field enabled for manual entry
+                                            this.fields.gg.disabled = false;
+                                        }
+                                    } else {
+                                        // No observer data - keep GG enabled for manual entry
+                                        this.fields.gg.disabled = false;
+                                    }
+                                } else {
+                                    // API error - keep GG enabled for manual entry
+                                    this.fields.gg.disabled = false;
+                                }
+                            } catch (e) {
+                                console.error('Error fetching GG:', e);
+                                // Error - keep GG enabled for manual entry
+                                this.fields.gg.disabled = false;
+                            }
+                        })();
+                    } else {
+                        // KK not filled yet - keep GG enabled but don't auto-fill
+                        this.fields.gg.disabled = false;
+                    }
+                } else if (g === 1) {
+                    // g=1 (Auswärtsbeobachtung): Enable GG for manual entry
+                    this.fields.gg.disabled = false;
+                    if (!this.originalObservation) {
+                        this.fields.gg.value = '';
+                    }
+                }
+            } else if (triggerField === 'v') {
+                // V field: Manage sectors based on EE and V
+                const ee = parseInt(this.fields.ee.value);
+                const v = parseInt(this.fields.v.value);
+                const circularHalos = [1, 7, 12, 31, 32, 33, 34, 35, 36, 40];
+                
+                if (ee && circularHalos.includes(ee)) {
+                    if (v === 1) {
+                        // V=1 (unvollständig): Sectors enabled
+                        this.fields.sectors.disabled = false;
+                    } else if (v === 2) {
+                        // V=2 (vollständig): Sectors cleared and disabled
+                        this.fields.sectors.value = '';
+                        this.fields.sectors.disabled = true;
+                    } else {
+                        // V not set: Sectors enabled (user may enter)
+                        this.fields.sectors.disabled = false;
+                    }
+                } else {
+                    // EE not a circular halo: Sectors cleared and disabled
                     this.fields.sectors.value = '';
                     this.fields.sectors.disabled = true;
-                } else {
-                    this.fields.sectors.disabled = false;
                 }
-            } else {
-                this.fields.sectors.value = '';
-                this.fields.sectors.disabled = true;
             }
         };
         
-        this.fields.ee.addEventListener('change', checkSectorsAutoFill);
-        this.fields.v.addEventListener('change', checkSectorsAutoFill);
+        // Attach event listeners for interdependent field changes
+        this.fields.d.addEventListener('change', () => {
+            manageFieldDependencies('d');
+        });
+        this.fields.n.addEventListener('change', () => {
+            manageFieldDependencies('n');
+        });
+        this.fields.C.addEventListener('change', () => {
+            manageFieldDependencies('C');
+        });
+        this.fields.c.addEventListener('change', () => {
+            manageFieldDependencies('c');
+        });
+        this.fields.ee.addEventListener('change', () => {
+            manageFieldDependencies('ee');
+            // Also check sectors when EE changes (EE affects both 8HHHH and sectors)
+            const v = parseInt(this.fields.v.value);
+            if (v) {
+                manageFieldDependencies('v');
+            }
+        });
+        this.fields.g.addEventListener('change', () => {
+            manageFieldDependencies('g');
+            checkRequired();
+        });
+        this.fields.kk.addEventListener('change', () => {
+            manageFieldDependencies('kk');
+            checkRequired();
+        });
+        this.fields.jj.addEventListener('change', () => {
+            manageFieldDependencies('jj');
+            checkRequired();
+        });
+        this.fields.mm.addEventListener('change', () => {
+            manageFieldDependencies('mm');
+            checkRequired();
+        });
+        this.fields.v.addEventListener('change', () => {
+            manageFieldDependencies('v');
+        });
+        
+        // Note: 8HHHH field management moved to manageFieldDependencies() function
         
         // Required field listeners
         ['kk', 'o', 'jj', 'mm', 'tt', 'g', 'ee', 'gg'].forEach(key => {
@@ -782,8 +999,8 @@ class ObservationForm {
         this.fields.f.value = obs.f !== -1 && obs.f !== null ? obs.f : '-1';
         this.fields.zz.value = obs.zz !== -1 && obs.zz !== 99 && obs.zz !== null ? obs.zz : (obs.zz === 99 ? '99' : '-1');
         this.fields.gg.value = obs.GG || '';
-        this.fields.ho.value = obs.HO !== -1 && obs.HO !== null ? obs.HO : '-1';
-        this.fields.hu.value = obs.HU !== -1 && obs.HU !== null ? obs.HU : '-1';
+        this.fields.ho.value = obs.HO !== -1 && obs.HO !== 0 && obs.HO !== null ? obs.HO : (obs.HO === 0 ? '0' : '-1');
+        this.fields.hu.value = obs.HU !== -1 && obs.HU !== 0 && obs.HU !== null ? obs.HU : (obs.HU === 0 ? '0' : '-1');
         this.fields.sectors.value = obs.sectors || '';
         this.fields.remarks.value = obs.remarks || '';
     }

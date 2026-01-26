@@ -171,7 +171,9 @@
       "download_filename_prompt": "Dateiname für heruntergeladene Beobachtungen:",
       "download_progress": "Lade herunter...",
       "download_success": "✓ Download von {0} Beobachtungen erfolgreich",
-      "download_title": "Download"
+      "download_title": "Download",
+      "legacy_format_converted_title": "Dateiformat konvertiert",
+      "legacy_format_converted_message": "Die Datei wurde aus dem alten HALO-Format in das aktuelle CSV-Format konvertiert und gespeichert."
   },
   "observations": {
     "title": "Beobachtungen",
@@ -477,6 +479,34 @@
     "4": "Sternhalo",
     "5": "Halo um eine irdische Lichtquelle"
   },
+  "months": {
+    "1": "Januar",
+    "2": "Februar",
+    "3": "März",
+    "4": "April",
+    "5": "Mai",
+    "6": "Juni",
+    "7": "Juli",
+    "8": "August",
+    "9": "September",
+    "10": "Oktober",
+    "11": "November",
+    "12": "Dezember"
+  },
+  "months_short": {
+    "1": "Jan",
+    "2": "Feb",
+    "3": "Mär",
+    "4": "Apr",
+    "5": "Mai",
+    "6": "Jun",
+    "7": "Jul",
+    "8": "Aug",
+    "9": "Sep",
+    "10": "Okt",
+    "11": "Nov",
+    "12": "Dez"
+  },
   "location_types": {
     "0": "Hauptbeobachtungsort",
     "1": "außerhalb von Haupt- und Nebenbeobachtungsort",
@@ -528,67 +558,6 @@
     "7": "Altostratus (As)",
     "8": "Altocumulus (Ac)",
     "9": "As + Ac"
-  },
-  "months": {
-    "1": "Januar",
-    "2": "Februar",
-    "3": "März",
-    "4": "April",
-    "5": "Mai",
-    "6": "Juni",
-    "7": "Juli",
-    "8": "August",
-    "9": "September",
-    "10": "Oktober",
-    "11": "November",
-    "12": "Dezember"
-  },
-  "months_short": {
-    "1": "Jan",
-    "2": "Feb",
-    "3": "Mär",
-    "4": "Apr",
-    "5": "Mai",
-    "6": "Jun",
-    "7": "Jul",
-    "8": "Aug",
-    "9": "Sep",
-    "10": "Okt",
-    "11": "Nov",
-    "12": "Dez"
-  },
-  "brightness": {
-    "-1": "keine Angabe",
-    "0": "sehr schwach",
-    "1": "schwach, wenig auffällig",
-    "2": "hell, auffällig",
-    "3": "sehr hell, sehr auffällig"
-  },
-  "color": {
-    "-1": "keine Angabe",
-    "0": "weiß",
-    "1": "farbig",
-    "2": "Blauanteil besonders auffällig",
-    "3": "Gelbanteil besonders auffällig",
-    "4": "Rotanteil besonders auffällig",
-    "5": "Grünanteil besonders auffällig"
-  },
-  "completeness": {
-    "-1": "keine Angabe",
-    "1": "unvollständig",
-    "2": "vollständig"
-  },
-  "weather_front": {
-    "-1": "keine Angabe",
-    "0": "sonstige Front",
-    "1": "Warmfront",
-    "2": "Kaltfront",
-    "3": "Okklusion",
-    "4": "Trog(bereich/achse)",
-    "5": "Wärmegewitter/Schauer",
-    "6": "Konvergenzlinie",
-    "7": "Höhentief/Kaltlufttropfen",
-    "8": "Strahlstrom"
   },
   "halo_types": {
     "1": "22°-Ring",
@@ -670,6 +639,39 @@
     "77": "Moilanenbogen",
     "99": "unbekanntes oder nicht zuordbares Halo"
   },
+  "brightness": {
+    "-1": "keine Angabe",
+    "0": "sehr schwach",
+    "1": "schwach, wenig auffällig",
+    "2": "hell, auffällig",
+    "3": "sehr hell, sehr auffällig"
+  },
+  "color": {
+    "-1": "keine Angabe",
+    "0": "weiß",
+    "1": "farbig",
+    "2": "Blauanteil besonders auffällig",
+    "3": "Gelbanteil besonders auffällig",
+    "4": "Rotanteil besonders auffällig",
+    "5": "Grünanteil besonders auffällig"
+  },
+  "completeness": {
+    "-1": "keine Angabe",
+    "1": "unvollständig",
+    "2": "vollständig"
+  },
+  "weather_front": {
+    "-1": "keine Angabe",
+    "0": "sonstige Front",
+    "1": "Warmfront",
+    "2": "Kaltfront",
+    "3": "Okklusion",
+    "4": "Trog(bereich/achse)",
+    "5": "Wärmegewitter/Schauer",
+    "6": "Konvergenzlinie",
+    "7": "Höhentief/Kaltlufttropfen",
+    "8": "Strahlstrom"
+  },
   "geographic_regions": {
     "1": "Schleswig-Holstein/Mecklenburg-Vorpommern",
     "2": "Niedersachsen/Bremen/Hamburg",
@@ -730,6 +732,8 @@
     "weather_front": "Witterungsfront",
     "precipitation": "Niederschlag",
     "region": "Gebiet",
+    "ho": "obere Lichtsäule",
+    "hu": "untere Lichtsäule",
     "sectors": "Sektoren",
     "remarks": "Bemerkungen",
     "select": "Auswählen",

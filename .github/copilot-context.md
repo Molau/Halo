@@ -28,7 +28,32 @@
 
 ## Core Principles
 
-### 0. Debug Logging Standard - Decision #024
+### 0. Code Modification Policy - Decision #026
+- **Date**: 2026-01-25
+- **Status**: ✓ Approved
+- **Core Rule**: NEVER replace existing code with newly generated code without explicit approval
+- **Critical Principle**: ALWAYS attempt to CORRECT existing code, never regenerate from scratch
+- **Requirements**:
+  1. ✓ **READ existing code first** - Understand what's already there
+  2. ✓ **CORRECT the specific issue** - Make minimal, targeted changes
+  3. ✓ **PRESERVE existing logic** - Keep all working code intact
+  4. ✗ **NEVER regenerate code blocks** - This causes "lost updates" where previous fixes are lost
+  5. ✗ **NEVER assume what code should look like** - Use actual existing code as base
+- **When Regeneration Might Be Needed**:
+  - **MUST ask explicitly first**: "I need to regenerate [function X] because [reason]. This will replace lines Y-Z. Approve?"
+  - Wait for explicit user approval before proceeding
+  - Provide clear diff showing what will be lost
+- **Rationale**:
+  - Prevents "lost updates" where previous bug fixes disappear
+  - Avoids reintroducing bugs that were already fixed
+  - Maintains code quality and consistency
+  - Reduces rework and frustration
+- **Examples**:
+  - ✓ **Correct approach**: Read existing function → identify bug → fix specific line
+  - ✗ **Wrong approach**: "I'll rewrite the function" → loses previous fixes
+- **Impact**: This is a CRITICAL principle that prevents repeated debugging cycles
+
+### 1. Debug Logging Standard - Decision #024
 - **Date**: 2026-01-24
 - **Status**: ✓ Approved
 - **Core Rule**: All debug/diagnostic output MUST be clearly labeled for easy identification and removal
@@ -49,7 +74,7 @@
   console.log("🔍 DEBUG: filterCriterion1=", this.filterCriterion1, "filterValue1=", this.filterValue1);
   ```
 
-### 1. Observation Record Format (HALO Key)
+### 2. Observation Record Format (HALO Key)
 - **Decision**: ✓ Preserve standardized observation record format exactly
 - **Format**: `KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen`
 - **Rationale**: 
@@ -59,52 +84,58 @@
 - **Status**: ✓ Fixed (not changeable)
 - **Documentation**: See [HALO_DATA_FORMAT.md](HALO_DATA_FORMAT.md)
 
-### 2. File Storage Format
-- **Decision**: OPEN - Binary (.HAL, .BEO) vs. CSV format
-- **Current Situation**: 
-  - Using CSV files as temporary workaround
-  - Original software supports CSV export for observations (.HAL files)
-  - Observer files (.BEO) only exist in binary format - CSV conversion pending
-- **Original Format**: 
-  - Binary files with compression algorithm
-  - Reason: Limited disk space (floppy disks) - no longer relevant
-  - Proprietary to HALO program - can be changed
-- **Options**:
-  - Option A: Keep original binary format WITH compression (as-is)
-  - Option B: Use CSV as primary format (observations already supported, observers need conversion)
-- **Note**: Compression is integral to the binary format and cannot be removed - it's all or nothing
-- **Requirements if choosing CSV**:
-  - Must read and interpret CSV format exported by original Pascal program
-  - Ensure compatibility with existing CSV exports from HALO.EXE
-  - Users can convert their binary files using original Pascal program's CSV export function
-- **Trade-offs**:
-  - Binary: Compact, preserves original format
-  - CSV: Human-readable, easier to work with, already exported by original software
-- **Technical Note for CSV**: 
-  - Remark field (Bemerkungen) may contain commas
-  - Each field in HALO key has fixed length (positions 1-50)
-  - Original CSV export preserves field positions
-  - Remark field starts at position 51, allowing proper parsing even with embedded commas
-  - Must escape/handle commas in remark field appropriately
-- **Status**: Decision pending
-- **Documentation**: See [HALO_DATA_FORMAT.md](HALO_DATA_FORMAT.md) for record structure (independent of storage format)
-
-### 3. Strict Fidelity to Original
-- **Decision**: Maintain original program structure, logic, and user interface as closely as possible
+### 2. Observation Record Format (HALO Key)
+- **Decision**: ✓ Preserve standardized observation record format exactly
+- **Format**: `KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH Sektoren Bemerkungen`
 - **Rationale**: 
-  - Preserve proven workflow developed over decades
-  - Minimize learning curve for existing users
-  - Ensure behavioral compatibility
-- **Status**: Active principle
+  - Standardized format defined independently of HALO program
+  - Used by observation community for decades
+  - Cannot be changed - this is a standard, not a design decision
+- **Status**: ✓ Fixed (not changeable)
+- **Documentation**: See [HALO_DATA_FORMAT.md](HALO_DATA_FORMAT.md)
+
+### 3. File Storage Format - Decision #025
+- **Decision**: ✓ CSV format is the official HALOpy format
+- **Date**: 2026-01-25
+- **Status**: ✓ Finalized - binary format will not be implemented
+- **Format**: 
+  - **Modern CSV**: Proper CSV with quoted remarks field to handle embedded commas
+  - **Legacy CSV**: Compatible with CSV exports from original HALO program (auto-converts)
+- **Legacy Compatibility**: 
+  - HALOpy can read legacy CSV format (fixed positions with spaces)
+  - Auto-converts to modern format on first save
+  - Detection: Legacy format has spaces (leading or trailing) in sectors field
+- **Modern Format Specification**:
+  - No spaces between commas
+  - No leading zeros (except where semantically required)
+  - Remarks field enclosed in double quotes when needed: `"remark text, with commas"`
+  - Standard CSV escaping: quotes within remarks doubled (`""`)  
+  - All other fields unquoted (numeric or simple text)
+- **Special Value Encoding**:
+  - Empty or space = not observed/unknown → stored as `-1` (most fields)
+  - `/` = observed but not present → stored as `-2` (only for d and 8HHHH fields)
+  - **Critical**: Most fields have their own "not present" values (usually 0). Only d (cirrus density) and 8HHHH (light pillar) use `/` (-2) for "observed but not present"
+- **Rationale**:
+  - Binary format reason (disk space on floppies) no longer relevant
+  - CSV is open, portable, human-readable
+  - Easier integration with other tools (Excel, Python, R)
+  - Users already converted files using HALO.EXE CSV export
+  - Simpler maintenance and debugging
+- **Documentation**: See [HALO_DATA_FORMAT.md](HALO_DATA_FORMAT.md) for record structure and special value semantics
+
+### 4. Maintain User Experience (UPDATED - 2026-01-25)
+- **Decision**: Preserve proven workflow and familiar UI while allowing modern improvements
+- **Rationale**: 
+  - ✓ Migration completed - original functionality successfully ported
+  - Preserve user familiarity with established workflows
+  - Allow incremental improvements and modernization
+- **Status**: Active principle - continuous improvement phase
 - **Applies to**:
   - Menu structure and functions (30 years of user familiarity)
-  - Display formats
-  - Error messages
-  - All texts and translations (use original texts exactly, no rephrasing or independent translation)
-- **Critical**: Do NOT rephrase, translate, or adapt any text unless explicitly approved. All texts must come directly from the original Pascal program source.
-- **Note**: Data validation rules, field dependencies, and sort orders are NOT design decisions - they are defined by the observation data standard itself and cannot be changed
+  - Display formats and data validation
+  - All texts and translations (use original texts, allow refinements with approval)
 
-### 4. Controlled Evolution
+### 5. Controlled Evolution
 - **Decision**: No function omission or new features without explicit approval
 - **Rationale**: Prevent scope creep and maintain focus on faithful migration
 - **Process**: All changes must be:

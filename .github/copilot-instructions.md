@@ -6,10 +6,11 @@ This document provides workflow guidance for GitHub Copilot when working on the 
 
 ## Documentation Hierarchy
 
-### Tier 1: Pascal Source Code - THE ULTIMATE TRUTH 🔒
+### Tier 1: Pascal Source Code - MIGRATION REFERENCE (ARCHIVED) 📚
 - **Location**: `c:\ASTRO\HALO\QUELLEN\*.PAS`
-- **Authority**: ABSOLUTE - This is the original program we're migrating
-- **Purpose**: Source of all functionality, UI text, validation rules, business logic
+- **Authority**: HISTORICAL - Migration completed, no longer primary reference
+- **Purpose**: Historical reference only; HALOpy is now the authoritative implementation
+- **Status**: ✓ Migration completed - use only for understanding original design decisions
 - **Key Files**:
   - `H_TYPES.PAS` - Data structures, constants (MaxKenn, Germany regions, etc.)
   - `H_SPR.PAS` - All UI strings (ConO, ConN, ConE, ConH, ConF, ConV, etc.)
@@ -75,10 +76,10 @@ This document provides workflow guidance for GitHub Copilot when working on the 
    - What is the user asking for?
    - Is this a new feature or fixing existing functionality?
 
-2. **Check Pascal source code** (Tier 1)
-   - How does the original HALO program handle this?
-   - What are the exact UI strings, validation rules, business logic?
-   - Location: `c:\ASTRO\HALO\QUELLEN\*.PAS`
+2. **Check existing HALOpy implementation**
+   - How does HALOpy currently handle this?
+   - What are the existing patterns, validation rules, business logic?
+   - Location: `src/halo/`, `static/js/`, `templates/`
 
 3. **Check copilot-context.md** (Tier 2)
    - Are there existing decisions about this functionality?

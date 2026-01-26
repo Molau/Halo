@@ -463,9 +463,9 @@ def save_observations() -> Dict[str, Any]:
     if not filename:
         return jsonify({'error': 'Filename is required'}), 400
     
-    # Ensure .CSV extension
-    if not filename.upper().endswith('.CSV'):
-        filename += '.CSV'
+    # Ensure .csv extension
+    if not filename.lower().endswith('.csv'):
+        filename += '.csv'
     
     # Convert observation dicts to Observation objects
     from halo.models.types import Observation
@@ -653,7 +653,10 @@ def get_statistics() -> Dict[str, Any]:
     data_path = Path(__file__).parent.parent.parent.parent / 'data' / 'ALLE.CSV'
     
     try:
-        observations = csv_handler.read_observations(str(data_path))
+        observations, needs_conversion = csv_handler.read_observations(str(data_path))
+        # Auto-convert legacy format
+        if needs_conversion:
+            csv_handler.write_observations(data_path, observations)
         
         # Calculate statistics
         years = [obs.JJ for obs in observations]
@@ -718,9 +721,9 @@ def new_file() -> Dict[str, Any]:
     if not filename:
         return jsonify({'error': 'Filename is required'}), 400
     
-    # Ensure .CSV extension
-    if not filename.endswith('.CSV') and not filename.endswith('.csv'):
-        filename += '.CSV'
+    # Ensure .csv extension
+    if not filename.lower().endswith('.csv'):
+        filename += '.csv'
     
     datapath = Path(__file__).parent.parent.parent.parent / 'data'
     filepath = os.path.join(str(datapath), filename)
@@ -749,8 +752,9 @@ def new_file() -> Dict[str, Any]:
 def load_file_from_browser() -> Dict[str, Any]:
     """Load a file from user's filesystem directly into memory."""
     from flask import current_app
-    from io import StringIO
-    import csv
+    from pathlib import Path
+    import tempfile
+    import os
     
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
@@ -763,24 +767,39 @@ def load_file_from_browser() -> Dict[str, Any]:
         return jsonify({'error': 'Only CSV files are supported'}), 400
     
     try:
-        # Read file content directly into memory (HALO CSV is latin-1)
-        content = file.read().decode('latin-1')
-        file_object = StringIO(content)
+        # Save uploaded file temporarily to detect legacy format
+        with tempfile.NamedTemporaryFile(mode='wb', suffix='.csv', delete=False) as tmp:
+            file.save(tmp.name)
+            temp_path = Path(tmp.name)
         
-        # Parse CSV directly from memory
-        observations = ObservationCSV.read_observations_from_stream(file_object)
-        
-        # Store in app config
-        current_app.config['LOADED_FILE'] = file.filename
-        current_app.config['OBSERVATIONS'] = observations
-        current_app.config['DIRTY'] = False
-        
-        return jsonify({
-            'success': True,
-            'filename': file.filename,
-            'count': len(observations),
-            'message': f'{len(observations)} Beobachtungen geladen!'
-        })
+        try:
+            # Use unified load logic with legacy format detection
+            observations, needs_conversion = ObservationCSV.read_observations(temp_path)
+            
+            # Save to data folder (convert if needed)
+            datapath = Path(__file__).parent.parent.parent.parent / 'data'
+            target_path = datapath / file.filename
+            
+            # Always save to data folder (in modern format if conversion needed)
+            ObservationCSV.write_observations(target_path, observations)
+            
+            # Store in app config
+            current_app.config['LOADED_FILE'] = file.filename
+            current_app.config['OBSERVATIONS'] = observations
+            current_app.config['DIRTY'] = False
+            
+            return jsonify({
+                'success': True,
+                'filename': file.filename,
+                'count': len(observations),
+                'message': f'{len(observations)} Beobachtungen geladen!',
+                'converted': needs_conversion
+            })
+        finally:
+            # Clean up temp file
+            if temp_path.exists():
+                os.unlink(temp_path)
+                
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -854,7 +873,7 @@ def merge_file() -> Dict[str, Any]:
 
 @api_blueprint.route('/file/load/<filename>', methods=['GET', 'POST'])
 def load_file(filename: str) -> Dict[str, Any]:
-    """Load observation file - implements 'Datei -> Laden' from HALO.PAS laden()
+    """Load observation file from data folder - implements 'Datei -> Laden' from HALO.PAS laden()
     
     Supports both GET and POST methods for convenience.
     """
@@ -863,13 +882,18 @@ def load_file(filename: str) -> Dict[str, Any]:
     import os
     
     datapath = Path(__file__).parent.parent.parent.parent / 'data'
-    filepath = os.path.join(str(datapath), filename)
+    filepath = datapath / filename
     
-    if not os.path.exists(filepath):
+    if not filepath.exists():
         return jsonify({'error': 'File not found'}), 404
     
     try:
-        observations = ObservationCSV.read_observations(Path(filepath))
+        # Use unified load logic with legacy format detection
+        observations, needs_conversion = ObservationCSV.read_observations(filepath)
+        
+        # Auto-convert legacy format by overwriting file
+        if needs_conversion:
+            ObservationCSV.write_observations(filepath, observations)
         
         # Store in app config
         current_app.config['LOADED_FILE'] = filename
@@ -880,7 +904,8 @@ def load_file(filename: str) -> Dict[str, Any]:
             'success': True,
             'filename': filename,
             'count': len(observations),
-            'message': f'{len(observations)} Beobachtungen geladen!'
+            'message': f'{len(observations)} Beobachtungen geladen!',
+            'converted': needs_conversion
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -928,9 +953,9 @@ def save_file_as() -> Dict[str, Any]:
     if not filename:
         return jsonify({'error': 'Filename is required'}), 400
     
-    # Ensure .CSV extension
-    if not filename.endswith('.CSV') and not filename.endswith('.csv'):
-        filename += '.CSV'
+    # Ensure .csv extension
+    if not filename.lower().endswith('.csv'):
+        filename += '.csv'
     
     datapath = Path(__file__).parent.parent.parent.parent / 'data'
     filepath = os.path.join(str(datapath), filename)
@@ -1178,7 +1203,10 @@ def restore_autosave() -> Dict[str, Any]:
     
     try:
         # Load observations from temp file
-        observations = ObservationCSV.read_observations(temp_filepath)
+        observations, needs_conversion = ObservationCSV.read_observations(temp_filepath)
+        # Auto-convert legacy format
+        if needs_conversion:
+            ObservationCSV.write_observations(temp_filepath, observations)
         
         # Store in app config
         current_app.config['OBSERVATIONS'] = observations
@@ -1476,6 +1504,7 @@ def _kurzausgabe(obs) -> str:
     """Format observation as HALO key string (short format).
     
     Ported from monthly_report.js kurzausgabe() function.
+    Special values: -1 = ' ' (not observed), -2 = '/' (not present)
     """
     first = ''
     
@@ -1492,47 +1521,52 @@ def _kurzausgabe(obs) -> str:
     first += str(obs.TT // 10) + str(obs.TT % 10)
     first += str(obs.g)
     
-    # ZS, ZM
-    zs = obs.ZS if obs.ZS != -1 else None
-    zm = obs.ZM if obs.ZM != -1 else None
-    first += '//' if zs is None else str(zs // 10) + str(zs % 10)
-    first += '//' if zm is None else str(zm // 10) + str(zm % 10)
+    # ZS, ZM - handle -1 (space) and 0 (/) for HO/HU
+    def fmt2(val):
+        """Format 2-digit field: -1→'  ', 0→'//' (for HO/HU), else number"""
+        if val == -1:
+            return '  '  # Not observed
+        elif val == 0:
+            return '//'  # Not relevant/present (for HO/HU)
+        else:
+            return str(val // 10) + str(val % 10)
     
-    # d, DD
-    d_val = obs.d if obs.d != -1 else None
-    dd_val = obs.DD if obs.DD != -1 else None
-    first += '/' if d_val is None else str(d_val)
-    first += '//' if dd_val is None else str(dd_val // 10) + str(dd_val % 10)
+    first += fmt2(obs.ZS)
+    first += fmt2(obs.ZM)
+    
+    # d - single digit field
+    def fmt1(val):
+        """Format 1-digit field: -1→' ', else number"""
+        if val == -1:
+            return ' '  # Not observed
+        else:
+            return str(val)
+    
+    first += fmt1(obs.d)
+    first += fmt2(obs.DD)
     
     # N, C, c
-    n_val = obs.N if obs.N != -1 else None
-    c_val = obs.C if obs.C != -1 else None
-    c_lower = obs.c if obs.c != -1 else None
-    first += '/' if n_val is None else str(n_val)
-    first += '/' if c_val is None else str(c_val)
-    first += '/' if c_lower is None else str(c_lower)
+    first += fmt1(obs.N)
+    first += fmt1(obs.C)
+    first += fmt1(obs.c)
     
     # EE
     first += str(obs.EE // 10) + str(obs.EE % 10)
     
     # H, F, V
-    h_val = obs.H if obs.H != -1 else None
-    f_val = obs.F if obs.F != -1 else None
-    v_val = obs.V if obs.V != -1 else None
-    first += '/' if h_val is None else str(h_val)
-    first += '/' if f_val is None else str(f_val)
-    first += '/' if v_val is None else str(v_val)
+    first += fmt1(obs.H)
+    first += fmt1(obs.F)
+    first += fmt1(obs.V)
     
     # f, zz, GG
-    f_lower = obs.f if obs.f != -1 else None
-    zz_val = obs.zz if obs.zz not in (-1, 99) else (None if obs.zz == -1 else 99)
-    first += ' ' if f_lower is None else str(f_lower)
-    if zz_val is None:
-        first += '  '
-    elif zz_val == 99:
+    first += fmt1(obs.f)
+    
+    # zz special: 99 means '//', -1 means '  ', -2 means '//'
+    if obs.zz == 99:
         first += '//'
     else:
-        first += str(zz_val // 10) + str(zz_val % 10)
+        first += fmt2(obs.zz)
+    
     gg = obs.GG if obs.GG != -1 else 0
     first += str(gg // 10) + str(gg % 10)
     
@@ -1545,18 +1579,17 @@ def _kurzausgabe(obs) -> str:
             if len(chunk) == 5:
                 erg += ' '
     
-    # 8HHHH - light pillar
-    ho_val = obs.HO if obs.HO != -1 else None
-    hu_val = obs.HU if obs.HU != -1 else None
-    
+    # 8HHHH - light pillar (HO=0 or HU=0 formatted as '//')
     if obs.EE == 8:
-        erg += '8////' if ho_val is None else '8' + str(ho_val // 10) + str(ho_val % 10) + '//'
+        ho_str = fmt2(obs.HO)
+        erg += '8' + ho_str + '//'
     elif obs.EE == 9:
-        erg += '8////' if hu_val is None else '8//' + str(hu_val // 10) + str(hu_val % 10)
+        hu_str = fmt2(obs.HU)
+        erg += '8//' + hu_str
     elif obs.EE == 10:
-        erg += '8'
-        erg += '//' if ho_val is None else str(ho_val // 10) + str(ho_val % 10)
-        erg += '//' if hu_val is None else str(hu_val // 10) + str(hu_val % 10)
+        ho_str = fmt2(obs.HO)
+        hu_str = fmt2(obs.HU)
+        erg += '8' + ho_str + hu_str
     else:
         erg += '/////'
     
@@ -4828,7 +4861,10 @@ def analyze_observations() -> Dict[str, Any]:
         if not observations:
             csv_handler = ObservationCSV()
             data_path = Path(__file__).parent.parent.parent.parent / 'data' / 'ALLE.CSV'
-            observations = csv_handler.read_observations(str(data_path))
+            observations, needs_conversion = csv_handler.read_observations(str(data_path))
+            # Auto-convert legacy format
+            if needs_conversion:
+                csv_handler.write_observations(data_path, observations)
         
         # Apply filters first
         filtered_obs = observations
