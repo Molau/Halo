@@ -16,6 +16,19 @@ class ObservationForm {
         this.originalObservation = null;
         this.saved = false;
         this.skipped = false;
+        // Field constraints: Store current valid value ranges for dependent fields
+        this.fieldConstraints = {
+            d: [],      // Valid values for cirrus density
+            n: [],      // Valid values for cloud cover
+            C: [],      // Valid values for cirrus cover (upper)
+            c: [],      // Valid values for cirrus cover (lower)
+            g: [],      // Valid values for observing site
+            GG: null,   // Current observing site code (single value)
+            TT: [],     // Valid values for day
+            HO: [],     // Valid values for upper light pillar
+            HU: [],     // Valid values for lower light pillar
+            sectors: [] // Valid state for sectors (empty array = inactive, ['any'] = active)
+        };
     }
     
     async initialize(mode = 'add') {
@@ -98,6 +111,7 @@ class ObservationForm {
             // Disable all fields in edit/delete/view mode - user must click "Yes" to edit
             setTimeout(() => {
                 this.disableAllFields();
+                // Dependencies already applied in populateFields()
             }, 0);
         } else if (mode === 'add') {
             // Pre-fill fields for new observations
@@ -117,6 +131,15 @@ class ObservationForm {
                 if (this.fixedObserver && this.fields.kk) {
                     this.fields.kk.value = this.fixedObserver;
                 }
+                
+                // Apply initial dependencies for pre-filled values
+                // O-Trigger: sets d, and cascades to N, C, c
+                this.manageFieldDependencies('o');
+                // KK/MM/JJ-Trigger: sets g, cascades to GG
+                this.manageFieldDependencies('kk');
+                this.manageFieldDependencies('mm');
+                // EE-Trigger: sets HO, HU, sectors
+                this.manageFieldDependencies('ee');
             }, 0);
         }
         
@@ -202,14 +225,14 @@ class ObservationForm {
             <div class="col-md-6">
                 <label class="form-label">KK - ${i18nStrings.fields.observer} <span class="text-danger">*</span></label>
                 <select class="form-select form-select-sm" id="form-kk" ${kkDisabled} required>
-                    <option value="">-- ${i18nStrings.fields.select} --</option>
+                    <option value="">${i18nStrings.fields.select}</option>
                     ${observerOptions}
                 </select>
             </div>
             <div class="col-md-6">
                 <label class="form-label">O - ${i18nStrings.fields.object} <span class="text-danger">*</span></label>
                 <select class="form-select form-select-sm" id="form-o" required>
-                    <option value="">-- ${i18nStrings.fields.select} --</option>
+                    <option value="">${i18nStrings.fields.select}</option>
                     <option value="1">1 - ${i18nStrings.object_types['1']}</option>
                     <option value="2">2 - ${i18nStrings.object_types['2']}</option>
                     <option value="3">3 - ${i18nStrings.object_types['3']}</option>
@@ -220,14 +243,14 @@ class ObservationForm {
             <div class="col-md-4">
                 <label class="form-label">JJ - ${i18nStrings.fields.year} <span class="text-danger">*</span></label>
                 <select class="form-select form-select-sm" id="form-jj" required>
-                    <option value="">-- ${i18nStrings.fields.select} --</option>
+                    <option value="">${i18nStrings.fields.select}</option>
                     ${yearOptions}
                 </select>
             </div>
             <div class="col-md-4">
                 <label class="form-label">MM - ${i18nStrings.fields.month} <span class="text-danger">*</span></label>
                 <select class="form-select form-select-sm" id="form-mm" required>
-                    <option value="">-- ${i18nStrings.fields.select} --</option>
+                    <option value="">${i18nStrings.fields.select}</option>
                     ${Array.from({length: 12}, (_, i) => {
                         const monthNum = i + 1;
                         const monthName = i18nStrings.months[monthNum];
@@ -238,7 +261,7 @@ class ObservationForm {
             <div class="col-md-4">
                 <label class="form-label">TT - ${i18nStrings.fields.day} <span class="text-danger">*</span></label>
                 <select class="form-select form-select-sm" id="form-tt" required>
-                    <option value="">-- ${i18nStrings.fields.select} --</option>
+                    <option value="">${i18nStrings.fields.select}</option>
                     ${Array.from({length: 31}, (_, i) => `<option value="${i+1}">${String(i+1).padStart(2, '0')}</option>`).join('')}
                 </select>
             </div>
@@ -268,7 +291,7 @@ class ObservationForm {
             <div class="col-md-4">
                 <label class="form-label">d - ${i18nStrings.fields.cirrus_density}</label>
                 <select class="form-select form-select-sm" id="form-d">
-                    <option value="-1">-- ${i18nStrings.fields.not_specified} --</option>
+                    <option value="-1">${i18nStrings.fields.select}</option>
                     <option value="0">0 - ${i18nStrings.cirrus_density['0']}</option>
                     <option value="1">1 - ${i18nStrings.cirrus_density['1'] }</option>
                     <option value="2">2 - ${i18nStrings.cirrus_density['2']}</option>
@@ -281,14 +304,14 @@ class ObservationForm {
             <div class="col-md-3">
                 <label class="form-label">DD - ${i18nStrings.fields.duration}</label>
                 <select class="form-select form-select-sm" id="form-dd">
-                    <option value="-1">--</option>
+                    <option value="-1">${i18nStrings.fields.select}</option>
                     ${Array.from({length: 100}, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')}</option>`).join('')}
                 </select>
             </div>
             <div class="col-md-3">
                 <label class="form-label">N - ${i18nStrings.fields.cloud_cover}</label>
                 <select class="form-select form-select-sm" id="form-n">
-                    <option value="-1">--</option>
+                    <option value="-1">${i18nStrings.fields.select}</option>
                     ${Array.from({length: 10}, (_, i) => {
                         const label = i18nStrings.cloud_cover[i.toString()];
                         return `<option value="${i}">${i} - ${label}</option>`;
@@ -298,7 +321,7 @@ class ObservationForm {
             <div class="col-md-3">
                 <label class="form-label">C - ${i18nStrings.fields.cirrus_type}</label>
                 <select class="form-select form-select-sm" id="form-C">
-                    <option value="-1">--</option>
+                    <option value="-1">${i18nStrings.fields.select}</option>
                     ${Array.from({length: 8}, (_, i) => {
                         const label = i18nStrings.cirrus_types[i.toString()];
                         return `<option value="${i}">${i} - ${label}</option>`;
@@ -308,7 +331,7 @@ class ObservationForm {
             <div class="col-md-3">
                 <label class="form-label">c - ${i18nStrings.fields.low_clouds}</label>
                 <select class="form-select form-select-sm" id="form-c">
-                    <option value="-1">--</option>
+                    <option value="-1">${i18nStrings.fields.select}</option>
                     ${Array.from({length: 10}, (_, i) => {
                         const label = i18nStrings.low_clouds[i.toString()];
                         return `<option value="${i}">${i} - ${label}</option>`;
@@ -318,14 +341,14 @@ class ObservationForm {
             <div class="col-md-3">
                 <label class="form-label">EE - ${i18nStrings.fields.phenomenon} <span class="text-danger">*</span></label>
                 <select class="form-select form-select-sm" id="form-ee" required>
-                    <option value="">-- ${i18nStrings.fields.select} --</option>
+                    <option value="">${i18nStrings.fields.select}</option>
                     ${this.buildHaloTypeOptions()}
                 </select>
             </div>
             <div class="col-md-3">
                 <label class="form-label">H - ${i18nStrings.fields.brightness}</label>
                 <select class="form-select form-select-sm" id="form-h">
-                    <option value="-1">--</option>
+                    <option value="-1">${i18nStrings.fields.select}</option>
                     ${Array.from({length: 4}, (_, i) => {
                         const label = i18nStrings.brightness[i.toString()];
                         return `<option value="${i}">${i} - ${label}</option>`;
@@ -335,7 +358,7 @@ class ObservationForm {
             <div class="col-md-3">
                 <label class="form-label">F - ${i18nStrings.fields.color}</label>
                 <select class="form-select form-select-sm" id="form-F">
-                    <option value="-1">--</option>
+                    <option value="-1">${i18nStrings.fields.select}</option>
                     ${Array.from({length: 6}, (_, i) => {
                         const label = i18nStrings.color[i.toString()];
                         return `<option value="${i}">${i} - ${label}</option>`;
@@ -345,7 +368,7 @@ class ObservationForm {
             <div class="col-md-3">
                 <label class="form-label">V - ${i18nStrings.fields.completeness}</label>
                 <select class="form-select form-select-sm" id="form-v">
-                    <option value="-1">--</option>
+                    <option value="-1">${i18nStrings.fields.select}</option>
                     <option value="1">1 - ${i18nStrings.completeness['1']}</option>
                     <option value="2">2 - ${i18nStrings.completeness['2']}</option>
                 </select>
@@ -353,7 +376,7 @@ class ObservationForm {
             <div class="col-md-3">
                 <label class="form-label">f - ${i18nStrings.fields.weather_front}</label>
                 <select class="form-select form-select-sm" id="form-weather_front">
-                    <option value="-1">--</option>
+                    <option value="-1">${i18nStrings.fields.select}</option>
                     ${Array.from({length: 9}, (_, i) => {
                         const label = i18nStrings.weather_front[i.toString()];
                         return `<option value="${i}">${i} - ${label}</option>`;
@@ -363,7 +386,7 @@ class ObservationForm {
             <div class="col-md-3">
                 <label class="form-label">zz - ${i18nStrings.fields.precipitation}</label>
                 <select class="form-select form-select-sm" id="form-zz">
-                    <option value="-1">--</option>
+                    <option value="-1">${i18nStrings.fields.select}</option>
                     ${Array.from({length: 99}, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')}</option>`).join('')}
                     <option value="99">99</option>
                 </select>
@@ -371,7 +394,7 @@ class ObservationForm {
             <div class="col-md-3">
                 <label class="form-label">GG - ${i18nStrings.fields.region} <span class="text-danger">*</span></label>
                 <select class="form-select form-select-sm" id="form-gg" required>
-                    <option value="">-- ${i18nStrings.fields.select} --</option>
+                    <option value="">${i18nStrings.fields.select}</option>
                     ${this.buildRegionOptions()}
                 </select>
             </div>
@@ -381,7 +404,7 @@ class ObservationForm {
                     <div class="col-6">
                         <label class="form-label small">HO - ${i18nStrings.fields.ho}</label>
                         <select class="form-select form-select-sm" id="form-ho">
-                            <option value="-1">--</option>
+                            <option value="-1">${i18nStrings.fields.select}</option>
                             <option value="0">//</option>
                             ${Array.from({length: 90}, (_, i) => `<option value="${i+1}">${String(i+1).padStart(2, '0')}</option>`).join('')}
                         </select>
@@ -389,7 +412,7 @@ class ObservationForm {
                     <div class="col-6">
                         <label class="form-label small">HU - ${i18nStrings.fields.hu}</label>
                         <select class="form-select form-select-sm" id="form-hu">
-                            <option value="-1">--</option>
+                            <option value="-1">${i18nStrings.fields.select}</option>
                             <option value="0">//</option>
                             ${Array.from({length: 90}, (_, i) => `<option value="${i+1}">${String(i+1).padStart(2, '0')}</option>`).join('')}
                         </select>
@@ -425,14 +448,478 @@ class ObservationForm {
         }).join('');
     }
     
+    // Central field dependency management for all interdependent fields
+    // Implements forward-only dependencies (no backward/circular dependencies)
+    // Trigger fields: O, d, N, KK, g, MM, EE
+    // Rule: Fields can only affect subsequent fields, never previous ones
+    manageFieldDependencies(triggerField) {
+        // Helper: Enable/disable specific option values
+        const setOptionStates = (opts, enabledValues) => {
+            opts.forEach(opt => {
+                const val = opt.value;
+                opt.disabled = !enabledValues.includes(val);
+            });
+        };
+        
+        // Helper: Enable all options
+        const enableAllOptions = (opts) => {
+            opts.forEach(opt => opt.disabled = false);
+        };
+        
+        // Apply rules based on which field triggered the change
+        if (triggerField === 'o') {
+            // O (Object) → d
+            // Rule: O=-1 → d=-1 | O=1-4 → d=-1,0,1,2,4,5,6,7 | O=5 → d=-1,4,5,6,7 AND N=-1,C=-1,c=-1
+            const oValue = this.fields.o.value;
+            const o = oValue === '' ? -1 : parseInt(oValue);
+            
+            const dOpts = Array.from(this.fields.d.options);
+            const oldDValue = this.fields.d.value;
+            
+            let dValid;
+            
+            if (o >= 1 && o <= 4) {
+                // O=1-4 (Sun, Moon, Planet, Star): d can be any density
+                dValid = ['-1', '0', '1', '2', '4', '5', '6', '7'];
+            } else if (o === 5) {
+                // O=5 (Earthbound light): Only non-cirrus sources, N/C/c forced to -1
+                dValid = ['-1', '4', '5', '6', '7'];
+                
+                // Force N, C, c to -1 for O=5
+                const nOpts = Array.from(this.fields.n.options);
+                const cUpOpts = Array.from(this.fields.C.options);
+                const cLowOpts = Array.from(this.fields.c.options);
+                
+                setOptionStates(nOpts, ['-1']);
+                setOptionStates(cUpOpts, ['-1']);
+                setOptionStates(cLowOpts, ['-1']);
+                
+                this.fields.n.value = '-1';
+                this.fields.C.value = '-1';
+                this.fields.c.value = '-1';
+                
+                this.fieldConstraints.n = ['-1'];
+                this.fieldConstraints.C = ['-1'];
+                this.fieldConstraints.c = ['-1'];
+            } else {
+                // O=-1 (not set): d must be -1
+                dValid = ['-1'];
+            }
+            
+            // Apply d constraints
+            setOptionStates(dOpts, dValid);
+            this.fieldConstraints.d = dValid;
+            
+            // If current d value is not valid, set to first valid value
+            if (!dValid.includes(oldDValue)) {
+                this.fields.d.value = dValid[0];
+            }
+            
+            // ALWAYS trigger d dependencies (recursive cascade)
+            this.manageFieldDependencies('d');
+        } else if (triggerField === 'd') {
+            // d (Cirrus Density) → N
+            // Rule: d=-1 → N=-1 | d=0..2 → N=-1,1..9 | d=4..7 → N=-1
+            const dValue = this.fields.d.value;
+            const d = dValue === '-1' ? -1 : parseInt(dValue);
+            
+            const nOpts = Array.from(this.fields.n.options);
+            const oldNValue = this.fields.n.value;
+            
+            let nValid;
+            if (d >= 0 && d <= 2) {
+                // d=0-2 (thin cirrus): N can be -1 or 1..9
+                nValid = ['-1', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+            } else if (d >= 4 && d <= 7) {
+                // d=4-7 (thick cirrus/non-cirrus): N must be -1
+                nValid = ['-1'];
+            } else {
+                // d=-1 (not observed): N must be -1
+                nValid = ['-1'];
+            }
+            
+            setOptionStates(nOpts, nValid);
+            this.fieldConstraints.n = nValid;
+            
+            // If current N value is not valid, set to first valid value
+            if (!nValid.includes(oldNValue)) {
+                this.fields.n.value = nValid[0];
+            }
+            
+            // ALWAYS trigger N dependencies (recursive cascade)
+            this.manageFieldDependencies('n');
+        } else if (triggerField === 'n') {
+            // N (Cloud Cover) → C, c
+            // Rule: N=-1 → C=-1,c=-1 | N=0 → C=0,c=-1 | N=1..8 → C=-1,1..7,c=-1..9 | N=9 → C=-1..7,c=-1,1..9
+            const nValue = this.fields.n.value;
+            const n = nValue === '-1' ? -1 : parseInt(nValue);
+            
+            const cUpOpts = Array.from(this.fields.C.options);
+            const cLowOpts = Array.from(this.fields.c.options);
+            const oldCValue = this.fields.C.value;
+            const oldcValue = this.fields.c.value;
+            
+            let cUpValid, cLowValid;
+            if (n === 0) {
+                // N=0 (clear sky): C must be 0, c must be -1
+                cUpValid = ['0'];
+                cLowValid = ['-1'];
+            } else if (n >= 1 && n <= 8) {
+                // N=1-8 (some clouds): C=-1 or 1..7, c=-1..9
+                cUpValid = ['-1', '1', '2', '3', '4', '5', '6', '7'];
+                cLowValid = ['-1', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+            } else if (n === 9) {
+                // N=9 (overcast): C=-1..7, c=-1 or 1..9
+                cUpValid = ['-1', '0', '1', '2', '3', '4', '5', '6', '7'];
+                cLowValid = ['-1', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+            } else {
+                // N=-1 (not observed): C=-1, c=-1
+                cUpValid = ['-1'];
+                cLowValid = ['-1'];
+            }
+            
+            setOptionStates(cUpOpts, cUpValid);
+            setOptionStates(cLowOpts, cLowValid);
+            
+            this.fieldConstraints.C = cUpValid;
+            this.fieldConstraints.c = cLowValid;
+            
+            // If current values are not valid, set to first valid value
+            if (!cUpValid.includes(oldCValue)) {
+                this.fields.C.value = cUpValid[0];
+            }
+            if (!cLowValid.includes(oldcValue)) {
+                this.fields.c.value = cLowValid[0];
+            }
+            // N-Trigger ends here (C and c have no further dependencies)
+        } else if (triggerField === 'kk' || triggerField === 'mm' || triggerField === 'jj') {
+            // KK/MM/JJ combined trigger
+            // Combined trigger: KK, MM, JJ → g
+            // Rule: MM=-1 OR JJ=-1 OR KK=-1 → g=-1
+            //       MM>-1 AND JJ>-1 AND KK>-1 → g=-1..2
+            
+            // Step 1: If MM triggered, update TT (days in month)
+            if (triggerField === 'mm') {
+                const mmValue = this.fields.mm.value;
+                const jjValue = this.fields.jj.value;
+                
+                const mm = mmValue === '' ? -1 : parseInt(mmValue);
+                const jj = jjValue === '' ? -1 : parseInt(jjValue);
+                
+                
+                const ttOpts = Array.from(this.fields.tt.options);
+                const oldTTValue = this.fields.tt.value;
+                
+                let ttValid;
+                
+                if (mm === -1) {
+                    ttValid = [''];
+                } else if (mm === 1 || mm === 3 || mm === 5 || mm === 7 || mm === 8 || mm === 10 || mm === 12) {
+                    ttValid = [''];
+                    for (let d = 1; d <= 31; d++) ttValid.push(d.toString());
+                } else if (mm === 2) {
+                    const year = jj > -1 ? (jj < 50 ? 2000 + jj : 1900 + jj) : 2024;
+                    const daysInFeb = new Date(year, 2, 0).getDate();
+                    ttValid = [''];
+                    for (let d = 1; d <= daysInFeb; d++) ttValid.push(d.toString());
+                } else if (mm === 4 || mm === 6 || mm === 9 || mm === 11) {
+                    ttValid = [''];
+                    for (let d = 1; d <= 30; d++) ttValid.push(d.toString());
+                } else {
+                    ttValid = [''];
+                }
+                
+                setOptionStates(ttOpts, ttValid);
+                this.fieldConstraints.TT = ttValid;
+                
+                if (!ttValid.includes(oldTTValue)) {
+                    this.fields.tt.value = ttValid[0];
+                }
+            }
+            
+            // Step 2: If JJ triggered and MM=2, recalculate February days
+            if (triggerField === 'jj') {
+                const mmValue = this.fields.mm.value;
+                if (mmValue !== '' && parseInt(mmValue) === 2) {
+                    // Re-trigger MM logic to update TT
+                    this.manageFieldDependencies('mm');
+                    // Don't continue to g logic here, let MM trigger handle it
+                    return;
+                }
+            }
+            
+            // Step 3: Evaluate KK, MM, JJ → g
+            const kkValue = this.fields.kk.value;
+            const jjValue = this.fields.jj.value;
+            const mmValue = this.fields.mm.value;
+            
+            const kk = kkValue === '' ? -1 : parseInt(kkValue);
+            const jj = jjValue === '' ? -1 : parseInt(jjValue);
+            const mm = mmValue === '' ? -1 : parseInt(mmValue);
+            
+            
+            const gOpts = Array.from(this.fields.g.options);
+            const oldGValue = this.fields.g.value;
+            
+            let gValid;
+            if (mm === -1 || jj === -1 || kk === -1) {
+                // Any of MM, JJ, KK not set: g must be -1
+                gValid = [''];
+                
+                setOptionStates(gOpts, gValid);
+                this.fieldConstraints.g = gValid;
+                
+                // If current g value is not valid, set to first valid value and trigger g
+                if (!gValid.includes(oldGValue)) {
+                    this.fields.g.value = gValid[0];
+                    this.manageFieldDependencies('g');
+                } else {
+                    this.manageFieldDependencies('g');
+                }
+            } else {
+                // MM>-1 AND JJ>-1 AND KK>-1: Check if observer was active at this date
+                
+                // Async check for observer activity
+                fetch(`/api/observers/${kk}/active?mm=${mm}&jj=${jj}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.active) {
+                            // Observer was active: g can be -1..2
+                            gValid = ['', '0', '1', '2'];
+                        } else {
+                            // Observer was not active: g must be -1
+                            gValid = [''];
+                        }
+                        
+                        setOptionStates(gOpts, gValid);
+                        this.fieldConstraints.g = gValid;
+                        
+                        // If current g value is not valid, set to first valid value and trigger g
+                        if (!gValid.includes(oldGValue)) {
+                            this.fields.g.value = gValid[0];
+                            this.manageFieldDependencies('g');
+                        } else {
+                            this.manageFieldDependencies('g');
+                        }
+                    })
+                    .catch(error => {
+                        // On error, allow g to be set (fail-open)
+                        gValid = ['', '0', '1', '2'];
+                        setOptionStates(gOpts, gValid);
+                        this.fieldConstraints.g = gValid;
+                    });
+            }
+        } else if (triggerField === 'g') {
+            // g (Location Type) → GG
+            // Rules: g=-1 → GG=-1 | g=0 → GG=HBOrt | g=1 → GG=all regions | g=2 → GG=NBOrt
+            // NOTE: This trigger is also called by KK when KK/JJ/MM change (via manageFieldDependencies('g'))
+            const gValue = this.fields.g.value;
+            const g = gValue === '' ? -1 : parseInt(gValue);
+            
+            
+            const ggOpts = Array.from(this.fields.gg.options);
+            
+            if (g === 0) {
+                // g=0 (Hauptbeobachtungsort): GG = HBOrt (auto-filled from observer)
+                
+                const kk = this.fields.kk.value;
+                const jj = this.fields.jj.value ? parseInt(this.fields.jj.value) % 100 : null;
+                const mm = this.fields.mm.value ? parseInt(this.fields.mm.value) : null;
+                
+                if (kk) {
+                    // Fetch observer data
+                    (async () => {
+                        try {
+                            let url = `/api/observers?kk=${kk}`;
+                            if (jj && mm) {
+                                url += `&jj=${jj}&mm=${mm}`;
+                            }
+                            const resp = await fetch(url);
+                            if (resp.ok) {
+                                const data = await resp.json();
+                                if (data.observer && data.observer.GH) {
+                                    const gg = parseInt(data.observer.GH);  // Parse to int to remove leading zero
+                                    // GG constrained to single value (HBOrt)
+                                    setOptionStates(ggOpts, [gg.toString()]);
+                                    this.fields.gg.value = gg;
+                                    this.fieldConstraints.GG = [gg.toString()];
+                                } else {
+                                    setOptionStates(ggOpts, ['']);
+                                    this.fields.gg.value = '';
+                                    this.fieldConstraints.GG = [''];
+                                }
+                            }
+                        } catch (e) {
+                            console.error('Error fetching GG:', e);
+                        }
+                    })();
+                } else {
+                    setOptionStates(ggOpts, ['']);
+                    this.fields.gg.value = '';
+                    this.fieldConstraints.GG = [''];
+                }
+            } else if (g === 2) {
+                // g=2 (Nebenbeobachtungsort): GG = NBOrt (auto-filled from observer)
+                
+                const kk = this.fields.kk.value;
+                const jj = this.fields.jj.value ? parseInt(this.fields.jj.value) % 100 : null;
+                const mm = this.fields.mm.value ? parseInt(this.fields.mm.value) : null;
+                
+                if (kk) {
+                    // Fetch observer data
+                    (async () => {
+                        try {
+                            let url = `/api/observers?kk=${kk}`;
+                            if (jj && mm) {
+                                url += `&jj=${jj}&mm=${mm}`;
+                            }
+                            const resp = await fetch(url);
+                            if (resp.ok) {
+                                const data = await resp.json();
+                                if (data.observer && data.observer.GN) {
+                                    const gg = parseInt(data.observer.GN);  // Parse to int to remove leading zero
+                                    // GG constrained to single value (NBOrt)
+                                    setOptionStates(ggOpts, [gg.toString()]);
+                                    this.fields.gg.value = gg;
+                                    this.fieldConstraints.GG = [gg.toString()];
+                                } else {
+                                    setOptionStates(ggOpts, ['']);
+                                    this.fields.gg.value = '';
+                                    this.fieldConstraints.GG = [''];
+                                }
+                            }
+                        } catch (e) {
+                            console.error('Error fetching GG:', e);
+                        }
+                    })();
+                } else {
+                    setOptionStates(ggOpts, ['']);
+                    this.fields.gg.value = '';
+                    this.fieldConstraints.GG = [''];
+                }
+            } else if (g === 1) {
+                // g=1 (Auswärtsbeobachtung): GG = all available regions (manual entry)
+                enableAllOptions(ggOpts);
+                // Don't overwrite GG if editing
+                if (!this.originalObservation) {
+                    this.fields.gg.value = '';
+                }
+                this.fieldConstraints.GG = null;  // All values allowed
+            } else {
+                // g=-1 (not set): GG=-1 (only empty option)
+                setOptionStates(ggOpts, ['']);
+                this.fields.gg.value = '';
+                this.fieldConstraints.GG = [''];
+            }
+        } else if (triggerField === 'ee' || triggerField === 'v') {
+            // EE/V combined trigger
+            // EE (Phenomenon) → HO, HU
+            // EE + V → Sectors
+            
+            const ee = this.fields.ee.value === '' ? -1 : parseInt(this.fields.ee.value);
+            const v = this.fields.v.value === '' ? -1 : parseInt(this.fields.v.value);
+            
+            
+            // Step 1: Set HO/HU based on EE only (only if EE triggered)
+            if (triggerField === 'ee') {
+                const hoOpts = Array.from(this.fields.ho.options);
+                const huOpts = Array.from(this.fields.hu.options);
+                const oldHOValue = this.fields.ho.value;
+                const oldHUValue = this.fields.hu.value;
+                
+                // Define height value arrays (without 0)
+                const heightValues = ['-1', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 
+                    '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', 
+                    '21', '22', '23', '24', '25', '26', '27', '28', '29', '30',
+                    '31', '32', '33', '34', '35', '36', '37', '38', '39', '40',
+                    '41', '42', '43', '44', '45', '46', '47', '48', '49', '50',
+                    '51', '52', '53', '54', '55', '56', '57', '58', '59', '60',
+                    '61', '62', '63', '64', '65', '66', '67', '68', '69', '70',
+                    '71', '72', '73', '74', '75', '76', '77', '78', '79', '80',
+                    '81', '82', '83', '84', '85', '86', '87', '88', '89', '90'];
+                
+                if (ee === 8) {
+                    // EE=8 (Obere Lichtsäule): HO = -1, 1..90, HU = 0
+                    setOptionStates(hoOpts, heightValues);
+                    setOptionStates(huOpts, ['0']);
+                    
+                    this.fieldConstraints.HO = heightValues;
+                    this.fieldConstraints.HU = ['0'];
+                    
+                    // Check if current values are valid
+                    if (!heightValues.includes(oldHOValue)) {
+                        this.fields.ho.value = heightValues[0]; // -1
+                    }
+                    this.fields.hu.value = '0';
+                } else if (ee === 9) {
+                    // EE=9 (Untere Lichtsäule): HO = 0, HU = -1, 1..90
+                    setOptionStates(hoOpts, ['0']);
+                    setOptionStates(huOpts, heightValues);
+                    
+                    this.fieldConstraints.HO = ['0'];
+                    this.fieldConstraints.HU = heightValues;
+                    
+                    this.fields.ho.value = '0';
+                    if (!heightValues.includes(oldHUValue)) {
+                        this.fields.hu.value = heightValues[0]; // -1
+                    }
+                } else if (ee === 10) {
+                    // EE=10 (both light pillars): HO = -1, 1..90, HU = -1, 1..90
+                    setOptionStates(hoOpts, heightValues);
+                    setOptionStates(huOpts, heightValues);
+                    
+                    this.fieldConstraints.HO = heightValues;
+                    this.fieldConstraints.HU = heightValues;
+                    
+                    // Check if current values are valid
+                    if (!heightValues.includes(oldHOValue)) {
+                        this.fields.ho.value = heightValues[0]; // -1
+                    }
+                    if (!heightValues.includes(oldHUValue)) {
+                        this.fields.hu.value = heightValues[0]; // -1
+                    }
+                } else {
+                    // All other EE values (including -1 and circular halos): HO = 0, HU = 0
+                    setOptionStates(hoOpts, ['0']);
+                    setOptionStates(huOpts, ['0']);
+                    
+                    this.fieldConstraints.HO = ['0'];
+                    this.fieldConstraints.HU = ['0'];
+                    
+                    this.fields.ho.value = '0';
+                    this.fields.hu.value = '0';
+                }
+            }
+            
+            // Step 2: Set Sectors based on EE and V (always run for both triggers)
+            const circularHalos = [1, 7, 12, 31, 32, 33, 34, 35, 36, 40];
+            
+            if (ee === -1 || !circularHalos.includes(ee)) {
+                // EE=-1 or not a circular halo: Sectors inactive
+                this.fieldConstraints.sectors = [];
+                this.fields.sectors.value = '';
+                this.fields.sectors.disabled = true;
+            } else if (circularHalos.includes(ee)) {
+                // EE is circular halo: Check V value
+                
+                if (v === 1) {
+                    // V=1 (incomplete): Sectors active
+                    this.fieldConstraints.sectors = ['any'];
+                    this.fields.sectors.disabled = false;
+                    // Keep existing sector value
+                } else {
+                    // V=0, 2, or not set: Sectors inactive
+                    this.fieldConstraints.sectors = [];
+                    this.fields.sectors.value = '';
+                    this.fields.sectors.disabled = true;
+                }
+            }
+            
+        }
+    }
+    
     setupEventListeners() {
         // Get all field references
-        // DEBUG: Check if modal is in DOM
-        console.log("🔍 DEBUG: setupEventListeners called");
-        console.log("🔍 DEBUG: Modal element exists:", !!document.getElementById('obs-form-modal'));
-        console.log("🔍 DEBUG: form-C element exists:", !!document.getElementById('form-C'));
-        console.log("🔍 DEBUG: form-n element exists:", !!document.getElementById('form-n'));
-        
         this.fields = {
             kk: document.getElementById('form-kk'),
             o: document.getElementById('form-o'),
@@ -472,29 +959,18 @@ class ObservationForm {
             }
         };
         
-        // Central field dependency management for all interdependent fields
-        // Rules implement dependencies for: d, N, C, c, EE, HO, HU, sectors, V
+        // Delegate to class method
         const manageFieldDependencies = (triggerField) => {
-            const dVal = this.fields.d.value;
-            const nVal = this.fields.n.value;
-            const cVal = this.fields.C.value;
-            const cLowVal = this.fields.c.value;
-            
-            const d = dVal === '-1' || dVal === '' ? -1 : parseInt(dVal);
-            const n = nVal === '-1' || nVal === '' ? -1 : parseInt(nVal);
-            const cUp = cVal === '-1' || cVal === '' ? -1 : parseInt(cVal);
-            const cLow = cLowVal === '-1' || cLowVal === '' ? -1 : parseInt(cLowVal);
-            
-            const dOpts = Array.from(this.fields.d.options);
-            const nOpts = Array.from(this.fields.n.options);
-            const cUpOpts = Array.from(this.fields.C.options);
-            const cLowOpts = Array.from(this.fields.c.options);
-            
+            this.manageFieldDependencies(triggerField);
+        };
+        
+        // (Original function body moved to class method above)
+        /*
             // Helper: Enable/disable specific option values
-            const setOptionStates = (opts, disabledValues) => {
+            const setOptionStates = (opts, enabledValues) => {
                 opts.forEach(opt => {
                     const val = opt.value;
-                    opt.disabled = disabledValues.includes(val);
+                    opt.disabled = !enabledValues.includes(val);
                 });
             };
             
@@ -504,157 +980,145 @@ class ObservationForm {
             };
             
             // Apply rules based on which field triggered the change
-            if (triggerField === 'd') {
-                if (d === -1) {
-                    // d=-1: N, C, c fully enabled
-                    enableAllOptions(nOpts);
-                    enableAllOptions(cUpOpts);
-                    enableAllOptions(cLowOpts);
-                    this.fields.n.disabled = false;
-                    this.fields.C.disabled = false;
-                    this.fields.c.disabled = false;
-                } else if (d >= 0 && d <= 2) {
-                    // d=0-2: N, C, c enabled, but N=0 and C=0 disabled
-                    setOptionStates(nOpts, ['0']);
-                    setOptionStates(cUpOpts, ['0']);
-                    enableAllOptions(cLowOpts);
-                    this.fields.n.disabled = false;
-                    this.fields.C.disabled = false;
-                    this.fields.c.disabled = false;
+            if (triggerField === 'o') {
+                // O (Object) → d, N, C, c
+                const o = parseInt(this.fields.o.value);
+                
+                const dOpts = Array.from(this.fields.d.options);
+                const nOpts = Array.from(this.fields.n.options);
+                const cUpOpts = Array.from(this.fields.C.options);
+                const cLowOpts = Array.from(this.fields.c.options);
+                
+                let dValid, nValid, cUpValid, cLowValid;
+                
+                if (o >= 1 && o <= 4) {
+                    // O=1-4 (Sun, Moon, Planet, Star): All options available
+                    dValid = ['-1', '0', '1', '2', '4', '5', '6', '7'];
+                    nValid = ['-1', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+                    cUpValid = ['-1', '0', '1', '2', '3', '4', '5', '6', '7'];
+                    cLowValid = ['-1', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+                } else if (o === 5) {
+                    // O=5 (Earthbound light): Only non-cirrus sources
+                    dValid = ['-1', '4', '5', '6', '7'];
+                    nValid = ['-1'];
+                    cUpValid = ['-1'];
+                    cLowValid = ['-1'];
+                } else {
+                    // O=-1 or invalid: Reset all
+                    dValid = ['-1'];
+                    nValid = ['-1'];
+                    cUpValid = ['-1'];
+                    cLowValid = ['-1'];
+                }
+                
+                // Apply option states
+                setOptionStates(dOpts, dValid);
+                setOptionStates(nOpts, nValid);
+                setOptionStates(cUpOpts, cUpValid);
+                setOptionStates(cLowOpts, cLowValid);
+                
+                // Store constraints and set to first valid value (once for all options)
+                this.fieldConstraints.d = dValid;
+                this.fieldConstraints.n = nValid;
+                this.fieldConstraints.C = cUpValid;
+                this.fieldConstraints.c = cLowValid;
+                this.fields.d.value = dValid[0];
+                this.fields.n.value = nValid[0];
+                this.fields.C.value = cUpValid[0];
+                this.fields.c.value = cLowValid[0];
+            } else if (triggerField === 'd') {
+                // d (Cirrus Density) → N, C, c
+                const d = parseInt(this.fields.d.value);
+                
+                const nOpts = Array.from(this.fields.n.options);
+                const cUpOpts = Array.from(this.fields.C.options);
+                const cLowOpts = Array.from(this.fields.c.options);
+                
+                if (d >= 0 && d <= 2) {
+                    // d=0-2 (thin cirrus): Some cloud cover and cirrus required
+                    const nValid = ['-1', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+                    const cUpValid = ['-1', '1', '2', '3', '4', '5', '6', '7'];
+                    const cLowValid = ['-1', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
                 } else if (d >= 4 && d <= 7) {
-                    // d=4-7: Set N, C, c to -1 and disable completely
-                    this.fields.n.value = '-1';
-                    this.fields.C.value = '-1';
-                    this.fields.c.value = '-1';
-                    this.fields.n.disabled = true;
-                    this.fields.C.disabled = true;
-                    this.fields.c.disabled = true;
+                    // d=4-7 (thick cirrus/non-cirrus): Only -1 allowed
+                    const nValid = ['-1'];
+                    const cUpValid = ['-1'];
+                    const cLowValid = ['-1'];
+                } else {
+                    // d=-1 (not observed): Only -1 allowed
+                    const nValid = ['-1'];
+                    const cUpValid = ['-1'];
+                    const cLowValid = ['-1'];
                 }
-            } else if (triggerField === 'n') {
-                if (n === -1) {
-                    // N=-1: d, C, c fully enabled
-                    enableAllOptions(dOpts);
-                    enableAllOptions(cUpOpts);
-                    enableAllOptions(cLowOpts);
-                    this.fields.d.disabled = false;
-                    this.fields.C.disabled = false;
-                    this.fields.c.disabled = false;
-                } else if (n === 0) {
-                    // N=0: d values 0,1,2 disabled; if d has these, set d=-1; C=0 and disabled; c enabled
-                    setOptionStates(dOpts, ['0', '1', '2']);
-                    if (d >= 0 && d <= 2) {
-                        this.fields.d.value = '-1';
-                    }
-                    this.fields.C.value = '0';
-                    this.fields.C.disabled = true;
-                    enableAllOptions(cLowOpts);
-                    this.fields.c.disabled = false;
-                } else if (n >= 1 && n <= 8) {
-                    // N=1-8: d values 4-7 disabled; if d has these, set d=-1; C enabled but C=0 disabled; c enabled
-                    setOptionStates(dOpts, ['4', '5', '6', '7']);
-                    if (d >= 4 && d <= 7) {
-                        this.fields.d.value = '-1';
-                    }
-                    setOptionStates(cUpOpts, ['0']);
-                    this.fields.C.disabled = false;
-                    enableAllOptions(cLowOpts);
-                    this.fields.c.disabled = false;
-                } else if (n === 9) {
-                    // N=9: d values 4-7 disabled; if d has these, set d=-1; c option 0 disabled
-                    setOptionStates(dOpts, ['4', '5', '6', '7']);
-                    if (d >= 4 && d <= 7) {
-                        this.fields.d.value = '-1';
-                    }
-                    setOptionStates(cLowOpts, ['0']);
-                    this.fields.c.disabled = false;
-                }
-            } else if (triggerField === 'C') {
-                if (cUp === -1) {
-                    // C=-1: N and d fully enabled
-                    enableAllOptions(nOpts);
-                    enableAllOptions(dOpts);
-                    this.fields.n.disabled = false;
-                    this.fields.d.disabled = false;
-                } else if (cUp === 0) {
-                    // C=0: N=0 and disabled; d values 4-7 disabled; if d has these, set d=-1
-                    this.fields.n.value = '0';
-                    this.fields.n.disabled = true;
-                    setOptionStates(dOpts, ['4', '5', '6', '7']);
-                    if (d >= 4 && d <= 7) {
-                        this.fields.d.value = '-1';
-                    }
-                } else if (cUp >= 1 && cUp <= 7) {
-                    // C=1-7: N enabled but N=0 disabled; d values 4-7 disabled; if d has these, set d=-1
-                    setOptionStates(nOpts, ['0']);
-                    this.fields.n.disabled = false;
-                    setOptionStates(dOpts, ['4', '5', '6', '7']);
-                    if (d >= 4 && d <= 7) {
-                        this.fields.d.value = '-1';
-                    }
-                }
-            } else if (triggerField === 'c') {
-                if (cLow === -1 || (cLow >= 1 && cLow <= 9)) {
-                    // c=-1 or 1-9: N fully enabled
-                    enableAllOptions(nOpts);
-                    this.fields.n.disabled = false;
-                } else if (cLow === 0) {
-                    // c=0: N option 9 disabled
-                    setOptionStates(nOpts, ['9']);
-                    this.fields.n.disabled = false;
-                }
-            } else if (triggerField === 'ee') {
-                // EE field: Manage 8HHHH fields (HO and HU)
-                const ee = this.fields.ee.value === '' ? -1 : parseInt(this.fields.ee.value);
-                
-                const hoOpts = Array.from(this.fields.ho.options);
-                const huOpts = Array.from(this.fields.hu.options);
-                
-                if (ee === -1 || ee === 8 || ee === 9 || ee === 10) {
-                    // EE requires height fields: enable and set to -1 (not specified)
-                    this.fields.ho.disabled = false;
-                    this.fields.hu.disabled = false;
                     
-                    if (ee === 8) {
-                        // EE=08: Obere Lichtsäule - only HO relevant, HU set to -1
-                        // Disable option "0" for HO (must specify height or // or --)
-                        setOptionStates(hoOpts, ['0']);
-                        if (this.fields.ho.value === '0') this.fields.ho.value = '-1';
-                        // HU not relevant, set to -1 and disable
-                        this.fields.hu.value = '-1';
-                        this.fields.hu.disabled = true;
-                        enableAllOptions(huOpts);
-                    } else if (ee === 9) {
-                        // EE=09: Untere Lichtsäule - only HU relevant, HO set to -1
-                        // HO not relevant, set to -1 and disable
-                        this.fields.ho.value = '-1';
-                        this.fields.ho.disabled = true;
-                        enableAllOptions(hoOpts);
-                        // Disable option "0" for HU (must specify height or // or --)
-                        setOptionStates(huOpts, ['0']);
-                        if (this.fields.hu.value === '0') this.fields.hu.value = '-1';
-                    } else if (ee === 10) {
-                        // EE=10: Both light pillars - both fields relevant
-                        // Disable option "0" for both HO and HU
-                        setOptionStates(hoOpts, ['0']);
-                        setOptionStates(huOpts, ['0']);
-                        if (this.fields.ho.value === '0') this.fields.ho.value = '-1';
-                        if (this.fields.hu.value === '0') this.fields.hu.value = '-1';
-                    } else {
-                        // ee === -1: Enable all options
-                        enableAllOptions(hoOpts);
-                        enableAllOptions(huOpts);
-                    }
-                } else if (ee >= 1 && ee <= 77 || ee === 99) {
-                    // EE does not require height fields: set both to 0 (//) and disable
-                    this.fields.ho.value = 0;
-                    this.fields.hu.value = 0;
-                    this.fields.ho.disabled = true;
-                    this.fields.hu.disabled = true;
-                    enableAllOptions(hoOpts);
-                    enableAllOptions(huOpts);
+                setOptionStates(nOpts, nValid);
+                setOptionStates(cUpOpts, cUpValid);
+                setOptionStates(cLowOpts, cLowValid);
+                    
+                // Store constraints and set to first valid value
+                this.fieldConstraints.n = nValid;
+                this.fieldConstraints.C = cUpValid;
+                this.fieldConstraints.c = cLowValid;
+                this.fields.n.value = nValid[0];
+                this.fields.C.value = cUpValid[0];
+                this.fields.c.value = cLowValid[0];
+            } else if (triggerField === 'n') {
+                // N (Cloud Cover) → C, c
+                const n = parseInt(this.fields.n.value);
+                
+                const cUpOpts = Array.from(this.fields.C.options);
+                const cLowOpts = Array.from(this.fields.c.options);
+                
+                if (n === 0) {
+                    // N=0 (clear sky): No cirrus
+                    const cUpValid = ['0'];
+                    const cLowValid = ['-1'];
+                } else if (n >= 1 && n <= 8) {
+                    // N=1-8 (some clouds): Cirrus possible
+                    const cUpValid = ['-1', '1', '2', '3', '4', '5', '6', '7'];
+                    const cLowValid = ['-1', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+                } else if (n === 9) {
+                    // N=9 (overcast): All options
+                    const cUpValid = ['-1', '0', '1', '2', '3', '4', '5', '6', '7'];
+                    const cLowValid = ['-1', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+                } else {
+                    // N=-1 (not observed): Only -1
+                    const cUpValid = ['-1'];
+                    const cLowValid = ['-1'];
                 }
-            } else if (triggerField === 'g' || triggerField === 'kk' || triggerField === 'jj' || triggerField === 'mm') {
-                // g, kk, jj, mm fields: Manage GG auto-fill
+                    
+                setOptionStates(cUpOpts, cUpValid);
+                setOptionStates(cLowOpts, cLowValid);
+                    
+                // Store constraints and set to first valid value
+                this.fieldConstraints.C = cUpValid;
+                this.fieldConstraints.c = cLowValid;
+                this.fields.C.value = cUpValid[0];
+                this.fields.c.value = cLowValid[0];
+            } else if (triggerField === 'kk') {
+                // KK (Observer) → g, GG
+                const kk = this.fields.kk.value;
+                
+                const gOpts = Array.from(this.fields.g.options);
+                const ggOpts = Array.from(this.fields.gg.options);
+                
+                if (kk && kk !== '') {
+                    // KK set: All location types available
+                    const gValid = ['0', '1', '2'];
+                } else {
+                    // KK not set: Reset
+                    const gValid = [''];
+                }
+                setOptionStates(gOpts, gValid);
+                // GG: All valid regions (will be auto-filled based on g)
+                enableAllOptions(ggOpts);
+                    
+                // Store constraints and set to first valid value
+                this.fieldConstraints.g = gValid;
+                this.fields.g.value = gValid[0];
+                // GG will be auto-filled by g trigger
+            } else if (triggerField === 'g' || triggerField === 'jj' || triggerField === 'mm') {
+                // g (Location Type) → GG (also triggered by jj/mm for auto-fill)
                 const g = parseInt(this.fields.g.value);
                 
                 if (g === 0 || g === 2) {
@@ -663,12 +1127,10 @@ class ObservationForm {
                     const jj = this.fields.jj.value ? parseInt(this.fields.jj.value) % 100 : null;
                     const mm = this.fields.mm.value ? parseInt(this.fields.mm.value) : null;
                     
-                    // Need at least KK to look up observer
                     if (kk) {
-                        // Async operation - fetch observer data
+                        // Fetch observer data
                         (async () => {
                             try {
-                                // Build URL - if jj/mm not set, get first valid observer record
                                 let url = `/api/observers?kk=${kk}`;
                                 if (jj && mm) {
                                     url += `&jj=${jj}&mm=${mm}`;
@@ -680,89 +1142,182 @@ class ObservationForm {
                                         const gg = g === 0 ? data.observer.GH : data.observer.GN;
                                         if (gg !== null && gg !== undefined && gg !== '') {
                                             this.fields.gg.value = gg;
-                                            this.fields.gg.disabled = true;
-                                        } else {
-                                            // GG value is empty/null, keep field enabled for manual entry
-                                            this.fields.gg.disabled = false;
+                                            // Store GG as single value constraint
+                                            this.fieldConstraints.GG = gg;
                                         }
-                                    } else {
-                                        // No observer data - keep GG enabled for manual entry
-                                        this.fields.gg.disabled = false;
                                     }
-                                } else {
-                                    // API error - keep GG enabled for manual entry
-                                    this.fields.gg.disabled = false;
                                 }
                             } catch (e) {
                                 console.error('Error fetching GG:', e);
-                                // Error - keep GG enabled for manual entry
-                                this.fields.gg.disabled = false;
                             }
                         })();
-                    } else {
-                        // KK not filled yet - keep GG enabled but don't auto-fill
-                        this.fields.gg.disabled = false;
                     }
                 } else if (g === 1) {
-                    // g=1 (Auswärtsbeobachtung): Enable GG for manual entry
-                    this.fields.gg.disabled = false;
+                    // g=1 (Auswärtsbeobachtung): Manual GG entry
                     if (!this.originalObservation) {
                         this.fields.gg.value = '';
+                        this.fieldConstraints.GG = null;
                     }
+                } else {
+                    // g=-1 (not set): Reset GG
+                    this.fields.gg.value = '';
+                    this.fieldConstraints.GG = null;
                 }
+            } else if (triggerField === 'mm') {
+                // MM (Month) → TT (Day)
+                const mm = parseInt(this.fields.mm.value);
+                const jj = parseInt(this.fields.jj.value);
+                const ttOpts = Array.from(this.fields.tt.options);
+                
+                if (mm >= 1 && mm <= 12 && jj) {
+                    // Calculate days in month
+                    const year = jj < 50 ? 2000 + jj : 1900 + jj;
+                    const daysInMonth = new Date(year, mm, 0).getDate();
+                    
+                    // Generate valid days array
+                    const ttValid = [];
+                    for (let d = 1; d <= daysInMonth; d++) {
+                        ttValid.push(d.toString());
+                    }
+                    
+                    // Enable only valid days
+                    setOptionStates(ttOpts, ttValid);
+                    
+                    // Store constraints and set to first valid value
+                    this.fieldConstraints.TT = ttValid;
+                    
+                    // Set to first day if current value is invalid
+                    if (!ttValid.includes(this.fields.tt.value)) {
+                        this.fields.tt.value = ttValid[0];
+                    }
+                } else {
+                    // MM or JJ not set: All days available
+                    const ttValid = [];
+                    for (let d = 1; d <= 31; d++) {
+                        ttValid.push(d.toString());
+                    }
+                    enableAllOptions(ttOpts);
+                    this.fieldConstraints.TT = ttValid;
+                }
+            } else if (triggerField === 'ee') {
+                // EE (Phenomenon) → HO, HU, Sectors
+                const ee = this.fields.ee.value === '' ? -1 : parseInt(this.fields.ee.value);
+                
+                const hoOpts = Array.from(this.fields.ho.options);
+                const huOpts = Array.from(this.fields.hu.options);
+                const circularHalos = [1, 7, 12, 31, 32, 33, 34, 35, 36, 40];
+                
+                // Define height value arrays
+                const heightValues = ['-1', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 
+                    '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', 
+                    '21', '22', '23', '24', '25', '26', '27', '28', '29', '30',
+                    '31', '32', '33', '34', '35', '36', '37', '38', '39', '40',
+                    '41', '42', '43', '44', '45', '46', '47', '48', '49', '50',
+                    '51', '52', '53', '54', '55', '56', '57', '58', '59', '60',
+                    '61', '62', '63', '64', '65', '66', '67', '68', '69', '70',
+                    '71', '72', '73', '74', '75', '76', '77', '78', '79', '80',
+                    '81', '82', '83', '84', '85', '86', '87', '88', '89', '90'];
+                const allHoValues = ['0', '-1', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 
+                    '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', 
+                    '21', '22', '23', '24', '25', '26', '27', '28', '29', '30',
+                    '31', '32', '33', '34', '35', '36', '37', '38', '39', '40',
+                    '41', '42', '43', '44', '45', '46', '47', '48', '49', '50',
+                    '51', '52', '53', '54', '55', '56', '57', '58', '59', '60',
+                    '61', '62', '63', '64', '65', '66', '67', '68', '69', '70',
+                    '71', '72', '73', '74', '75', '76', '77', '78', '79', '80',
+                    '81', '82', '83', '84', '85', '86', '87', '88', '89', '90'];
+                const allHuValues = ['0', '-1', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 
+                    '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', 
+                    '21', '22', '23', '24', '25', '26', '27', '28', '29', '30',
+                    '31', '32', '33', '34', '35', '36', '37', '38', '39', '40',
+                    '41', '42', '43', '44', '45', '46', '47', '48', '49', '50',
+                    '51', '52', '53', '54', '55', '56', '57', '58', '59', '60',
+                    '61', '62', '63', '64', '65', '66', '67', '68', '69', '70',
+                    '71', '72', '73', '74', '75', '76', '77', '78', '79', '80',
+                    '81', '82', '83', '84', '85', '86', '87', '88', '89', '90'];
+                
+                if (ee === 8) {
+                    // EE=8 (Obere Lichtsäule): HO required, HU=0
+                    setOptionStates(hoOpts, heightValues);
+                    enableAllOptions(huOpts);
+                   
+                    this.fields.sectors.value = '';
+                } else if (ee === 9) {
+                    // EE=9 (Untere Lichtsäule): HO=0, HU required
+                    enableAllOptions(hoOpts);
+                    setOptionStates(huOpts, heightValues);
+                    
+                    this.fields.sectors.value = '';
+                } else if (ee === 10) {
+                    // EE=10 (both light pillars): Both required
+                    setOptionStates(hoOpts, heightValues);
+                    setOptionStates(huOpts, heightValues);
+                    
+                    this.fields.sectors.value = '';
+                } else if (circularHalos.includes(ee)) {
+                    // EE=circular halo: HO=0, HU=0, Sectors depend on V
+                    enableAllOptions(hoOpts);
+                    enableAllOptions(huOpts);
+                    
+                    // Check V value for sectors
+                    const v = parseInt(this.fields.v.value);
+                    if (v === 0 || v === 2 || isNaN(v)) {
+                        // V=0 (not set) or V=2 (complete): Sectors inactive
+                        this.fieldConstraints.sectors = []; // Inactive
+                        this.fields.sectors.value = '';
+                    } else if (v === 1) {
+                        // V=1 (incomplete): Sectors active
+                        this.fieldConstraints.sectors = ['any']; // Active
+                        // Keep existing sector value
+                    }
+                } else {
+                    // All other EE values (including -1): HO=0, HU=0, Sectors inactive
+                    enableAllOptions(hoOpts);
+                    enableAllOptions(huOpts);
+                    
+                    this.fields.sectors.value = '';
+                }
+                // Store constraints and set to first valid value
+                this.fieldConstraints.HO = heightValues;
+                this.fieldConstraints.HU = ['0'];
+                this.fieldConstraints.sectors = []; // Inactive
+                this.fields.ho.value = heightValues[0]; // -1
+                this.fields.hu.value = '0';
             } else if (triggerField === 'v') {
-                // V field: Manage sectors based on EE and V
+                // V (Completeness) → Sectors (supplementary to EE)
                 const ee = parseInt(this.fields.ee.value);
                 const v = parseInt(this.fields.v.value);
                 const circularHalos = [1, 7, 12, 31, 32, 33, 34, 35, 36, 40];
                 
                 if (ee && circularHalos.includes(ee)) {
                     if (v === 1) {
-                        // V=1 (unvollständig): Sectors enabled
-                        this.fields.sectors.disabled = false;
-                    } else if (v === 2) {
-                        // V=2 (vollständig): Sectors cleared and disabled
-                        this.fields.sectors.value = '';
-                        this.fields.sectors.disabled = true;
+                        // V=1 (incomplete): Sectors active, keep existing value
+                        this.fieldConstraints.sectors = ['any']; // Active
                     } else {
-                        // V not set: Sectors enabled (user may enter)
-                        this.fields.sectors.disabled = false;
+                        // V=0 (not set) or V=2 (complete): Sectors inactive
+                        this.fieldConstraints.sectors = []; // Inactive
+                        this.fields.sectors.value = '';
                     }
-                } else {
-                    // EE not a circular halo: Sectors cleared and disabled
-                    this.fields.sectors.value = '';
-                    this.fields.sectors.disabled = true;
-                }
-            }
-        };
+        */
         
-        // Attach event listeners for interdependent field changes
+        // Attach event listeners for trigger fields only (forward dependencies)
+        // Trigger fields: O, d, N, KK, g, MM, EE
+        this.fields.o.addEventListener('change', () => {
+            manageFieldDependencies('o');
+            checkRequired();
+        });
         this.fields.d.addEventListener('change', () => {
             manageFieldDependencies('d');
         });
         this.fields.n.addEventListener('change', () => {
             manageFieldDependencies('n');
         });
-        this.fields.C.addEventListener('change', () => {
-            manageFieldDependencies('C');
-        });
-        this.fields.c.addEventListener('change', () => {
-            manageFieldDependencies('c');
-        });
-        this.fields.ee.addEventListener('change', () => {
-            manageFieldDependencies('ee');
-            // Also check sectors when EE changes (EE affects both 8HHHH and sectors)
-            const v = parseInt(this.fields.v.value);
-            if (v) {
-                manageFieldDependencies('v');
-            }
-        });
-        this.fields.g.addEventListener('change', () => {
-            manageFieldDependencies('g');
-            checkRequired();
-        });
         this.fields.kk.addEventListener('change', () => {
             manageFieldDependencies('kk');
+            checkRequired();
+        });
+        this.fields.g.addEventListener('change', () => {
+            this.manageFieldDependencies('g');
             checkRequired();
         });
         this.fields.jj.addEventListener('change', () => {
@@ -771,6 +1326,10 @@ class ObservationForm {
         });
         this.fields.mm.addEventListener('change', () => {
             manageFieldDependencies('mm');
+            checkRequired();
+        });
+        this.fields.ee.addEventListener('change', () => {
+            manageFieldDependencies('ee');
             checkRequired();
         });
         this.fields.v.addEventListener('change', () => {
@@ -1003,6 +1562,19 @@ class ObservationForm {
         this.fields.hu.value = obs.HU !== -1 && obs.HU !== 0 && obs.HU !== null ? obs.HU : (obs.HU === 0 ? '0' : '-1');
         this.fields.sectors.value = obs.sectors || '';
         this.fields.remarks.value = obs.remarks || '';
+        
+        // Apply initial dependencies based on populated values
+        // Order matters: follow dependency chain O → d → N → ... → KK → g → MM → EE → V
+        // ALWAYS trigger all dependency fields, regardless of their value
+        // The logic handles all possible values including -1, empty, etc.
+        this.manageFieldDependencies('o');
+        this.manageFieldDependencies('d');
+        this.manageFieldDependencies('n');
+        this.manageFieldDependencies('kk');
+        this.manageFieldDependencies('g');
+        this.manageFieldDependencies('mm');
+        this.manageFieldDependencies('ee');
+        this.manageFieldDependencies('v');
     }
     
     getFormData() {
@@ -1042,6 +1614,49 @@ class ObservationForm {
             sectors: this.fields.sectors.value || '',
             remarks: this.fields.remarks.value || ''
         };
+    }
+    
+    /**
+     * Get current constraint for a dependent field
+     * @param {string} fieldName - Name of the dependent field (d, n, C, c, g, GG, TT, HO, HU, sectors)
+     * @returns {Array|string|null} - Array of valid values, single value (GG), or null if not constrained
+     */
+    getFieldConstraint(fieldName) {
+        return this.fieldConstraints[fieldName];
+    }
+    
+    /**
+     * Check if a field is currently constrained (has limited valid values)
+     * @param {string} fieldName - Name of the field to check
+     * @returns {boolean} - true if field is constrained, false otherwise
+     */
+    isFieldConstrained(fieldName) {
+        const constraint = this.fieldConstraints[fieldName];
+        if (Array.isArray(constraint)) {
+            return constraint.length > 0;
+        }
+        return constraint !== null && constraint !== undefined;
+    }
+    
+    /**
+     * Check if a value is valid for a constrained field
+     * @param {string} fieldName - Name of the field
+     * @param {string|number} value - Value to check
+     * @returns {boolean} - true if value is valid, false otherwise
+     */
+    isValueValid(fieldName, value) {
+        const constraint = this.fieldConstraints[fieldName];
+        if (fieldName === 'sectors') {
+            // Sectors: [] = inactive, ['any'] = active
+            return constraint.length > 0;
+        } else if (fieldName === 'GG') {
+            // GG: Single value or null
+            return constraint !== null;
+        } else if (Array.isArray(constraint)) {
+            // All other fields: Array of valid values
+            return constraint.includes(String(value));
+        }
+        return false;
     }
 }
 

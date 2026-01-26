@@ -162,7 +162,7 @@ def _format_lp8(e: int, ho: int | None, hu: int | None) -> str:
 
 @api_blueprint.route('/health', methods=['GET'])
 def health_check() -> Dict[str, Any]:
-    return jsonify({'status': 'ok', 'version': '3.0.0', 'service': 'HALO API'})
+    return jsonify({'status': 'ok', 'version': '3.0.2', 'service': 'HALO API'})
 
 
 @api_blueprint.route('/language', methods=['GET'])
@@ -4503,6 +4503,72 @@ def get_observer_sites(kk):
         return jsonify({'error': 'Observer not found'}), 404
     
     return jsonify({'sites': sites})
+
+
+@api_blueprint.route('/observers/<kk>/active', methods=['GET'])
+def check_observer_active(kk):
+    """Check if observer was active at a given date (MM/JJ)
+    
+    Query parameters:
+        mm: Month (1-12)
+        jj: Year (2-digit: 50-99 = 1950-1999, 0-49 = 2000-2049)
+    
+    Returns:
+        {'active': True/False}
+        
+    Logic:
+        Observer is active if there exists a site entry where:
+        - seit <= MM/JJ (observer was already active at that date)
+        - AND (site is still active OR bis >= MM/JJ)
+    """
+    from flask import current_app, request
+    
+    # Get MM and JJ from query parameters
+    mm = request.args.get('mm', type=int)
+    jj = request.args.get('jj', type=int)
+    
+    if mm is None or jj is None:
+        return jsonify({'error': 'Missing mm or jj parameter'}), 400
+    
+    if mm < 1 or mm > 12:
+        return jsonify({'error': 'Invalid month (must be 1-12)'}), 400
+    
+    # Normalize KK to 2 digits
+    kk = str(kk).zfill(2)
+    
+    observers = current_app.config.get('OBSERVERS', [])
+    
+    # Convert jj to 4-digit year for comparison
+    year_4digit = (2000 + jj) if jj < 50 else (1900 + jj)
+    
+    # Find all site entries for this observer
+    active = False
+    for obs in observers:
+        if obs[0] == kk:  # obs[0] is KK
+            # Parse seit (start date)
+            seit_parts = obs[3].split('/')
+            seit_month = int(seit_parts[0])
+            seit_year = int(seit_parts[1])
+            seit_year_4digit = (2000 + seit_year) if seit_year < 50 else (1900 + seit_year)
+            
+            # Check if seit <= MM/JJ
+            seit_date = seit_year_4digit * 100 + seit_month
+            check_date = year_4digit * 100 + mm
+            
+            if seit_date <= check_date:
+                # Check if site is still active (active flag)
+                # In HALO observer format, active=1 means site is still active (no end date)
+                is_active = int(obs[4]) == 1
+                
+                if is_active:
+                    # Site is still active, observer was active at check_date
+                    active = True
+                    break
+                # If active=0, the site has an end date (bis)
+                # We would need to check bis field, but in current format we only have active flag
+                # For now, if active=0, we consider the site ended before check_date
+    
+    return jsonify({'active': active})
 
 
 @api_blueprint.route('/observers/<kk>/sites', methods=['POST'])

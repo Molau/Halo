@@ -1,8 +1,8 @@
 {
   "app": {
     "title": "HALO Analysis Program",
-    "version": "3.0.1",
-    "version_date": "2026-01-25",
+    "version": "3.0.2",
+    "version_date": "2026-01-27",
     "copyright_years": "1992-2026",
     "welcome_title": "Welcome to HALO Analysis Program",
     "welcome_subtitle": "Software for recording and analyzing halo observations",
@@ -736,7 +736,7 @@
     "hu": "lower light pillar",
     "sectors": "Sectors",
     "remarks": "Remarks",
-    "select": "Select",
+    "select": "--",
     "not_specified": "not specified",
     "max_15_chars": "max 15 chars",
     "max_60_chars": "max 60 chars",
