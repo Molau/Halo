@@ -33,6 +33,7 @@
     "observation": "Observation",
     "added": "added",
     "deleted": "deleted",
+    "and": "and",
     "ok": "OK",
     "cancel": "Cancel",
     "apply": "Apply",
@@ -332,7 +333,7 @@
       "SH": "Solar altitude",
       "KK": "Observer",
       "GG": "Observing area",
-      "O": "Object",
+      "O": "Cirrus density/Object",
       "f": "Weather front",
       "C": "Cirrus type",
       "d": "Formation location",
@@ -741,5 +742,19 @@
     "max_15_chars": "max 15 chars",
     "max_60_chars": "max 60 chars",
     "not_applicable": "not applicable"
+  },
+  "field_constraints": {
+    "restricted_by": "The options are restricted by <strong>{triggerField}</strong>",
+    "triggers": {
+      "O": "Object",
+      "d": "Density",
+      "N": "Cloud Cover",
+      "KK": "Observer",
+      "JJ": "Year",
+      "MM": "Month",
+      "g": "Observing Area",
+      "EE": "Halo Type",
+      "V": "Completeness"
+    }
   }
 }

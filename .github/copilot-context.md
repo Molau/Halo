@@ -55,23 +55,41 @@
 
 ### 1. Debug Logging Standard - Decision #024
 - **Date**: 2026-01-24
+- **Updated**: 2026-01-27
 - **Status**: ✓ Approved
 - **Core Rule**: All debug/diagnostic output MUST be clearly labeled for easy identification and removal
+- **Critical**: Debug statements MUST be on a SINGLE LINE and removable by simple regex
 - **Labeling Convention**:
-  - Python: Prefix with `# DEBUG:` comment and use `print("🔍 DEBUG: ...")` 
-  - JavaScript: Use `console.log("🔍 DEBUG: ...")`
-  - HTML templates: Use `<!-- DEBUG: ... -->`
+  - Python: Single line: `print(f"🔍 DEBUG: {var1}={value1}, {var2}={value2}")` (NOT multi-line)
+  - JavaScript: Single line: `console.log("🔍 DEBUG: field=", fieldValue, "state=", stateValue);` (NOT multi-line)
+  - HTML templates: Single line: `<!-- DEBUG: message -->` (NOT multi-line)
+- **Single Line Rule**:
+  - ✓ MUST fit on one line (if line is too long, use string concatenation or split debug data)
+  - ✗ NEVER split debug statements across multiple lines
+  - ✗ NEVER use line breaks within debug statements
+  - Purpose: Enable removal via simple PowerShell regex: `'s*console\.log.*🔍 DEBUG.*);?\n?'`
 - **Purpose**: Enable temporary debugging without polluting production code
 - **Removal**: Search for `DEBUG:` or `🔍` to find all debug statements before merging
-- **Example Python**:
+- **Example Python (✓ CORRECT)**:
   ```python
-  # DEBUG: Check filter values
-  print(f"🔍 DEBUG: filter_type={filter_type}, value={value}, obs.GG={getattr(obs, attr, None)}")
+  print(f"🔍 DEBUG: kk={kk}, mm={mm}, jj={jj}, active={data.active}")
   ```
-- **Example JavaScript**:
+- **Example Python (✗ WRONG - multi-line)**:
+  ```python
+  print("🔍 DEBUG: kk={kk}, mm={mm}")  # Line 1
+  print("🔍 DEBUG: jj={jj}, active={data.active}")  # Line 2
+  # This is OKAY only if each line is removable independently
+  ```
+- **Example JavaScript (✓ CORRECT)**:
   ```javascript
-  // DEBUG: Log filter state
-  console.log("🔍 DEBUG: filterCriterion1=", this.filterCriterion1, "filterValue1=", this.filterValue1);
+  console.log("🔍 DEBUG: constraints for", fieldKey, ":", constraints, "allowed=", allowedCount, "total=", totalOptions);
+  ```
+- **Example JavaScript (✗ WRONG - multi-line)**:
+  ```javascript
+  console.log("🔍 DEBUG: Starting update");  // Line 1
+  // ... code ...
+  console.log("🔍 DEBUG: Done");  // Line 2
+  // Each line needs to be on its own line so regex can find it
   ```
 
 ### 2. Observation Record Format (HALO Key)
@@ -155,36 +173,36 @@
 - **Implementation**: JSON resource files in `resources/` directory
 
 ### 5a. Internationalization (i18n) Scope - Decision #017
-- **Date**: 2026-01-10
+- **Date**: 2026-01-10 (Updated: 2026-01-27)
 - **Status**: ✓ Approved
-- **Principle**: Put in i18n ONLY text that would need translation for a new language
-- **What MUST be in i18n** (translatable UI text):
-  - User-visible labels, messages, titles, prompts
-  - Error messages, warnings, confirmations
-  - Table headers, column names (when user-facing)
-  - Button labels, menu items
-  - Help text, descriptions, explanations
-  - Any text that would change when adding French, Spanish, etc.
-- **What CAN stay hardcoded** (non-translatable):
-  - Technical data format strings: `KKOJJ MMTTg`, `ZZZZd DDNCc`, etc.
-  - Pseudographic/box-drawing table structures: `║`, `╔`, `═`, etc.
-  - Technical identifiers and codes
-  - Field position markers, layout characters
-  - Anything that doesn't change meaning in a new language
+- **Core Principle**: **ALLE statischen Texte MÜSSEN in i18n - KEINE Ausnahmen außer technische Identifier!**
+- **What MUST be in i18n** (everything except technical identifiers):
+  - ✓ **ALL user-visible text**: labels, messages, titles, prompts, buttons, menu items
+  - ✓ **ALL error messages, warnings, confirmations**
+  - ✓ **ALL table headers, column names** (even technical ones if user-facing)
+  - ✓ **ALL help text, descriptions, explanations**
+  - ✓ **ALL words used in UI logic**: conjunctions ("und"/"and"), articles, prepositions
+  - ✓ **Rule of thumb**: If it's a word or text visible to users → i18n, no exceptions
+- **What CAN stay hardcoded** (ONLY technical identifiers):
+  - ✓ Technical data format identifiers: `KKOJJ MMTTg`, `ZZZZd DDNCc` (field codes)
+  - ✓ Pseudographic/box-drawing characters: `║`, `╔`, `═`, `├`, `─` (table structure)
+  - ✓ Field position markers in technical output (when reproducing original format exactly)
+  - ✓ **Critical rule**: If it's NOT a data format identifier → it MUST be in i18n!
 - **Fail Fast Rule** (Decision #015):
   - No fallbacks: `i18n?.field || 'default'` is **FORBIDDEN**
   - All i18n fields accessed directly: `i18n.field`
   - Missing i18n keys cause immediate errors (intended behavior)
   - This prevents silent failures and ensures consistency
 - **Examples**:
-  - ✓ Translatable → i18n: "Tag", "Sonne", "Monatsmeldung", "Fehler beim Laden"
-  - ✓ Hardcodable: `║ KKOJJ MMTTg ║`, `╠═══╬═══╣`, `KKOJJ MMTTg ZZZZd DDNCc`
-  - ✗ Wrong: `Tag` hardcoded in JavaScript for HTML output
-  - ✗ Wrong: `i18n.months || ['Jan', 'Feb', ...]` fallback pattern
+  - ✓ **MUST be i18n**: "Tag", "Sonne", "Monatsmeldung", "Fehler beim Laden", "und", "and"
+  - ✓ **Can be hardcoded**: `║ KKOJJ MMTTg ║`, `╠═══╬═══╣`, `KKOJJ MMTTg ZZZZd DDNCc`
+  - ✗ **WRONG**: `Tag` hardcoded in JavaScript for HTML output
+  - ✗ **WRONG**: `i18n.months || ['Jan', 'Feb', ...]` fallback pattern
+  - ✗ **WRONG**: Hardcoded "und" or "and" instead of `i18n.common.and`
 - **Implementation Guidelines**:
-  - Check if text would be different in another language
-  - If yes → must be i18n key
-  - If no → can remain hardcoded
+  - **Default assumption**: ALL text → i18n (unless proven to be technical identifier)
+  - If it's a word humans read → i18n key
+  - If it's a technical code like "KKOJJ" → hardcoded
   - Always access i18n without optional chaining or fallbacks
 
 ### 6. Code Reuse and DRY Principle

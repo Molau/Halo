@@ -33,6 +33,7 @@
     "observation": "Beobachtung",
     "added": "hinzugefügt",
     "deleted": "gelöscht",
+    "and": "und",
     "ok": "OK",
     "cancel": "Abbrechen",
     "apply": "Anwenden",
@@ -335,7 +336,7 @@
       "O": "Objekt",
       "f": "Wetterfront",
       "C": "Cirrusart",
-      "d": "Entstehungsort",
+      "d": "Cirrusdichte",
       "EE": "Haloart",
       "DD": "Dauer",
       "H": "Helligkeit",
@@ -741,5 +742,19 @@
     "max_15_chars": "max 15 Zeichen",
     "max_60_chars": "max 60 Zeichen",
     "not_applicable": "nicht zutreffend"
+  },
+  "field_constraints": {
+    "restricted_by": "Die Optionen werden durch <strong>{triggerField}</strong> eingeschränkt",
+    "triggers": {
+      "O": "Objekt",
+      "d": "Dichte",
+      "N": "Himmelsbedeckung",
+      "KK": "Beobachter",
+      "JJ": "Jahr",
+      "MM": "Monat",
+      "g": "Beobachtungsort",
+      "EE": "Haloart",
+      "V": "Vollständigkeit"
+    }
   }
 }

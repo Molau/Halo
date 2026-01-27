@@ -148,6 +148,8 @@ class ObservationForm {
     }
     
     createModalHTML() {
+
+        
         // Remove existing modal if any
         const existing = document.getElementById('observation-form-modal');
         if (existing) {
@@ -259,16 +261,16 @@ class ObservationForm {
                 </select>
             </div>
             <div class="col-md-4">
-                <label class="form-label">TT - ${i18nStrings.fields.day} <span class="text-danger">*</span></label>
+                <label class="form-label">TT - ${this.buildConstraintIndicator(i18nStrings.fields.day, 'MM', 'TT')} <span class="text-danger">*</span></label>
                 <select class="form-select form-select-sm" id="form-tt" required>
                     <option value="">${i18nStrings.fields.select}</option>
                     ${Array.from({length: 31}, (_, i) => `<option value="${i+1}">${String(i+1).padStart(2, '0')}</option>`).join('')}
                 </select>
             </div>
             <div class="col-md-4">
-                <label class="form-label">g - ${i18nStrings.fields.observing_area } <span class="text-danger">*</span></label>
+                <label class="form-label">g - ${this.buildConstraintIndicator(i18nStrings.fields.observing_area, ['KK', 'MM', 'JJ'], 'g')} <span class="text-danger">*</span></label>
                 <select class="form-select form-select-sm" id="form-g" required>
-                    <option value="">-- ${i18nStrings.fields.select } --</option>
+                    <option value="">${i18nStrings.fields.select}</option>
                     <option value="0">0 - ${i18nStrings.location_types['0']}</option>
                     <option value="1">1 - ${i18nStrings.location_types['1']}</option>
                     <option value="2">2 - ${i18nStrings.location_types['2']}</option>
@@ -289,7 +291,7 @@ class ObservationForm {
                 </select>
             </div>
             <div class="col-md-4">
-                <label class="form-label">d - ${i18nStrings.fields.cirrus_density}</label>
+                <label class="form-label">d - ${this.buildConstraintIndicator(i18nStrings.fields.cirrus_density, 'O', 'd')}</label>
                 <select class="form-select form-select-sm" id="form-d">
                     <option value="-1">${i18nStrings.fields.select}</option>
                     <option value="0">0 - ${i18nStrings.cirrus_density['0']}</option>
@@ -309,7 +311,7 @@ class ObservationForm {
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">N - ${i18nStrings.fields.cloud_cover}</label>
+                <label class="form-label">N - ${this.buildConstraintIndicator(i18nStrings.fields.cloud_cover, 'd', 'n')}</label>
                 <select class="form-select form-select-sm" id="form-n">
                     <option value="-1">${i18nStrings.fields.select}</option>
                     ${Array.from({length: 10}, (_, i) => {
@@ -319,7 +321,7 @@ class ObservationForm {
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">C - ${i18nStrings.fields.cirrus_type}</label>
+                <label class="form-label">C - ${this.buildConstraintIndicator(i18nStrings.fields.cirrus_type, 'N', 'C')}</label>
                 <select class="form-select form-select-sm" id="form-C">
                     <option value="-1">${i18nStrings.fields.select}</option>
                     ${Array.from({length: 8}, (_, i) => {
@@ -329,7 +331,7 @@ class ObservationForm {
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">c - ${i18nStrings.fields.low_clouds}</label>
+                <label class="form-label">c - ${this.buildConstraintIndicator(i18nStrings.fields.low_clouds, 'N', 'c')}</label>
                 <select class="form-select form-select-sm" id="form-c">
                     <option value="-1">${i18nStrings.fields.select}</option>
                     ${Array.from({length: 10}, (_, i) => {
@@ -392,7 +394,7 @@ class ObservationForm {
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">GG - ${i18nStrings.fields.region} <span class="text-danger">*</span></label>
+                <label class="form-label">GG - ${this.buildConstraintIndicator(i18nStrings.fields.region, 'g', 'GG')} <span class="text-danger">*</span></label>
                 <select class="form-select form-select-sm" id="form-gg" required>
                     <option value="">${i18nStrings.fields.select}</option>
                     ${this.buildRegionOptions()}
@@ -402,7 +404,7 @@ class ObservationForm {
                 <label class="form-label">8HHHH</label>
                 <div class="row g-1">
                     <div class="col-6">
-                        <label class="form-label small">HO - ${i18nStrings.fields.ho}</label>
+                        <label class="form-label small">HO - ${this.buildConstraintIndicator(i18nStrings.fields.ho, 'EE', 'HO')}</label>
                         <select class="form-select form-select-sm" id="form-ho">
                             <option value="-1">${i18nStrings.fields.select}</option>
                             <option value="0">//</option>
@@ -410,7 +412,7 @@ class ObservationForm {
                         </select>
                     </div>
                     <div class="col-6">
-                        <label class="form-label small">HU - ${i18nStrings.fields.hu}</label>
+                        <label class="form-label small">HU - ${this.buildConstraintIndicator(i18nStrings.fields.hu, 'EE', 'HU')}</label>
                         <select class="form-select form-select-sm" id="form-hu">
                             <option value="-1">${i18nStrings.fields.select}</option>
                             <option value="0">//</option>
@@ -420,7 +422,7 @@ class ObservationForm {
                 </div>
             </div>
             <div class="col-12">
-                <label class="form-label">${i18nStrings.fields.sectors}</label>
+                <label class="form-label">${this.buildConstraintIndicator(i18nStrings.fields.sectors, ['EE', 'V'], 'sectors')}</label>
                 <input type="text" class="form-control form-control-sm" id="form-sectors" maxlength="15">
             </div>
             <div class="col-12">
@@ -447,12 +449,70 @@ class ObservationForm {
             return `<option value="${gg}">${String(gg).padStart(2, '0')} - ${label}</option>`;
         }).join('');
     }
+
+    /**
+     * Build constraint indicator HTML for a field that might be restricted
+     * Wraps the field label in a span that becomes italic when constrained
+     * @param {string} fieldLabel - The label text to display (e.g., "Himmelsbedeckung")
+     * @param {string|Array} triggerFields - The trigger field(s) that constrain this field
+     * @param {string} fieldKey - Internal field key for constraint tracking (d, n, C, c, g, gg, tt, ho, hu, sectors)
+     * @returns {string} - HTML string with constraint indicator and tooltip
+     */
+    buildConstraintIndicator(fieldLabel, triggerFields, fieldKey = '') {
+        // Fail fast if required i18n data is missing (Decision #015)
+        if (!triggerFields) {
+            console.error('buildConstraintIndicator: triggerFields missing for field:', fieldKey);
+            throw new Error(`Cannot build constraint indicator for ${fieldKey}: triggerFields missing`);
+        }
+
+        // Normalize to array
+        const triggers = Array.isArray(triggerFields) ? triggerFields : [triggerFields];
+        
+        // Get labels for all trigger fields
+        const triggerLabels = triggers.map(t => i18nStrings.field_constraints.triggers[t] || t);
+                
+        // Build tooltip text with all triggers (with HTML support)
+        let tooltipText;
+        if (triggerLabels.length === 1) {
+            tooltipText = i18nStrings.field_constraints.restricted_by.replace('{triggerField}', triggerLabels[0]);
+
+        } else {
+            // Join multiple triggers with ", " and use i18n conjunction before the last one
+            const conjunction = ' ' + i18nStrings.common.and + ' ';
+            const joinedLabels = triggerLabels.slice(0, -1).join(', ') + conjunction + triggerLabels[triggerLabels.length - 1];
+
+            // CRITICAL: Use {triggerField} (singular) not {triggerFields} - template uses same placeholder for both cases
+            tooltipText = i18nStrings.field_constraints.restricted_by.replace('{triggerField}', joinedLabels);
+
+        }
+        
+        return `<span class="constraint-indicator" data-constraint-field="${fieldKey}">${fieldLabel}<span class="tooltip-text">${tooltipText}</span></span>`;
+    }
+
+    /**
+     * Update constraint indicators when dependencies change
+     * Shows field labels in italic when constrained
+     * 
+     * Field dependency map:
+     * - d: constrained by O
+     * - n: constrained by d (transitively by O)
+     * - C: constrained by N (transitively by d, O)
+     * - c: constrained by N (transitively by d, O)
+     * - g: constrained by KK, MM, JJ (combined trigger)
+     * - gg: constrained by g
+     * - tt: constrained by MM
+     * - ho: constrained by EE
+     * - hu: constrained by EE
+     * - sectors: constrained by EE and V (combined trigger)
+     */
     
     // Central field dependency management for all interdependent fields
     // Implements forward-only dependencies (no backward/circular dependencies)
     // Trigger fields: O, d, N, KK, g, MM, EE
     // Rule: Fields can only affect subsequent fields, never previous ones
     manageFieldDependencies(triggerField) {
+
+        
         // Helper: Enable/disable specific option values
         const setOptionStates = (opts, enabledValues) => {
             opts.forEach(opt => {
@@ -593,6 +653,7 @@ class ObservationForm {
             }
             // N-Trigger ends here (C and c have no further dependencies)
         } else if (triggerField === 'kk' || triggerField === 'mm' || triggerField === 'jj') {
+
             // KK/MM/JJ combined trigger
             // Combined trigger: KK, MM, JJ → g
             // Rule: MM=-1 OR JJ=-1 OR KK=-1 → g=-1
@@ -600,6 +661,7 @@ class ObservationForm {
             
             // Step 1: If MM triggered, update TT (days in month)
             if (triggerField === 'mm') {
+
                 const mmValue = this.fields.mm.value;
                 const jjValue = this.fields.jj.value;
                 
@@ -663,11 +725,13 @@ class ObservationForm {
             
             let gValid;
             if (mm === -1 || jj === -1 || kk === -1) {
+
                 // Any of MM, JJ, KK not set: g must be -1
                 gValid = [''];
                 
                 setOptionStates(gOpts, gValid);
                 this.fieldConstraints.g = gValid;
+
                 
                 // If current g value is not valid, set to first valid value and trigger g
                 if (!gValid.includes(oldGValue)) {
@@ -677,12 +741,14 @@ class ObservationForm {
                     this.manageFieldDependencies('g');
                 }
             } else {
+
                 // MM>-1 AND JJ>-1 AND KK>-1: Check if observer was active at this date
                 
                 // Async check for observer activity
                 fetch(`/api/observers/${kk}/active?mm=${mm}&jj=${jj}`)
                     .then(response => response.json())
                     .then(data => {
+
                         if (data.active) {
                             // Observer was active: g can be -1..2
                             gValid = ['', '0', '1', '2'];
@@ -701,6 +767,9 @@ class ObservationForm {
                         } else {
                             this.manageFieldDependencies('g');
                         }
+                        
+                        // CRITICAL: Update constraint indicators AFTER async operation completes
+                        this.updateConstraintIndicatorsForField('g');
                     })
                     .catch(error => {
                         // On error, allow g to be set (fail-open)
@@ -915,6 +984,98 @@ class ObservationForm {
                 }
             }
             
+        }
+        
+        // Update all constraint indicators
+        this.updateConstraintIndicators();
+    }
+    
+    /**
+     * Update constraint indicator for a single field (for async operations)
+     * Field is constrained when NOT ALL values are available
+     * (i.e., at least one value is disabled/missing from allowed set)
+     */
+    updateConstraintIndicatorsForField(fieldKey) {
+
+        const indicator = document.querySelector(`[data-constraint-field="${fieldKey}"]`);
+
+        if (indicator) {
+            const constraints = this.fieldConstraints[fieldKey];
+
+            
+            // Find the corresponding SELECT element to count total possible values
+            const selectEl = document.getElementById(`form-${fieldKey}`);
+            if (selectEl) {
+                // Total options minus "Select" placeholder option (value='')
+                const totalOptions = Array.from(selectEl.options).filter(opt => opt.value !== '').length;
+                const allowedCount = Array.isArray(constraints) ? constraints.length : 0;
+
+                
+                // Field is constrained if fewer values are allowed than total possible
+                const isConstrained = allowedCount > 0 && allowedCount < totalOptions;
+                
+                if (isConstrained) {
+
+                    indicator.classList.add('constrained');
+                } else {
+
+                    indicator.classList.remove('constrained');
+                }
+            }
+        }
+    }
+    
+    /**
+     * Update all constraint indicators based on current field constraints
+     * Field is constrained when NOT ALL values are available
+     * (i.e., at least one value is disabled/missing from allowed set)
+     */
+    updateConstraintIndicators() {
+
+
+        
+        // Field keys and their corresponding HTML element IDs
+        const fieldMap = {
+            'd': 'form-d',
+            'n': 'form-n',
+            'C': 'form-C',
+            'c': 'form-c',
+            'TT': 'form-tt',
+            'g': 'form-g',
+            'GG': 'form-gg',
+            'HO': 'form-ho',
+            'HU': 'form-hu',
+            'sectors': 'form-sectors'
+        };
+        
+        // For each field, check if it's constrained and update .constrained class
+        for (const [fieldKey, elementId] of Object.entries(fieldMap)) {
+            const indicator = document.querySelector(`[data-constraint-field="${fieldKey}"]`);
+            if (indicator) {
+                const constraints = this.fieldConstraints[fieldKey];
+                const selectEl = document.getElementById(elementId);
+                
+                let isConstrained = false;
+                
+                if (fieldKey === 'sectors') {
+                    // Special handling for sectors (text input, not select)
+                    // Sectors: ['any'] = active (can be filled) = NOT constrained (normal input)
+                    // Sectors: [] = inactive (disabled) = constrained to empty
+                    isConstrained = !(Array.isArray(constraints) && constraints.length > 0);
+                    if (window.DEBUG_SECTORS) console.log(`🔍 sectors: constraints=${JSON.stringify(constraints)}, isConstrained=${isConstrained}`);
+                } else if (selectEl && selectEl.options) {
+                    // For SELECT elements: count total possible values
+                    const totalOptions = Array.from(selectEl.options).filter(opt => opt.value !== '').length;
+                    const allowedCount = Array.isArray(constraints) ? constraints.length : 0;
+                    isConstrained = allowedCount > 0 && allowedCount < totalOptions;
+                }
+                
+                if (isConstrained) {
+                    indicator.classList.add('constrained');
+                } else {
+                    indicator.classList.remove('constrained');
+                }
+            }
         }
     }
     
@@ -1334,6 +1495,37 @@ class ObservationForm {
         });
         this.fields.v.addEventListener('change', () => {
             manageFieldDependencies('v');
+        });
+        
+        // Sectors field: validate sector notation on change
+        this.fields.sectors.addEventListener('change', () => {
+            if (this.fields.sectors.value) {
+                const result = validateSectorInput(this.fields.sectors.value, false);
+                if (!result.valid) {
+                    // Invalid input: clear the field silently (no error dialog)
+                    this.fields.sectors.value = '';
+                } else {
+                    // Valid: auto-clean the input
+                    this.fields.sectors.value = result.cleaned;
+                }
+            }
+        });
+        
+        // Sectors field: Enter key moves to remarks field
+        this.fields.sectors.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                // Validate input first (same logic as change event)
+                if (this.fields.sectors.value) {
+                    const result = validateSectorInput(this.fields.sectors.value, false);
+                    if (result.valid) {
+                        // Valid input: clean and jump to remarks
+                        this.fields.sectors.value = result.cleaned;
+                        this.fields.remarks.focus();
+                    }
+                    // Invalid: do nothing - stay in sectors field, value will be cleared on next change event
+                }
+            }
         });
         
         // Note: 8HHHH field management moved to manageFieldDependencies() function

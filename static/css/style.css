@@ -278,3 +278,61 @@ footer {
     color: #666;
     font-size: 0.9rem;
 }
+/* Field Constraint Indicators */
+.constraint-indicator {
+    font-style: normal;
+    position: relative;
+    cursor: help;
+}
+
+.constraint-indicator.constrained {
+    font-style: italic;
+    text-decoration: underline dotted;
+    text-decoration-color: #f57c00;
+    text-underline-offset: 3px;
+}
+
+/* Tooltip styling - only show when field is constrained */
+.constraint-indicator .tooltip-text {
+    visibility: hidden;
+    position: absolute;
+    z-index: 10001;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: normal;
+    width: 250px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.25rem;
+    font-size: 0.85rem;
+    font-weight: normal;
+    font-style: normal;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+/* Only show tooltip on hover when field is constrained */
+.constraint-indicator.constrained:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+.constraint-indicator .tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #333;
+}
+
+/* Allow HTML formatting in tooltip */
+.constraint-indicator .tooltip-text strong {
+    font-weight: bold;
+}
+

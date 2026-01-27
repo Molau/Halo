@@ -506,7 +506,7 @@ Complete mapping:
     - 40: unterer Horizontalkreis
   - NOT relevant when V=2 (vollständig/complete): all octants visible by definition
 - **Special Values**: 
-  - All spaces = No sector information (not applicable or V=2)
+  - All spaces = No sector information
 - **Length**: Fixed 15 characters (padded with spaces)
 
 ### 22. Bemerkungen - Remarks
@@ -525,76 +525,134 @@ Complete mapping:
 
 ## Field Dependencies Summary
 
-### Critical Dependencies:
+### Dependency Checking Rules
 
-1. **g (location) → GG (region)**
-   - g=0: GG = Beo^[K].GH (auto)
-   - g=1: GG = manual input required
-   - g=2: GG = Beo^[K].GN (auto)
+**Trigger Fields**: Dependencies are only evaluated when these fields change:
+- **O** (Object)
+- **d** (Cirrus Density) 
+- **N** (Cloud Cover)
+- **KK** (Observer)
+- **g** (Location Type)
+- **MM** (Month)
+- **EE** (Phenomenon Type)
 
-2. **d (cirrus density) → N, C, c (mutual dependencies)**
-   - d=-1: N, C, c fully enabled
-   - d=0-2: N, C, c enabled, but N=0 and C=0 options disabled
-   - d=4-7: N, C, c all set to -1 and fields completely disabled (halo from non-cirrus source)
+Dependencies are also applied when setting initial values for new observations.
 
-3. **N (cloud cover) → d, C, c (mutual dependencies)**
-   - N=-1: d, C, c fully enabled
-   - N=0: d values 0,1,2 disabled (if d has these, reset to -1); C=0 and disabled; c enabled
-   - N=1-8: d values 4-7 disabled (if d has these, reset to -1); C enabled but C=0 disabled; c enabled
-   - N=9: d values 4-7 disabled (if d has these, reset to -1); c option 0 disabled
+**Forward-Only Dependencies**: Fields can only affect subsequent fields in the input flow, never previous fields. This prevents circular dependencies and simplifies validation logic, especially for numeric keyboard entry mode.
 
-4. **C (cirrus type) → N, d (mutual dependencies)**
-   - C=-1: N and d fully enabled
-   - C=0: N=0 and disabled; d values 4-7 disabled (if d has these, reset to -1)
-   - C=1-7: N enabled but N=0 disabled; d values 4-7 disabled (if d has these, reset to -1)
+**Recursive Check**: When one field triggers the change of another field, then the dependency check of that field has to be executed as well.
+### Dependency Rules (Forward Direction Only, recursive Check)
 
-5. **c (low clouds) → N (mutual dependency)**
-   - c=-1 or 1-9: N fully enabled
-   - c=0: N option 9 disabled
+#### 1. O (Object) → d, N, C, c
 
-6. **E (halo type) → 8HHHH (heights)**
-   - E=8: Requires ho (upper height)
-   - E=9: Requires hu (lower height)
-   - E=10: Requires both ho and hu
-   - E ∉ {8,9,10}: Heights not applicable
+- **O = -1** (not set):
+  - d = -1 (not set)
 
-7. **E (halo type), V (completeness) → Sektoren**
-   - E ∈ Sektor set [1, 7, 12, 31, 32, 33, 34, 35, 36, 40] AND V=1: Sectors required
-   - When V=2 (complete): Sectors not applicable (all octants visible)
-   - Otherwise: Sectors not applicable
+- **O = 0-4** (Sun, Moon, Planet, Star):
+  - d = -1, 0-2, 4-7 (all cirrus densities available)
 
-8. **J, M (year, month) → Data file loading**
-   - Index: 13*J + M
-   - Used for loading observer data
+- **O = 5** (Earthbound light source):
+  - d = -1, 4-7 (only non-cirrus halo sources)
+  - N = -1 (not set)
+  - C = -1 (not set)
+  - c = -1 (not set)
 
-9. **K (observer) → Various location fields**
-   - Provides HbOrt, NbOrt, GH, GN from observer database (see Observer Record Structure)
+#### 2. d (Cirrus Density) → N, C, c
 
----
+- **d = -1** (not observed):
+  - N = -1 (not set)
 
-## Data Validation Rules
+- **d = 0-2** (thin cirrus):
+  - N = -1, 1-9 (not 0 - some cloud cover required)
+  - C = -1, 1-7 (not 0 - cirrus present)
+  - c = -1, 0-9 (all low cloud options)
 
-1. **Required Fields** (cannot be blank):
-   - KK, O, JJ, MM, TT, g, GG, EE
+- **d = 4-7** (thick cirrus or non-cirrus):
+  - N = -1 (not set)
 
-2. **Optional Fields** (can be `/`, `//`, or spaces):
-   - ZZZZ, d, DD, N, C, c, H, F, V, f, zz
-   - 8HHHH (when E ∉ {8,9,10})
-   - Sektoren (when not applicable)
+#### 3. N (Cloud Cover) → C, c
 
-3. **Conditional Requirements**:
-   - dd < 3 → N and C should be specified
-   - N = 9 → cc ≠ 0
-   - E ∈ {8,9,10} → Corresponding heights required
-   - E ∈ Sektor [1, 7, 12, 31, 32, 33, 34, 35, 36, 40] AND V = 1 → Sektoren required
-   - g = 1 → GG manual input required
+- **N = -1** (not observed):
+  - C = -1 (not set)
+  - c = -1 (not set)
 
-4. **Invalid Combinations**:
-   - C = 0, 8, or 9 (when dd < 3)
-   - GG = 12
-   - V = 0
-   - N = 0 (as independent value, only when forced)
-   - dd = 3
+- **N = 0** (clear sky):
+  - C = 0 (no cirrus)
+  - c = -1 (not set)
+
+- **N = 1-8** (some clouds):
+  - C = -1, 1-7 (not 0)
+  - c = -1, 0-9 (all options)
+
+- **N = 9** (overcast):
+  - C = -1, 0-7 (all options)
+  - c = -1, 1-9 (not 0)
+
+#### 4. KK (Observer), JJ (Year) and MM ( Month) → g
+
+- **KK = -1 or JJ = -1 or MM = -1** (not set):
+  - g = -1 (not set)
+
+- **KK > -1 and JJ > -1 and MM > -1** (all valid values):
+  - g = -1, 0, 1, 2 (all values) if the observer was active at that time
+  - g = -1 (not set) if the observer was inactive at that time
+
+#### 5. g (Location Type) → GG
+
+- **g = -1** (not set):
+  - GG = -1  (not set)
+
+- **g = 0** (Hauptbeobachtungsort):
+  - GG = Observer's GH (auto-filled from observer record)
+
+- **g = 1** (Auswärtsbeobachtung):
+  - GG = -1, 1-11, 16-17, 19-39 (all valid geographic regions)
+
+- **g = 2** (Nebenbeobachtungsort):
+  - GG = Observer's GN (auto-filled from observer record)
+
+#### 6. MM (Month) → TT
+
+- **MM = -1** (not set):
+  - TT = -1 (not set)
+
+- **MM = 1, 3, 5, 7, 8, 10, 12** (31-day months):
+  - TT = 1-31 (31 days)
+
+- **MM = 2** (February):
+  - TT = 1-28 (or 1-29 for leap years)
+
+- **MM = 4, 6, 9, 11** (30-day months):
+  - TT = 1-30 (30 days)
+
+#### 7. EE (Phenomenon) → HO, HU
+
+- **EE = 8** (Obere Lichtsäule):
+  - HO = -1, 1-90 (height required)
+  - HU = 0 (not applicable)
+
+- **EE = 9** (Untere Lichtsäule):
+  - HO = 0 (not applicable)
+  - HU = -1, 1-90 (height required)
+
+- **EE = 10** (both light pillars):
+  - HO = -1, 1-90 (height required)
+  - HU = -1, 1-90 (height required)
+
+- **EE = -1 and all other values**:
+  - HO = 0 (not applicable)
+  - HU = 0 (not applicable)
+
+#### 8. EE (Phenomenon) and V (Completeness→ Sectors
+
+- **EE = -1 and not circular halo** (not 1, 7, 12, 31, 32, 33, 34, 35, 36, 40):
+  - Sectors = inactive (not applicable)
+
+- **EE = circular halo and V = 0, 2** (1, 7, 12, 31, 32, 33, 34, 35, 36, 40):
+  - Sectors = inactive (not applicable)
+
+- **EE = circular halo and V = 0, 2** (1, 7, 12, 31, 32, 33, 34, 35, 36, 40):
+  - Sectors = active (required)
 
 ---
 
