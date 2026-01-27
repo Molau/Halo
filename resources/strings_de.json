@@ -717,8 +717,6 @@
     "month": "Monat",
     "day": "Tag",
     "observing_area": "Beobachtungsort",
-    "primary_site": "Hauptbeobachtungsort",
-    "secondary_site": "Nebenbeobachtungsort",
     "hour": "Stunde",
     "minute": "Minute",
     "cirrus_density": "Dichte/Entstehungsort",
@@ -744,7 +742,7 @@
     "not_applicable": "nicht zutreffend"
   },
   "field_constraints": {
-    "restricted_by": "Die Optionen werden durch <strong>{triggerField}</strong> eingeschränkt",
+    "restricted_by": "Die Optionen werden durch <strong>{triggerField}</strong> eingeschränkt.",
     "triggers": {
       "O": "Objekt",
       "d": "Dichte",

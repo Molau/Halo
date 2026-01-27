@@ -528,24 +528,19 @@ class ObservationForm {
         
         // Apply rules based on which field triggered the change
         if (triggerField === 'o') {
-            // O (Object) → d
-            // Rule: O=-1 → d=-1 | O=1-4 → d=-1,0,1,2,4,5,6,7 | O=5 → d=-1,4,5,6,7 AND N=-1,C=-1,c=-1
+            // O (Object) → d (using shared constraint logic)
             const oValue = this.fields.o.value;
             const o = oValue === '' ? -1 : parseInt(oValue);
             
             const dOpts = Array.from(this.fields.d.options);
             const oldDValue = this.fields.d.value;
             
-            let dValid;
+            // Use shared calculateFieldConstraints function
+            const context = { o: oValue };
+            const dValid = calculateFieldConstraints('d', context);
             
-            if (o >= 1 && o <= 4) {
-                // O=1-4 (Sun, Moon, Planet, Star): d can be any density
-                dValid = ['-1', '0', '1', '2', '4', '5', '6', '7'];
-            } else if (o === 5) {
-                // O=5 (Earthbound light): Only non-cirrus sources, N/C/c forced to -1
-                dValid = ['-1', '4', '5', '6', '7'];
-                
-                // Force N, C, c to -1 for O=5
+            // Special case: O=5 forces N, C, c to -1
+            if (o === 5) {
                 const nOpts = Array.from(this.fields.n.options);
                 const cUpOpts = Array.from(this.fields.C.options);
                 const cLowOpts = Array.from(this.fields.c.options);
@@ -561,9 +556,6 @@ class ObservationForm {
                 this.fieldConstraints.n = ['-1'];
                 this.fieldConstraints.C = ['-1'];
                 this.fieldConstraints.c = ['-1'];
-            } else {
-                // O=-1 (not set): d must be -1
-                dValid = ['-1'];
             }
             
             // Apply d constraints
@@ -578,25 +570,15 @@ class ObservationForm {
             // ALWAYS trigger d dependencies (recursive cascade)
             this.manageFieldDependencies('d');
         } else if (triggerField === 'd') {
-            // d (Cirrus Density) → N
-            // Rule: d=-1 → N=-1 | d=0..2 → N=-1,1..9 | d=4..7 → N=-1
+            // d (Cirrus Density) → N (using shared constraint logic)
             const dValue = this.fields.d.value;
-            const d = dValue === '-1' ? -1 : parseInt(dValue);
             
             const nOpts = Array.from(this.fields.n.options);
             const oldNValue = this.fields.n.value;
             
-            let nValid;
-            if (d >= 0 && d <= 2) {
-                // d=0-2 (thin cirrus): N can be -1 or 1..9
-                nValid = ['-1', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-            } else if (d >= 4 && d <= 7) {
-                // d=4-7 (thick cirrus/non-cirrus): N must be -1
-                nValid = ['-1'];
-            } else {
-                // d=-1 (not observed): N must be -1
-                nValid = ['-1'];
-            }
+            // Use shared calculateFieldConstraints function
+            const context = { d: dValue };
+            const nValid = calculateFieldConstraints('n', context);
             
             setOptionStates(nOpts, nValid);
             this.fieldConstraints.n = nValid;
@@ -609,34 +591,18 @@ class ObservationForm {
             // ALWAYS trigger N dependencies (recursive cascade)
             this.manageFieldDependencies('n');
         } else if (triggerField === 'n') {
-            // N (Cloud Cover) → C, c
-            // Rule: N=-1 → C=-1,c=-1 | N=0 → C=0,c=-1 | N=1..8 → C=-1,1..7,c=-1..9 | N=9 → C=-1..7,c=-1,1..9
+            // N (Cloud Cover) → C, c (using shared constraint logic)
             const nValue = this.fields.n.value;
-            const n = nValue === '-1' ? -1 : parseInt(nValue);
             
             const cUpOpts = Array.from(this.fields.C.options);
             const cLowOpts = Array.from(this.fields.c.options);
             const oldCValue = this.fields.C.value;
             const oldcValue = this.fields.c.value;
             
-            let cUpValid, cLowValid;
-            if (n === 0) {
-                // N=0 (clear sky): C must be 0, c must be -1
-                cUpValid = ['0'];
-                cLowValid = ['-1'];
-            } else if (n >= 1 && n <= 8) {
-                // N=1-8 (some clouds): C=-1 or 1..7, c=-1..9
-                cUpValid = ['-1', '1', '2', '3', '4', '5', '6', '7'];
-                cLowValid = ['-1', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-            } else if (n === 9) {
-                // N=9 (overcast): C=-1..7, c=-1 or 1..9
-                cUpValid = ['-1', '0', '1', '2', '3', '4', '5', '6', '7'];
-                cLowValid = ['-1', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-            } else {
-                // N=-1 (not observed): C=-1, c=-1
-                cUpValid = ['-1'];
-                cLowValid = ['-1'];
-            }
+            // Use shared calculateFieldConstraints function
+            const context = { n: nValue };
+            const cUpValid = calculateFieldConstraints('C', context);
+            const cLowValid = calculateFieldConstraints('c', context);
             
             setOptionStates(cUpOpts, cUpValid);
             setOptionStates(cLowOpts, cLowValid);
@@ -659,36 +625,22 @@ class ObservationForm {
             // Rule: MM=-1 OR JJ=-1 OR KK=-1 → g=-1
             //       MM>-1 AND JJ>-1 AND KK>-1 → g=-1..2
             
-            // Step 1: If MM triggered, update TT (days in month)
+            // Step 1: If MM triggered, update TT (days in month) using shared constraint logic
             if (triggerField === 'mm') {
 
                 const mmValue = this.fields.mm.value;
                 const jjValue = this.fields.jj.value;
                 
-                const mm = mmValue === '' ? -1 : parseInt(mmValue);
-                const jj = jjValue === '' ? -1 : parseInt(jjValue);
-                
-                
                 const ttOpts = Array.from(this.fields.tt.options);
                 const oldTTValue = this.fields.tt.value;
                 
-                let ttValid;
+                // Use shared calculateFieldConstraints function
+                const context = { mm: mmValue, jj: jjValue };
+                let ttValid = calculateFieldConstraints('TT', context);
                 
-                if (mm === -1) {
-                    ttValid = [''];
-                } else if (mm === 1 || mm === 3 || mm === 5 || mm === 7 || mm === 8 || mm === 10 || mm === 12) {
-                    ttValid = [''];
-                    for (let d = 1; d <= 31; d++) ttValid.push(d.toString());
-                } else if (mm === 2) {
-                    const year = jj > -1 ? (jj < 50 ? 2000 + jj : 1900 + jj) : 2024;
-                    const daysInFeb = new Date(year, 2, 0).getDate();
-                    ttValid = [''];
-                    for (let d = 1; d <= daysInFeb; d++) ttValid.push(d.toString());
-                } else if (mm === 4 || mm === 6 || mm === 9 || mm === 11) {
-                    ttValid = [''];
-                    for (let d = 1; d <= 30; d++) ttValid.push(d.toString());
-                } else {
-                    ttValid = [''];
+                // Convert '01', '02' format to '1', '2' for menu mode (without leading zeros)
+                if (ttValid && ttValid.length > 0) {
+                    ttValid = ttValid.map(v => v === '' ? '' : parseInt(v).toString());
                 }
                 
                 setOptionStates(ttOpts, ttValid);

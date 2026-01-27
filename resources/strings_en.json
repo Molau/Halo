@@ -509,9 +509,9 @@
     "12": "Dec"
   },
   "location_types": {
-    "0": "unknown",
-    "1": "at home",
-    "2": "other location"
+    "0": "primary observing site",
+    "1": "outside of primary and secondary sites",
+    "2": "secondary observing site"
   },
   "cirrus_density": {
     "-1": "not observed",
@@ -717,8 +717,6 @@
     "month": "Month",
     "day": "Day",
     "observing_area": "Observing Area",
-    "primary_site": "Primary Site",
-    "secondary_site": "Secondary Site",
     "hour": "Hour",
     "minute": "Minute",
     "cirrus_density": "Cirrus Density/Origin",
@@ -744,7 +742,7 @@
     "not_applicable": "not applicable"
   },
   "field_constraints": {
-    "restricted_by": "The options are restricted by <strong>{triggerField}</strong>",
+    "restricted_by": "The options are restricted by <strong>{triggerField}.</strong>",
     "triggers": {
       "O": "Object",
       "d": "Density",

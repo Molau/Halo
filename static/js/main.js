@@ -959,6 +959,35 @@ function validateSectorInput(value, deleteInvalid = false) {
     return { valid: true, cleaned: cleaned };
 }
 
+/**
+ * Adapter for numeric input: parse input string and build context for calculateFieldConstraints()
+ * Uses shared field-constraints.js logic (Decision #6: DRY Principle)
+ */
+function getConstraintsForNumericInput(fieldKey, inputString) {
+    // Parse relevant fields from input string
+    const context = {
+        o: inputString.length >= 3 ? inputString[2] : undefined,
+        d: inputString.length >= 15 ? (inputString[14] === '/' ? '-2' : inputString[14]) : undefined,
+        n: inputString.length >= 18 ? inputString[17] : undefined,
+        mm: inputString.length >= 7 ? inputString.slice(5, 7) : undefined,
+        jj: inputString.length >= 5 ? inputString.slice(3, 5) : undefined,
+        kk: inputString.length >= 2 ? inputString.slice(0, 2) : undefined,
+        g: inputString.length >= 10 ? inputString[9] : undefined,
+        ee: inputString.length >= 22 ? inputString.slice(20, 22) : undefined,
+        v: inputString.length >= 25 ? inputString[24] : undefined
+    };
+    
+    // Call shared constraint calculation
+    const validValues = calculateFieldConstraints(fieldKey, context);
+    
+    // Convert -1 to '/' for numeric input mode (space/slash mean "not observed")
+    if (validValues && Array.isArray(validValues)) {
+        return validValues.map(v => v === '-1' ? '/' : v).filter(v => v !== '');
+    }
+    
+    return validValues;
+}
+
 // Validate progressive numeric entry similar to Pascal Kurzeingabe
 function validateNumericProgress(s, observerCodes) {
     const len = s.length;
@@ -990,8 +1019,16 @@ function validateNumericProgress(s, observerCodes) {
     if (len === 9) {
         const mm = parseInt(s.slice(5,7),10);
         const tt = parseInt(s.slice(7,9),10);
+        // TT validation - use constraints based on month
+        const validValues = getConstraintsForNumericInput('TT', s.slice(0, 7));
+        if (validValues) {
+            // validValues contains string representations like '01', '02', ..., '31'
+            const ttStr = s.slice(7,9);
+            if (!validValues.includes(ttStr)) return { ok: false, backtrack: 1 };
+            return { ok: true };
+        }
+        // Fallback to original validation if constraints not available
         if (tt < 1 || tt > 31) return { ok: false, backtrack: 1 };
-        // Days per month (ignoring leap years for simplicity)
         const daysInMonth = [0,31,29,31,30,31,30,31,31,30,31,30,31];
         return tt <= daysInMonth[mm] ? { ok: true } : { ok: false, backtrack: 1 };
     }
@@ -1013,31 +1050,37 @@ function validateNumericProgress(s, observerCodes) {
         const v = parseInt(zm,10);
         return v>=0 && v<=59 ? { ok: true } : { ok: false, backtrack: 1 };
     }
-    // 15 dd (0-7, not 3) or '/'
-    // Special rule: if C=0 or N=9 (when we get to position 19-20), values 0,1,2 are invalid
+    // 15 d (cirrus density) - use constraints
     if (len === 15) {
         const char = s[14];
-        if (!['0','1','2','4','5','6','7','/'].includes(char)) return { ok: false };
-        // At position 15, we can't check C or N yet (they come later at 19-20)
+        const validValues = getConstraintsForNumericInput('d', s.slice(0, 14));
+        if (validValues && !validValues.includes(char)) return { ok: false };
         return { ok: true };
     }
     // 16-17 D (00-99) or '//'
     if (len === 16) return { ok: digit.test(s[15]) || s[15] === '/' };
     if (len === 17) { const d = s.slice(15,17); return { ok: d === '//' || (/^\d{2}$/.test(d)) }; }
-    // 18 N (0-9) or '/'
-    if (len === 18) return { ok: (digit.test(s[17]) || s[17] === '/') };
-    // 19 C (0-9) or '/'
-    // Special rule: if N=9, C must be '/' (encoded as -1)
-    if (len === 19) {
-        const n = s[17];
-        const c = s[18];
-        if (!(digit.test(c) || c === '/')) return { ok: false };
-        // If N=9, C should be '/' but we allow any input and will validate at the end
-        // Note: This is informational validation; strict enforcement happens at parsing
+    // 18 n (cloud cover) - use constraints
+    if (len === 18) {
+        const char = s[17];
+        const validValues = getConstraintsForNumericInput('n', s.slice(0, 17));
+        if (validValues && !validValues.includes(char)) return { ok: false };
         return { ok: true };
     }
-    // 20 c (low clouds, 0-9) or '/'
-    if (len === 20) return { ok: (digit.test(s[19]) || s[19] === '/') };
+    // 19 C (cirrus type upper) - use constraints
+    if (len === 19) {
+        const char = s[18];
+        const validValues = getConstraintsForNumericInput('C', s.slice(0, 18));
+        if (validValues && !validValues.includes(char)) return { ok: false };
+        return { ok: true };
+    }
+    // 20 c (cirrus type lower) - use constraints
+    if (len === 20) {
+        const char = s[19];
+        const validValues = getConstraintsForNumericInput('c', s.slice(0, 19));
+        if (validValues && !validValues.includes(char)) return { ok: false };
+        return { ok: true };
+    }
     // 21-22 E (01-77 or 99)
     if (len === 21) return { ok: digit.test(s[20]) };
     if (len === 22) {

@@ -1,0 +1,190 @@
+/**
+ * Shared Field Constraint Logic
+ * 
+ * This module contains the core business logic for calculating valid field values
+ * based on HALO observation rules and dependencies. It is used by both:
+ * - Menu entry mode (observation-form.js)
+ * - Number entry mode (main.js)
+ * 
+ * Decision #6 (DRY Principle): Constraints are maintained in ONE place only.
+ */
+
+/**
+ * Calculate valid values for a field based on current observation context
+ * 
+ * @param {string} fieldKey - Field identifier ('d', 'n', 'C', 'c', 'TT', etc.)
+ * @param {object} context - Current field values { o, d, n, mm, jj, kk, ee, v, ... }
+ * @returns {Array<string>|null} - Array of valid string values, or null if async needed
+ */
+function calculateFieldConstraints(fieldKey, context) {
+    
+    // Helper: Normalize value (empty/undefined → -1)
+    const norm = (val) => (val === '' || val === undefined || val === null) ? -1 : parseInt(val);
+    
+    switch (fieldKey) {
+        
+        // d (Cirrus Density) ← depends on O (Object)
+        case 'd': {
+            const o = norm(context.o);
+            
+            if (o >= 1 && o <= 4) {
+                // O=1-4 (Sun, Moon, Planet, Star): d can be any density
+                return ['-1', '0', '1', '2', '4', '5', '6', '7'];
+            } else if (o === 5) {
+                // O=5 (Earthbound light): Only non-cirrus sources
+                return ['-1', '4', '5', '6', '7'];
+            } else {
+                // O=-1 (not set): d must be -1
+                return ['-1'];
+            }
+        }
+        
+        // n (Cloud Cover) ← depends on d (Cirrus Density)
+        case 'n': {
+            const d = norm(context.d);
+            
+            if (d >= 0 && d <= 2) {
+                // d=0-2 (thin cirrus): N can be -1 or 1..9
+                return ['-1', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+            } else if (d >= 4 && d <= 7) {
+                // d=4-7 (thick cirrus/non-cirrus): N must be -1
+                return ['-1'];
+            } else if (d === -2) {
+                // d=-2 (observed but not present, '/'): N must be -1
+                return ['-1'];
+            } else {
+                // d=-1 (not observed): N must be -1
+                return ['-1'];
+            }
+        }
+        
+        // C (Cirrus Cover Upper) ← depends on N (Cloud Cover)
+        case 'C': {
+            const n = norm(context.n);
+            
+            if (n === 0) {
+                // N=0 (clear sky): C must be 0
+                return ['0'];
+            } else if (n >= 1 && n <= 8) {
+                // N=1-8 (some clouds): C=-1 or 1..7
+                return ['-1', '1', '2', '3', '4', '5', '6', '7'];
+            } else if (n === 9) {
+                // N=9 (overcast): C=-1..7
+                return ['-1', '0', '1', '2', '3', '4', '5', '6', '7'];
+            } else {
+                // N=-1 (not observed): C=-1
+                return ['-1'];
+            }
+        }
+        
+        // c (Cirrus Cover Lower) ← depends on N (Cloud Cover)
+        case 'c': {
+            const n = norm(context.n);
+            
+            if (n === 0) {
+                // N=0 (clear sky): c must be -1
+                return ['-1'];
+            } else if (n >= 1 && n <= 8) {
+                // N=1-8 (some clouds): c=-1..9
+                return ['-1', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+            } else if (n === 9) {
+                // N=9 (overcast): c=-1 or 1..9 (not 0)
+                return ['-1', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+            } else {
+                // N=-1 (not observed): c=-1
+                return ['-1'];
+            }
+        }
+        
+        // TT (Day) ← depends on MM (Month) and JJ (Year)
+        case 'TT': {
+            const mm = norm(context.mm);
+            const jj = norm(context.jj);
+            
+            if (mm === -1) {
+                return [''];  // Empty for menu mode, will be filtered for number mode
+            }
+            
+            let maxDay;
+            if (mm === 1 || mm === 3 || mm === 5 || mm === 7 || mm === 8 || mm === 10 || mm === 12) {
+                maxDay = 31;
+            } else if (mm === 4 || mm === 6 || mm === 9 || mm === 11) {
+                maxDay = 30;
+            } else if (mm === 2) {
+                // February - check for leap year
+                const year = jj > -1 ? (jj < 50 ? 2000 + jj : 1900 + jj) : 2024;
+                maxDay = new Date(year, 2, 0).getDate();  // Days in February
+            } else {
+                return [''];
+            }
+            
+            // Generate valid days: '01', '02', ..., '31' (with leading zeros for number mode)
+            const validDays = [''];
+            for (let d = 1; d <= maxDay; d++) {
+                validDays.push(d.toString().padStart(2, '0'));
+            }
+            return validDays;
+        }
+        
+        // g (Location Type) ← depends on KK, MM, JJ (observer activity check)
+        // NOTE: Returns null because this requires ASYNC API call
+        case 'g': {
+            const kk = norm(context.kk);
+            const mm = norm(context.mm);
+            const jj = norm(context.jj);
+            
+            if (mm === -1 || jj === -1 || kk === -1) {
+                // Any of MM, JJ, KK not set: g must be -1
+                return [''];
+            }
+            
+            // Requires async check - return null to signal async needed
+            return null;
+        }
+        
+        // GG (Geographic Region) ← depends on g (Location Type) and observer data
+        // NOTE: Returns null because this requires ASYNC API call
+        case 'GG': {
+            return null;  // Requires async observer data fetch
+        }
+        
+        // HO, HU (Light Pillar Heights) ← depend on EE (Halo Type)
+        case 'HO':
+        case 'HU': {
+            const ee = norm(context.ee);
+            
+            if (ee === 8 || ee === 9 || ee === 10) {
+                // EE=8,9,10: Light pillar visible, height required
+                return ['-1', '-2', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+            } else {
+                // Other EE values: Height not applicable
+                return ['-1'];
+            }
+        }
+        
+        // sectors ← depend on EE (Halo Type) and V (Completeness)
+        case 'sectors': {
+            const ee = norm(context.ee);
+            const v = norm(context.v);
+            
+            // Check if EE is in Sektor set (requires sector data)
+            const sektorSet = [3, 4, 5, 11, 12, 13, 14, 15, 16, 17, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 40, 41, 42, 43, 44, 45, 46, 50, 51, 52, 53, 54, 55, 56, 62, 63];
+            const needsSectors = sektorSet.includes(ee) && v === 1;
+            
+            return needsSectors ? ['active'] : ['inactive'];
+        }
+        
+        default:
+            return null;  // Field not handled by constraints
+    }
+}
+
+// Make available globally
+if (typeof window !== 'undefined') {
+    window.calculateFieldConstraints = calculateFieldConstraints;
+}
+
+// Make available for Node.js/module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { calculateFieldConstraints };
+}

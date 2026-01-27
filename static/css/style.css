@@ -282,7 +282,6 @@ footer {
 .constraint-indicator {
     font-style: normal;
     position: relative;
-    cursor: help;
 }
 
 .constraint-indicator.constrained {
@@ -290,6 +289,7 @@ footer {
     text-decoration: underline dotted;
     text-decoration-color: #f57c00;
     text-underline-offset: 3px;
+    cursor: help;
 }
 
 /* Tooltip styling - only show when field is constrained */
