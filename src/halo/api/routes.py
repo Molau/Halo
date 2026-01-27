@@ -4519,7 +4519,10 @@ def check_observer_active(kk):
     Logic:
         Observer is active if there exists a site entry where:
         - seit <= MM/JJ (observer was already active at that date)
-        - AND (site is still active OR bis >= MM/JJ)
+        - AND aktiv=1 (site is still active)
+        
+    Multiple records per observer: Find the LATEST record where seit <= check_date,
+    then check if that record has aktiv=1.
     """
     from flask import current_app, request
     
@@ -4540,9 +4543,10 @@ def check_observer_active(kk):
     
     # Convert jj to 4-digit year for comparison
     year_4digit = (2000 + jj) if jj < 50 else (1900 + jj)
+    check_date = year_4digit * 100 + mm
     
-    # Find all site entries for this observer
-    active = False
+    # Find all site entries for this observer where seit <= check_date
+    matching_records = []
     for obs in observers:
         if obs[0] == kk:  # obs[0] is KK
             # Parse seit (start date)
@@ -4550,25 +4554,24 @@ def check_observer_active(kk):
             seit_month = int(seit_parts[0])
             seit_year = int(seit_parts[1])
             seit_year_4digit = (2000 + seit_year) if seit_year < 50 else (1900 + seit_year)
-            
-            # Check if seit <= MM/JJ
             seit_date = seit_year_4digit * 100 + seit_month
-            check_date = year_4digit * 100 + mm
             
+            # Only consider records where seit <= check_date
             if seit_date <= check_date:
-                # Check if site is still active (active flag)
-                # In HALO observer format, active=1 means site is still active (no end date)
-                is_active = int(obs[4]) == 1
-                
-                if is_active:
-                    # Site is still active, observer was active at check_date
-                    active = True
-                    break
-                # If active=0, the site has an end date (bis)
-                # We would need to check bis field, but in current format we only have active flag
-                # For now, if active=0, we consider the site ended before check_date
+                matching_records.append((seit_date, obs))
     
-    return jsonify({'active': active})
+    # No matching records found
+    if not matching_records:
+        return jsonify({'active': False})
+    
+    # Find the record with the LATEST seit date (most recent before or at check_date)
+    matching_records.sort(key=lambda x: x[0], reverse=True)
+    latest_record = matching_records[0][1]
+    
+    # Check if that record is active (aktiv=1)
+    is_active = int(latest_record[4]) == 1
+    
+    return jsonify({'active': is_active})
 
 
 @api_blueprint.route('/observers/<kk>/sites', methods=['POST'])

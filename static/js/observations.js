@@ -1,4 +1,4 @@
-// Observations page functionality - Exact translation from H_BEOBNG.PAS zeibeobachtung()
+﻿// Observations page functionality - Exact translation from H_BEOBNG.PAS zeibeobachtung()
 document.addEventListener('DOMContentLoaded', async function() {
     // Wait for i18nStrings to be loaded (from main.js)
     await window.waitForI18n();
@@ -115,9 +115,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     }
                 }
             }
-        } catch (error) {
-            console.error('Error checking server data:', error);
-        }
+        } catch (error) {}
         
         // Show filter dialog
         showFilterDialog();
@@ -306,9 +304,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             applyFiltersInternal();
             updateFileInfo(obsData.file, allObservations.length);
-        } catch (error) {
-            console.error('Error loading observations:', error);
-            compactTbody.textContent = i18nStrings.messages.error_loading_data;
+        } catch (error) {compactTbody.textContent = i18nStrings.messages.error_loading_data;
         }
     }
     
@@ -575,9 +571,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                             await applyFiltersInternal();
                         }
 
-                    } catch (error) {
-                        console.error('Error applying filters:', error);
-                    } finally {
+                    } catch (error) {} finally {
                         applySpinner.style.display = 'none';
                         applyBtn.disabled = false;
                         hideLoadingOverlay(overlay);
@@ -600,9 +594,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     } else {
                         await applyFiltersInternal();
                     }
-                } catch (error) {
-                    console.error('Error applying filters:', error);
-                } finally {
+                } catch (error) {} finally {
                     applySpinner.style.display = 'none';
                     applyBtn.disabled = false;
                     hideLoadingOverlay(overlay);
@@ -614,9 +606,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // checkelem() function from H_BEOBNG.PAS - checks if observation matches filters
     function checkelem(obs) {
         // DEBUG: Log filter check
-        if (filterCriterion1 === 'region' && filterValue1 !== null) {
-            console.log('🔍 DEBUG: Checking obs.KK=' + obs.KK + ' obs.GG=' + obs.GG + ' vs filterValue1=' + filterValue1);
-        }
+        if (filterCriterion1 === 'region' && filterValue1 !== null) {}
         // First filter (auswahl)
         if (filterCriterion1 === 'observer') {
             if (filterValue1 !== null && obs.KK !== filterValue1) return false;
@@ -658,9 +648,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             displayMode = config.mode === 'M' ? 'lang' : 'kurz';
 
-        } catch (error) {
-            console.error('Error loading config:', error);
-            displayMode = 'kurz';  // Default to compact on error
+        } catch (error) {displayMode = 'kurz';  // Default to compact on error
         }
         
 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Shared Field Constraint Logic
  * 
  * This module contains the core business logic for calculating valid field values
@@ -8,6 +8,38 @@
  * 
  * Decision #6 (DRY Principle): Constraints are maintained in ONE place only.
  */
+
+/**
+ * Check if observer was active at a given date (async API call)
+ * 
+ * @param {string} kk - Observer code (e.g., '44')
+ * @param {number} mm - Month (1-12)
+ * @param {number} jj - Year (2-digit: 86 = 1986, 26 = 2026)
+ * @returns {Promise<boolean>} - True if observer was active at that date
+ */
+async function isObserverActive(kk, mm, jj) {
+    console.log("🔍 DEBUG: isObserverActive() called - kk=" + kk + " mm=" + mm + " jj=" + jj);
+    
+    if (!kk || mm < 1 || mm > 12 || jj < 0) {
+        console.log("🔍 DEBUG: isObserverActive() → false (invalid params)");
+        return false;
+    }
+    
+    try {
+        const response = await fetch(`/api/observers/${kk}/active?mm=${mm}&jj=${jj}`);
+        if (!response.ok) {
+            console.log("🔍 DEBUG: isObserverActive() → false (API error: " + response.status + ")");
+            return false;
+        }
+        
+        const data = await response.json();
+        console.log("🔍 DEBUG: isObserverActive() → " + data.active + " (from API)");
+        return data.active;
+    } catch (error) {
+        console.error("🔍 DEBUG: isObserverActive() error:", error);
+        return false;
+    }
+}
 
 /**
  * Calculate valid values for a field based on current observation context
@@ -126,20 +158,23 @@ function calculateFieldConstraints(fieldKey, context) {
             return validDays;
         }
         
-        // g (Location Type) ← depends on KK, MM, JJ (observer activity check)
-        // NOTE: Returns null because this requires ASYNC API call
+        // g (Location Type) ← depends on KK, MM, JJ and observer activity
         case 'g': {
             const kk = norm(context.kk);
             const mm = norm(context.mm);
-            const jj = norm(context.jj);
-            
-            if (mm === -1 || jj === -1 || kk === -1) {
-                // Any of MM, JJ, KK not set: g must be -1
-                return [''];
+            const jj = norm(context.jj);// Required fields must be set
+            if (mm === -1 || jj === -1 || kk === -1) {return [];  // Cannot enter g if required fields missing
             }
             
-            // Requires async check - return null to signal async needed
-            return null;
+            // Return a Promise that checks observer activity via API
+            // This makes the constraint async - calling code must handle Promise
+            return isObserverActive(kk, mm, jj).then(active => {
+                if (!active) {
+                    return [];  // Observer not active: g cannot be entered
+                }
+                // All checks passed: g can be entered
+                return ['0', '1', '2'];
+            });
         }
         
         // GG (Geographic Region) ← depends on g (Location Type) and observer data
@@ -182,9 +217,11 @@ function calculateFieldConstraints(fieldKey, context) {
 // Make available globally
 if (typeof window !== 'undefined') {
     window.calculateFieldConstraints = calculateFieldConstraints;
+    window.isObserverActive = isObserverActive;
 }
 
 // Make available for Node.js/module systems
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { calculateFieldConstraints };
+    module.exports = { calculateFieldConstraints, isObserverActive };
 }
+

@@ -1,4 +1,4 @@
-// HALO Web Application JavaScript
+﻿// HALO Web Application JavaScript
 
 // Language will be loaded from server session on page load
 let currentLanguage = 'de';
@@ -46,9 +46,7 @@ function saveHaloDataToSession() {
                 count: window.haloData.observations.length || 0
             };
             sessionStorage.setItem('haloData', JSON.stringify(metadata));
-        } catch (e) {
-            console.error('Error saving metadata to sessionStorage:', e);
-            sessionStorage.removeItem('haloData');
+        } catch (e) {sessionStorage.removeItem('haloData');
         }
     } else {
         sessionStorage.removeItem('haloData');
@@ -74,9 +72,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.haloData.isDirty = metadata.isDirty;
             // Don't restore observations array - it will be fetched from server when needed
             window.haloData.observations = [];
-        } catch (e) {
-            console.error('Error restoring haloData metadata from sessionStorage:', e);
-            sessionStorage.removeItem('haloData');
+        } catch (e) {sessionStorage.removeItem('haloData');
         }
     }
     
@@ -85,9 +81,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadI18n(currentLanguage);
 
     // Check if i18n loaded successfully - fail fast if not
-    if (!i18nStrings) {
-        console.error('Failed to load i18n - cannot proceed');
-        return;  // Stop application
+    if (!i18nStrings) {return;  // Stop application
     }
 
     // Check for updates FIRST - blocks until user decides
@@ -146,16 +140,23 @@ async function loadCurrentLanguage() {
 
 async function loadObserverCodes() {
     if (observerData) return observerData;
+    
+    // Load simplified observer list (just KK codes for initial validation)
+    // Observer activity is checked via API endpoint when needed (g-field)
     const resp = await fetch('/api/observers/list');
     if (!resp.ok) throw new Error('Konnte Beobachterliste nicht laden');
     const data = await resp.json();
     const observers = data.observers || [];
+    
     const codeSet = new Set(
         observers
-            .map(o => o.KK ?? o.k ?? o.kk)
+            .map(o => {
+                const kk = o.KK || o.k || o.kk;
+                return kk ? String(kk).padStart(2, '0') : null;
+            })
             .filter(Boolean)
-            .map(code => String(code).padStart(2,'0').toUpperCase())
     );
+    
     observerData = { codeSet, observers };
     return observerData;
 }
@@ -239,9 +240,7 @@ async function getDateDefault() {
         const jj = String(year % 100).padStart(2, '0'); // 2-digit year
         
         return { mm, jj, month, year };
-    } catch (error) {
-        console.error('Error fetching date default:', error);
-        return null;
+    } catch (error) {return null;
     }
 }
 
@@ -427,9 +426,7 @@ async function showAddObservationDialog() {
         } else {
             return await showAddObservationDialogMenu();
         }
-    } catch (e) {
-        console.error('Add observation dialog error:', e);
-    }
+    } catch (e) {}
 }
 
 // Numeric entry (Kurzeingabe) dialog
@@ -443,9 +440,7 @@ async function showAddObservationDialogNumeric() {
     // Ensure i18n is loaded
     if (!i18nStrings.observations) {
         await loadI18n(currentLanguage);
-        if (!i18nStrings.observations) {
-            console.error('Failed to load i18n strings:', i18nStrings);
-            throw new Error('i18n strings not loaded');
+        if (!i18nStrings.observations) {throw new Error('i18n strings not loaded');
         }
     }
     
@@ -455,17 +450,13 @@ async function showAddObservationDialogNumeric() {
         const configResponse = await fetch('/api/config/fixed_observer');
         const config = await configResponse.json();
         fixedObserver = config.observer;
-    } catch (e) {
-        console.error('Error loading fixed observer:', e);
-    }
+    } catch (e) {}
 
     // Get date default setting
     let dateDefault = null;
     try {
         dateDefault = await getDateDefault();
-    } catch (e) {
-        console.error('Error loading date default:', e);
-    }
+    } catch (e) {}
     
     const modalHtml = `
         <div class="modal fade" id="add-observation-modal" tabindex="-1">
@@ -494,9 +485,7 @@ async function showAddObservationDialogNumeric() {
         const data = await loadObserverCodes();
         observerCodes = data.codeSet;
         observers = data.observers;
-    } catch (e) {
-        console.error(e);
-        showErrorDialog(i18nStrings.messages.error_loading_observers);
+    } catch (e) {showErrorDialog(i18nStrings.messages.error_loading_observers);
         return;
     }
 
@@ -515,12 +504,36 @@ async function showAddObservationDialogNumeric() {
         eing = eing.substring(0, 3) + dateDefault.jj + dateDefault.mm + eing.substring(5);
     }
 
+    const ensureNumericInputFocus = () => {
+        if (document.body.contains(input) && document.activeElement !== input) {
+            input.focus();
+        }
+    };
+
+    const handleVisibilityChange = () => {
+        if (!document.hidden) {
+            setTimeout(ensureNumericInputFocus, 0);
+        }
+    };
+
     // Focus input as soon as modal is shown
     modalEl.addEventListener('shown.bs.modal', () => {
-        input.focus();
+        ensureNumericInputFocus();
         // Set initial value and render
         input.value = eing;
         renderNumericGuide(eing);
+    });
+
+    // Restore focus when returning to the tab/window or clicking inside the modal
+    window.addEventListener('focus', ensureNumericInputFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    modalEl.addEventListener('mousedown', ensureNumericInputFocus);
+
+    // Cleanup listeners when modal closes
+    modalEl.addEventListener('hidden.bs.modal', () => {
+        window.removeEventListener('focus', ensureNumericInputFocus);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        modalEl.removeEventListener('mousedown', ensureNumericInputFocus);
     });
 
     // Enter key triggers OK button
@@ -553,10 +566,13 @@ async function showAddObservationDialogNumeric() {
         caretEl.textContent = ' '.repeat(Math.max(caretPos, 0)) + '^';
     }
 
+    // Track which positions were auto-filled (to handle backspace correctly)
+    const autoFilledPositions = new Set();
+
     // initial render
     renderNumericGuide(eing);
 
-    input.addEventListener('keydown', (ev) => {
+    input.addEventListener('keydown', async (ev) => {
         // Allow navigation keys
         const navKeys = ['ArrowLeft','ArrowRight','Home','End','Tab'];
         if (navKeys.includes(ev.key)) return;
@@ -567,7 +583,54 @@ async function showAddObservationDialogNumeric() {
                 return;
             }
             if (eing.length > 0) {
-                eing = eing.slice(0, -1);
+                // Check if we're deleting an auto-filled character
+                // If yes, delete all consecutive auto-filled characters plus the one that triggered them
+                let currentPos = eing.length - 1;
+                
+                // Keep looping while we're on auto-filled positions
+                while (currentPos >= 0 && autoFilledPositions.has(currentPos)) {// Delete the auto-filled character
+                    eing = eing.slice(0, -1);
+                    autoFilledPositions.delete(currentPos);
+                    currentPos--;
+                    
+                    // Keep deleting while we're on auto-filled positions
+                    while (currentPos >= 0 && autoFilledPositions.has(currentPos)) {eing = eing.slice(0, -1);
+                        autoFilledPositions.delete(currentPos);
+                        currentPos--;
+                    }
+                    
+                    // Delete one more character (the one that triggered the auto-fill)
+                    if (currentPos >= 0) {eing = eing.slice(0, -1);
+                        autoFilledPositions.delete(currentPos); // Clean up just in case
+                        currentPos--;
+                    }
+                    // Loop continues to check if THIS position is also auto-filled
+                }
+                
+                if (eing.length < input.value.length) {input.value = eing;
+                    renderNumericGuide(eing);
+                    ev.preventDefault();
+                    return;
+                }// Special handling for sector field trailing spaces (positions 36-50)
+                // If we're deleting spaces from the sector field, delete all trailing spaces at once
+                if (eing.length > 35 && eing.length <= 50) {
+                    // Check if current position and all positions before it (in sector field) are spaces
+                    let pos = eing.length - 1;
+                    if (eing[pos] === ' ') {
+                        // Find the last non-space character before this position
+                        while (pos >= 35 && eing[pos] === ' ') {
+                            pos--;
+                        }
+                        // Delete all spaces back to the last non-space character (or start of sector field)
+                        eing = eing.slice(0, pos + 1);
+                    } else {
+                        // Not a space, delete single character as normal
+                        eing = eing.slice(0, -1);
+                    }
+                } else {
+                    // Normal deletion outside sector field
+                    eing = eing.slice(0, -1);
+                }
                 input.value = eing;
                 renderNumericGuide(eing);
             }
@@ -583,7 +646,7 @@ async function showAddObservationDialogNumeric() {
         
         // Auto-fill JJ and MM when user reaches position 3 (after KK + O)
         if (candidate.length === 3 && dateDefault) {
-            // Validate up to position 3
+            // Validate up to position 3 (synchronous, no observer check yet)
             const result = validateNumericProgress(candidate, observerCodes);
             if (!result.ok) {
                 errEl.textContent = result.msg;
@@ -608,97 +671,112 @@ async function showAddObservationDialogNumeric() {
             if (g === 0 || g === 2) {
 
                 
-                // First validate and add the character the user just typed
+                // First validate and add the character the user just typed (async possible)
                 const result = validateNumericProgress(candidate, observerCodes);
-                if (!result.ok) {
-                    if (result.reset) {
-                        eing = '';
-                        input.value = eing;
-                        errEl.textContent = result.msg;
-                        errEl.style.display = 'block';
-                        renderNumericGuide(eing);
-                    } else {
-                        errEl.textContent = result.msg;
-                        errEl.style.display = 'block';
+                const handleResult = (res) => {
+                    if (!res.ok) {
+                        if (res.reset) {
+                            eing = '';
+                            input.value = eing;
+                            errEl.textContent = res.msg;
+                            errEl.style.display = 'block';
+                            renderNumericGuide(eing);
+                        } else {
+                            errEl.textContent = res.msg;
+                            errEl.style.display = 'block';
+                        }
+                        ev.preventDefault();
+                        return;
                     }
+                    
+                    // Add the validated character to eing
+                    eing = candidate;
+                    input.value = eing;
+                    errEl.style.display = 'none';
+                    renderNumericGuide(eing);
+                    
+                    // Now fetch and auto-fill GG
+                    const kk = eing.slice(0,2);
+                    const jj = eing.slice(3,5);
+                    const mm = eing.slice(5,7);
+                    
+                    // Fetch observer's region for this specific time period via API
+                    fetch(`/api/observers?kk=${kk}&jj=${jj}&mm=${mm}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            const observer = data.observer;
+
+                            
+                            if (observer) {
+                                // Get region - use GH for main site (g=0), GN for secondary site (g=2)
+                                let gg = g === 0 ? observer.GH : observer.GN;
+
+                                if (gg !== null && gg !== undefined) {
+                                    gg = String(gg).padStart(2,'0');
+
+                                    // Auto-fill the GG field
+                                    eing = eing + gg;
+                                    autoFilledPositions.add(27);
+                                    autoFilledPositions.add(28);
+                                    input.value = eing;
+                                    renderNumericGuide(eing);
+                                    
+                                    // Auto-fill 8HHHH sun pillar altitude field after GG
+                                    const ee = parseInt(eing.slice(20,22),10);
+
+                                    if (ee === 8) {
+                                        // EE 08: user enters 2 digits, then // auto-filled → 8??//
+                                        eing = eing + '8';
+                                    } else if (ee === 9) {
+                                        // EE 09: one slash, user enters 2 digits, one slash → 8//??  
+                                        eing = eing + '8/';
+                                    } else if (ee === 10) {
+                                        // EE 10: user enters all 4 digits → 8????
+                                        eing = eing + '8';
+                                    } else {
+                                        // All other EE values: no sun pillar → 8////
+                                        eing = eing + '8////';
+                                        // Track all 5 positions as auto-filled
+                                        autoFilledPositions.add(30);
+                                        autoFilledPositions.add(31);
+                                        autoFilledPositions.add(32);
+                                        autoFilledPositions.add(33);
+                                        autoFilledPositions.add(34);
+                                    }
+                                    input.value = eing;
+                                    renderNumericGuide(eing);
+                                    
+                                    // Auto-fill sectors after 8HHHH is complete
+                                    // Sectors are only needed for incomplete (V=1) circular halos
+                                    const v = parseInt(eing.slice(24,25),10);
+                                    const circularHalos = new Set([1,7,12,31,32,33,34,35,36,40]);
+
+                                    
+                                    if (v === 1 && circularHalos.has(ee)) {
+                                        // Incomplete circular halo: user will enter sectors (do nothing)
+
+                                    } else {
+                                        // Complete halo or non-circular: auto-fill 15 spaces
+
+                                        eing = eing + '               ';
+                                        input.value = eing;
+                                        renderNumericGuide(eing);
+                                    }
+                                }
+                            }
+                        })
+                        .catch(err => {});
+                };
+                
+                if (result && typeof result.then === 'function') {
+                    result.then(handleResult);
+                    ev.preventDefault();
+                    return;
+                } else {
+                    handleResult(result);
                     ev.preventDefault();
                     return;
                 }
-                
-                // Add the validated character to eing
-                eing = candidate;
-                input.value = eing;
-                errEl.style.display = 'none';
-                renderNumericGuide(eing);
-                
-                // Now fetch and auto-fill GG
-                const kk = eing.slice(0,2);
-                const jj = eing.slice(3,5);
-                const mm = eing.slice(5,7);
-                
-                // Fetch observer's region for this specific time period via API
-                fetch(`/api/observers?kk=${kk}&jj=${jj}&mm=${mm}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        const observer = data.observer;
-
-                        
-                        if (observer) {
-                            // Get region - use GH for main site (g=0), GN for secondary site (g=2)
-                            let gg = g === 0 ? observer.GH : observer.GN;
-
-                            if (gg !== null && gg !== undefined) {
-                                gg = String(gg).padStart(2,'0');
-
-                                // Auto-fill the GG field
-                                eing = eing + gg;
-                                input.value = eing;
-                                renderNumericGuide(eing);
-                                
-                                // Auto-fill 8HHHH sun pillar altitude field after GG
-                                const ee = parseInt(eing.slice(20,22),10);
-
-                                if (ee === 8) {
-                                    // EE 08: user enters 2 digits, then // auto-filled → 8??//
-                                    eing = eing + '8';
-                                } else if (ee === 9) {
-                                    // EE 09: one slash, user enters 2 digits, one slash → 8//??  
-                                    eing = eing + '8/';
-                                } else if (ee === 10) {
-                                    // EE 10: user enters all 4 digits → 8????
-                                    eing = eing + '8';
-                                } else {
-                                    // All other EE values: no sun pillar → 8////
-                                    eing = eing + '8////';
-                                }
-                                input.value = eing;
-                                renderNumericGuide(eing);
-                                
-                                // Auto-fill sectors after 8HHHH is complete
-                                // Sectors are only needed for incomplete (V=1) circular halos
-                                const v = parseInt(eing.slice(24,25),10);
-                                const circularHalos = new Set([1,7,12,31,32,33,34,35,36,40]);
-
-                                
-                                if (v === 1 && circularHalos.has(ee)) {
-                                    // Incomplete circular halo: user will enter sectors (do nothing)
-
-                                } else {
-                                    // Complete halo or non-circular: auto-fill 15 spaces
-
-                                    eing = eing + '               ';
-                                    input.value = eing;
-                                    renderNumericGuide(eing);
-                                }
-                            }
-                        }
-                    })
-                    .catch(err => {
-                        console.error(`[ERROR] Failed to fetch observer data:`, err);
-                    });
-                
-                ev.preventDefault();
-                return;
             }
             // If g=1, fall through to normal validation (manual GG entry)
         }
@@ -718,6 +796,8 @@ async function showAddObservationDialogNumeric() {
             } else {
                 // All other EE values: no sun pillar → 8////
                 candidate = candidate + '8////';
+                // Track all 5 positions as auto-filled (will be added to set in validation handler)
+                // Note: These are added in the validation result handler when eing is updated
             }
         }
         
@@ -760,21 +840,83 @@ async function showAddObservationDialogNumeric() {
         }
         
         const result = validateNumericProgress(candidate, observerCodes);
-        if (result.ok) {
-            eing = candidate;
-            input.value = eing;
-            errEl.style.display = 'none';
-            renderNumericGuide(eing);
-        } else if (result.reset) {
-            eing = '';
-            input.value = '';
-            errEl.style.display = 'none';
-            renderNumericGuide(eing);
-        } else if (result.backtrack) {
-            // Remove specified number of characters when 2-digit field validation fails
-            eing = eing.slice(0, -result.backtrack);
-            input.value = eing;
-            renderNumericGuide(eing);
+        
+        const handleValidationResult = async (res) => {
+            if (res.ok) {
+                // Check if 8//// or GG was just auto-filled (comparing lengths)
+                const oldLength = eing.length;
+                eing = candidate;
+                const newLength = eing.length;
+                
+                // If we jumped from position 6 to 28+ (after entering g), GG was auto-filled
+                if (oldLength === 7 && newLength >= 29) {
+                    autoFilledPositions.add(27);
+                    autoFilledPositions.add(28);
+                }
+                
+                // If we jumped from position 29 to 34 (added 5 chars), check if it's 8////
+                if (oldLength === 29 && newLength === 35 && eing.slice(30, 35) === '////') {
+                    // Track all 5 positions (30-34) as auto-filled
+                    autoFilledPositions.add(30);
+                    autoFilledPositions.add(31);
+                    autoFilledPositions.add(32);
+                    autoFilledPositions.add(33);
+                    autoFilledPositions.add(34);
+                }
+                
+                input.value = eing;
+                errEl.style.display = 'none';
+                renderNumericGuide(eing);
+                
+                // Auto-fill loop: keep auto-filling while next field has only one option
+                let continueFilling = true;
+                while (continueFilling) {
+                    let nextFieldConstraints = getConstraintsForNumericInput(null, eing);
+                    
+                    // If it's a Promise, await it
+                    if (nextFieldConstraints && typeof nextFieldConstraints.then === 'function') {nextFieldConstraints = await nextFieldConstraints;}
+                    
+                    // Now check if there's exactly one option
+                    if (nextFieldConstraints && nextFieldConstraints.length === 1) {
+                        // Auto-fill this field
+                        const autoFilledValue = nextFieldConstraints[0];const oldLength = eing.length;
+                        eing = eing + autoFilledValue;
+                        input.value = eing;
+                        
+                        // Track auto-filled positions
+                        // GG is 2 digits (positions 27-28), track both if auto-filled
+                        if (autoFilledValue.length === 2 && oldLength === 27) {
+                            // This is GG field (2 digits at position 27-28)
+                            autoFilledPositions.add(27);
+                            autoFilledPositions.add(28);} else {
+                            // Single character auto-fill
+                            autoFilledPositions.add(eing.length - 1);
+                        }
+                        
+                        renderNumericGuide(eing);
+                        // Continue loop to check next field
+                    } else {
+                        continueFilling = false;
+                    }
+                }
+            } else if (res.reset) {
+                eing = '';
+                input.value = '';
+                errEl.style.display = 'none';
+                renderNumericGuide(eing);
+            } else if (res.backtrack) {
+                // Remove specified number of characters when 2-digit field validation fails
+                eing = eing.slice(0, -res.backtrack);
+                input.value = eing;
+                renderNumericGuide(eing);
+            }
+        };
+        
+        // Handle async Promise return (e.g., for g-field observer check)
+        if (result && typeof result.then === 'function') {
+            await result.then(handleValidationResult);
+        } else {
+            await handleValidationResult(result);
         }
         // ignore invalid by preventing default
         ev.preventDefault();
@@ -890,10 +1032,10 @@ function validateSectorInput(value, deleteInvalid = false) {
     for (let i = 0; i < value.length; i++) {
         const ch = value[i].toLowerCase();
         const posInCleaned = cleaned.length;
-        const isOddPos = (posInCleaned % 2 === 0);  // Letters at 0,2,4... separators at 1,3,5...
+        const isLetterPos = (posInCleaned % 2 === 0);  // Letters at positions 0,2,4... separators at 1,3,5...
         
         if (ch === ' ') {
-            // Space can end sector input if at odd position (after a letter)
+            // Space can end sector input if at separator position (after a letter)
             if (posInCleaned % 2 === 1) {
                 // Valid completion - stop here
                 return { valid: true, cleaned: cleaned };
@@ -903,8 +1045,8 @@ function validateSectorInput(value, deleteInvalid = false) {
             return { valid: false, error: 'Space only allowed after letter' };
         }
         
-        if (isOddPos) {
-            // Odd positions (0,2,4...): only letters a-h, each once
+        if (isLetterPos) {
+            // Even positions (0,2,4...): only letters a-h, each once
             if (!/[a-h]/.test(ch)) {
                 if (deleteInvalid) continue;
                 return { valid: false, error: 'Only letters a-h allowed' };
@@ -941,7 +1083,7 @@ function validateSectorInput(value, deleteInvalid = false) {
             cleaned += ch;
             used.add(ch);
         } else {
-            // Even positions (1,3,5...): only - or /
+            // Odd positions (1,3,5...): only - or /
             if (ch !== '-' && ch !== '/') {
                 if (deleteInvalid) continue;
                 return { valid: false, error: 'Only - or / allowed as separator' };
@@ -950,11 +1092,8 @@ function validateSectorInput(value, deleteInvalid = false) {
         }
     }
     
-    // Validation: must end with a letter (not a separator)
-    if (cleaned.length > 0 && cleaned.length % 2 === 0) {
-        // Even length = ends with separator (position 1,3,5... is separator position)
-        return { valid: false, error: 'Sectors must end with a letter, not a separator' };
-    }
+    // For live input validation: allow ending with separator (user is still typing)
+    // The final check happens when submitting/validating the complete observation
     
     return { valid: true, cleaned: cleaned };
 }
@@ -964,6 +1103,22 @@ function validateSectorInput(value, deleteInvalid = false) {
  * Uses shared field-constraints.js logic (Decision #6: DRY Principle)
  */
 function getConstraintsForNumericInput(fieldKey, inputString) {
+    // If fieldKey is null, determine from position (for auto-fill)
+    if (fieldKey === null && inputString.length >= 0) {
+        // Map position to field key based on HALO format: KKOJJ MMTTg ZZZZd DDNCc EEHFV fzzGG 8HHHH
+        // Note: lowercase keys to match calculateFieldConstraints() expectations
+        // Position 18 = C (upper cirrus), Position 19 = c (lower clouds)
+        const positionToField = {
+            0: 'kk', 1: 'kk', 2: 'o', 3: 'jj', 4: 'jj', 5: 'mm', 6: 'mm',
+            7: 'tt', 8: 'tt', 9: 'g', 10: 'zz', 11: 'zz', 12: 'zz', 13: 'zz',
+            14: 'd', 15: 'dd', 16: 'dd', 17: 'n', 18: 'C', 19: 'c',
+            20: 'ee', 21: 'ee', 22: 'h', 23: 'f', 24: 'v', 25: 'f_type', 26: 'zz_precip', 27: 'zz_precip',
+            28: 'gg', 29: 'gg', 30: '8', 31: 'ho', 32: 'ho', 33: 'ho', 34: 'ho',
+            35: 'hu', 36: 'hu', 37: 'hu', 38: 'hu'
+        };
+        fieldKey = positionToField[inputString.length];
+    }
+    
     // Parse relevant fields from input string
     const context = {
         o: inputString.length >= 3 ? inputString[2] : undefined,
@@ -979,6 +1134,11 @@ function getConstraintsForNumericInput(fieldKey, inputString) {
     
     // Call shared constraint calculation
     const validValues = calculateFieldConstraints(fieldKey, context);
+    
+    // Handle async Promise return (for g-field observer check)
+    if (validValues && typeof validValues.then === 'function') {
+        return validValues;  // Return Promise as-is
+    }
     
     // Convert -1 to '/' for numeric input mode (space/slash mean "not observed")
     if (validValues && Array.isArray(validValues)) {
@@ -1032,8 +1192,30 @@ function validateNumericProgress(s, observerCodes) {
         const daysInMonth = [0,31,29,31,30,31,30,31,31,30,31,30,31];
         return tt <= daysInMonth[mm] ? { ok: true } : { ok: false, backtrack: 1 };
     }
-    // 10 g (0-2)
-    if (len === 10) return { ok: ['0','1','2'].includes(s[9]) };
+    // 10 g (0-2) - validate observer activity (async check)
+    if (len === 10) {
+        const char = s[9];
+        if (!['0','1','2'].includes(char)) return { ok: false };
+        
+        // Check observer activity constraint (async API call)
+        const validValuesPromise = getConstraintsForNumericInput('g', s.slice(0, 9));
+        if (validValuesPromise && typeof validValuesPromise.then === 'function') {
+            // Return a Promise that resolves with validation result
+            return validValuesPromise.then(validValues => {
+                if (validValues && validValues.length === 0) {
+                    // Observer not active at this date
+                    return { ok: false };
+                }
+                return { ok: true };
+            });
+        }
+        
+        // If not a Promise (fallback), check synchronously
+        if (validValuesPromise && validValuesPromise.length === 0) {
+            return { ok: false };
+        }
+        return { ok: true };
+    }
     // 11-12 ZS (00-23) or '//'
     if (len === 11) return { ok: digit.test(s[10]) || s[10] === '/' };
     if (len === 12) {
@@ -1151,23 +1333,13 @@ function validateNumericProgress(s, observerCodes) {
         if (v === 1 && circularHalos.has(ee)) {
             // User enters sector notation using shared validator
             const sectorStart = 35;
-            const sectorField = s.slice(sectorStart, len);
-            
-
-            
-            // Use shared validation function
+            const sectorField = s.slice(sectorStart, len);// Use shared validation function
             const result = validateSectorInput(sectorField, false);
             
-            if (!result.valid) {
-
-                return { ok: false };
-            }
-            
-
-            return { ok: true };
+            if (!result.valid) {return { ok: false };
+            }return { ok: true };
         } else {
             // Auto-filled spaces
-
             return { ok: char === ' ' };
         }
     }
@@ -1286,9 +1458,7 @@ async function loadI18n(lang) {
         const response = await fetch(`/api/i18n/${lang}`);
         i18nStrings = await response.json();
         updatePageText();
-    } catch (error) {
-        console.error('Failed to load i18n strings:', error);
-    }
+    } catch (error) {}
 }
 
 // Auto-update: check GitHub releases and prompt user
@@ -1432,9 +1602,7 @@ async function switchLanguage(lang) {
         // This ensures all templates, menus, and content are properly translated
         window.location.reload();
         
-    } catch (error) {
-        console.error('Error switching language:', error);
-    }
+    } catch (error) {}
 }
 
 // Update menu text with current language
@@ -1547,9 +1715,7 @@ async function showModifyObservationsDialog() {
             showWarningModal(i18nStrings.messages.no_data);
             return;
         }
-    } catch (error) {
-        console.error('Error checking observations:', error);
-        showWarningModal(i18nStrings.messages.no_data);
+    } catch (error) {showWarningModal(i18nStrings.messages.no_data);
         return;
     }
     
@@ -1707,9 +1873,7 @@ async function showGroupModifyDialogMenu(filteredObs) {
         } catch (e) {
             // Silently ignore - fixed observer is optional
         }
-    } catch (e) {
-        console.error(e);
-        showWarningModal(i18nStrings.messages.error_loading_observers);
+    } catch (e) {showWarningModal(i18nStrings.messages.error_loading_observers);
         return;
     }
     
@@ -2029,9 +2193,7 @@ async function processBulkUpdate(filteredObs, updates) {
                 body: JSON.stringify(original)
             });
             
-            if (!deleteResp.ok) {
-                console.error('[BULK UPDATE] Failed to delete observation:', original);
-            } else {
+            if (!deleteResp.ok) {} else {
 
             }
         }
@@ -2047,9 +2209,7 @@ async function processBulkUpdate(filteredObs, updates) {
             
             if (addResp.status === 409) {
                 console.warn('[BULK UPDATE] Duplicate observation, skipping:', modified);
-            } else if (!addResp.ok) {
-                console.error('[BULK UPDATE] Failed to add modified observation:', modified);
-            } else {
+            } else if (!addResp.ok) {} else {
 
             }
         }
@@ -2063,9 +2223,7 @@ async function processBulkUpdate(filteredObs, updates) {
             window.haloData.isDirty = true;
 
             updateFileInfoDisplay(window.haloData.fileName, window.haloData.observations.length);
-        } else {
-            console.error('[BULK UPDATE] Failed to reload observations');
-        }
+        } else {}
         
 
         showMessage(`${filteredObs.length} Beobachtungen wurden erfolgreich geändert.`, 'success');
@@ -2075,9 +2233,7 @@ async function processBulkUpdate(filteredObs, updates) {
             window.location.reload();
         }, 1500);
         
-    } catch (error) {
-        console.error('[BULK UPDATE ERROR]', error);
-        showErrorDialog('Fehler beim Aktualisieren der Beobachtungen: ' + error.message);
+    } catch (error) {showErrorDialog('Fehler beim Aktualisieren der Beobachtungen: ' + error.message);
     }
 }
 
@@ -2095,9 +2251,7 @@ async function showDeleteObservationsDialog() {
             showWarningModal(i18nStrings.messages.no_data);
             return;
         }
-    } catch (error) {
-        console.error('Error checking observations:', error);
-        showWarningModal(i18nStrings.messages.no_data);
+    } catch (error) {showWarningModal(i18nStrings.messages.no_data);
         return;
     }
 
@@ -2179,9 +2333,7 @@ async function showDeleteSingleObservations(filterState) {
                 // Continue to next observation
                 currentIndex += 1;
                 setTimeout(() => showNextObservation(), 1500);
-            } catch (e) {
-                console.error('Error deleting observation:', e);
-                showErrorDialog((i18nStrings.common.error) + ': ' + e.message);
+            } catch (e) {showErrorDialog((i18nStrings.common.error) + ': ' + e.message);
                 window.location.href = '/';
             }
         }, () => {
@@ -2270,17 +2422,13 @@ async function applyFilterToObservations(filterState) {
             const data = await response.json();
             allObs = data.observations || [];
         }
-    } catch (error) {
-        console.error('Error fetching observations:', error);
-        return [];
+    } catch (error) {return [];
     }
     
     return allObs.filter(obs => {
         // First filter criterion
         // DEBUG: Log filter state
-        if (filterState.criterion1 === 'region' && filterState.value1 !== null) {
-            console.log('🔍 DEBUG: Checking obs.KK=' + obs.KK + ' obs.GG=' + obs.GG + ' vs filterState.value1=' + filterState.value1);
-        }
+        if (filterState.criterion1 === 'region' && filterState.value1 !== null) {}
         if (filterState.criterion1 === 'observer') {
             if (filterState.value1 !== null && obs.KK !== filterState.value1) return false;
         } else if (filterState.criterion1 === 'region') {
@@ -2577,9 +2725,7 @@ async function showObservationFormForEdit(obs, currentNum, totalNum, onModified,
             setTimeout(() => {
                 if (onModified) onModified();
             }, 1500);
-        } catch (e) {
-            console.error('Error modifying observation:', e);
-            showErrorDialog(i18nStrings.common.error + ': ' + e.message);
+        } catch (e) {showErrorDialog(i18nStrings.common.error + ': ' + e.message);
         }
     }, () => {
         if (onCancelled) onCancelled();
@@ -2621,9 +2767,7 @@ async function showDisplayObservationsDialog() {
             showWarningModal(i18nStrings.messages.no_data);
             return;
         }
-    } catch (error) {
-        console.error('Error checking observations:', error);
-        showWarningModal(i18nStrings.messages.no_data);
+    } catch (error) {showWarningModal(i18nStrings.messages.no_data);
         return;
     }
     
@@ -2647,9 +2791,7 @@ async function showDisplayObservationsDialog() {
                     // Menüeingaben - show detail view one-by-one
                     showDisplaySingleObservations(filterState);
                 }
-            } catch (error) {
-                console.error('Error loading INPUT_MODE:', error);
-                // Default to detail view on error
+            } catch (error) {// Default to detail view on error
                 showDisplaySingleObservations(filterState);
             }
         },
@@ -3042,9 +3184,7 @@ async function showActiveObserversDialog() {
             clearMenuHighlights();
             modalEl.remove();
         });
-    } catch (error) {
-        console.error('Active observers dialog error:', error);
-    }
+    } catch (error) {}
 }
 
 // Startup file setting dialog
@@ -3135,9 +3275,7 @@ async function showStartupFileDialog() {
             clearMenuHighlights();
             modalEl.remove();
         });
-    } catch (error) {
-        console.error('Startup file dialog error:', error);
-    }
+    } catch (error) {}
 }
 
 // Select observations (Selektieren)
@@ -3707,9 +3845,7 @@ async function showSelectDialog() {
                     option.textContent = `${String(observer.KK).padStart(2, '0')} - ${observer.VName} ${observer.NName}`;
                     selectValue.appendChild(option);
                 });
-            } catch (error) {
-                console.error('Failed to load observers:', error);
-                selectValue.innerHTML = '<option value="">Error loading observers</option>';
+            } catch (error) {selectValue.innerHTML = '<option value="">Error loading observers</option>';
             }
             
         } else {
@@ -3828,9 +3964,7 @@ async function showSelectDialog() {
             }
             // No unsaved changes or status check failed - proceed
             callback();
-        } catch (error) {
-            console.error('Error checking dirty status:', error);
-            // On error, proceed anyway
+        } catch (error) {// On error, proceed anyway
             callback();
         }
     }
@@ -4034,9 +4168,7 @@ async function showSelectDialog() {
                                     observations: filteredObs
                                 };
                             }
-                        } catch (loadError) {
-                            console.error('Failed to load filtered file:', loadError);
-                        }
+                        } catch (loadError) {}
                         
                         showSelectionResults(filename, keptCount, deletedCount);
                     },
@@ -4092,9 +4224,7 @@ async function showSelectDialog() {
                         observations: filteredObs
                     };
                 }
-            } catch (loadError) {
-                console.error('Failed to load filtered file:', loadError);
-            }
+            } catch (loadError) {}
             
             // Show selection results
             showSelectionResults(filename, keptCount, deletedCount);
@@ -4102,9 +4232,7 @@ async function showSelectDialog() {
         } catch (error) {
             bsLoadingModal.hide();
             loadingModal.remove();
-            modal.hide();
-            console.error('Selection error:', error);
-            showWarningModal(error.message);
+            modal.hide();showWarningModal(error.message);
             window.location.href = '/';
         }
     }
@@ -4403,9 +4531,7 @@ async function showAuthenticationModal(onSuccess) {
             const passwordData = await passwordResponse.json();
             savedPassword = passwordData.password || '';
         }
-    } catch (error) {
-        console.error('Error loading data for auth modal:', error);
-    }
+    } catch (error) {}
     
     const observerDisabled = fixedObserver ? 'disabled' : '';
     
@@ -4510,9 +4636,7 @@ async function showAuthenticationModal(onSuccess) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ password: password })
             });
-        } catch (error) {
-            console.error('Error saving password:', error);
-        }
+        } catch (error) {}
         
         // TODO: Validate credentials against HALO server API
         // For now, we'll just pass the credentials to the callback
@@ -4816,9 +4940,7 @@ async function triggerAutosave() {
         } else {
             console.warn('[AUTOSAVE] Failed:', await response.text());
         }
-    } catch (error) {
-        console.error('[AUTOSAVE] Error:', error);
-    }
+    } catch (error) {}
 }
 
 // Check for autosave recovery on startup
@@ -4879,9 +5001,7 @@ async function checkAutosaveRecovery() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
-            } catch (error) {
-                console.error('[AUTOSAVE] Failed to cleanup autosave file:', error);
-            }
+            } catch (error) {}
             modal.hide();
         });
         
@@ -5129,10 +5249,7 @@ async function continueLoadFile() {
             showNotification(`<strong>✓</strong> ${window.haloData.observations.length} ${i18nStrings.common.observations} ${i18nStrings.messages.loaded_from} "${file.name}" ${i18nStrings.messages.loaded}`);
         } catch (error) {
             bsModal.hide();
-            setTimeout(() => loadingModal.remove(), 300);
-            console.error('Error loading file:', error);
-            
-            showNotification(`<strong>✗</strong> ${i18nStrings.messages.error_loading}: ${error.message}`, 'danger', 5000);
+            setTimeout(() => loadingModal.remove(), 300);showNotification(`<strong>✗</strong> ${i18nStrings.messages.error_loading}: ${error.message}`, 'danger', 5000);
         }
     });
     
@@ -5246,10 +5363,7 @@ async function continueMergeFile() {
             showNotification(`<strong>✓</strong> ${addedCount} ${i18nStrings.common.observations} ${i18nStrings.messages.added} "${file.name}"`);
         } catch (error) {
             bsModal.hide();
-            setTimeout(() => loadingModal.remove(), 300);
-            console.error('Error merging file:', error);
-            
-            showNotification(`<strong>✗</strong> ${i18nStrings.messages.merge_error}: ${error.message}`, 'danger', 5000);
+            setTimeout(() => loadingModal.remove(), 300);showNotification(`<strong>✗</strong> ${i18nStrings.messages.merge_error}: ${error.message}`, 'danger', 5000);
             document.body.appendChild(errorMsg);
             setTimeout(() => errorMsg.remove(), 5000);
         }
@@ -5321,9 +5435,7 @@ async function checkAndDisplayFileInfo() {
             // No data loaded
             clearFileInfoDisplay();
         }
-    } catch (error) {
-        console.error('Error checking file info:', error);
-        clearFileInfoDisplay();
+    } catch (error) {clearFileInfoDisplay();
     }
 }
 
@@ -5459,9 +5571,7 @@ async function showFixedObserverDialog() {
             modalEl.remove();
         });
         
-    } catch (error) {
-        console.error('Fixed observer dialog error:', error);
-    }
+    } catch (error) {}
 }
 
 // Show Datum (Date Default) dialog
@@ -5584,9 +5694,7 @@ async function showDatumDialog() {
             modalEl.remove();
         });
         
-    } catch (error) {
-        console.error('Date default dialog error:', error);
-    }
+    } catch (error) {}
 }
 
 // Show Eingabeart dialog
@@ -5651,9 +5759,7 @@ async function showEingabeartDialog() {
             modalEl.remove();
         });
         
-    } catch (error) {
-        console.error('Eingabeart dialog error:', error);
-    }
+    } catch (error) {}
 }
 // Show Ausgabeart (output format) dialog - NEW FEATURE
 async function showAusgabeartDialog() {
@@ -5721,9 +5827,7 @@ async function showAusgabeartDialog() {
             modalEl.remove();
         });
         
-    } catch (error) {
-        console.error('Ausgabeart dialog error:', error);
-    }
+    } catch (error) {}
 }
 
 // Show version information dialog
@@ -5914,9 +6018,7 @@ async function showAddObserverDialog(formData = null) {
         const response = await fetch('/api/config/fixed_observer');
         const config = await response.json();
         fixedObserver = config.observer || '';
-    } catch (error) {
-        console.error('Error loading fixed observer:', error);
-    }
+    } catch (error) {}
     
     // Build month options with names
     const monthOptions = Array.from({length: 12}, (_, i) => {
@@ -6298,9 +6400,7 @@ async function showDeleteObserverDialog() {
         const response = await fetch('/api/config/fixed_observer');
         const config = await response.json();
         fixedObserver = config.observer || '';
-    } catch (error) {
-        console.error('Error loading fixed observer:', error);
-    }
+    } catch (error) {}
     
     // Load observers first
     try {
@@ -6527,9 +6627,7 @@ async function showEditObserverDialog() {
         const response = await fetch('/api/config/fixed_observer');
         const config = await response.json();
         fixedObserver = config.observer || '';
-    } catch (error) {
-        console.error('Error loading fixed observer:', error);
-    }
+    } catch (error) {}
     
     // Load observers first
     try {
@@ -7912,3 +8010,4 @@ async function showDeleteSiteConfirmDialog(observer, sites, currentIndex = 0) {
     
     modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
 }
+
