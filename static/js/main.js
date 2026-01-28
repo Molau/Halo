@@ -127,6 +127,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
+// Warn user before closing browser tab/window if unsaved changes exist
+window.addEventListener('beforeunload', (event) => {
+    // Check if there are unsaved changes
+    if (window.haloData && window.haloData.isDirty) {
+        // Modern browsers ignore custom messages for security reasons
+        // They show their own generic "unsaved changes" dialog
+        event.preventDefault();
+        event.returnValue = ''; // Chrome requires returnValue to be set
+        return ''; // Some browsers use the return value
+    }
+});
+
 // Load current language from server session
 async function loadCurrentLanguage() {
     const response = await fetch('/api/language');
