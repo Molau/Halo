@@ -31,30 +31,30 @@
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="filterDialogLabel">Auswahlkriterien</h5>
+                        <h5 class="modal-title" id="filterDialogLabel">{{ g.i18n.get('filter_dialog.title') }}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
                         <div class="filter-form">
                             <div class="filter-group mb-3">
-                                <label class="form-label">1. Wonach soll die Beobachtung ausgewählt werden?</label>
+                                <label class="form-label">1. {{ g.i18n.get('filter_dialog.question_1') }}</label>
                                 <select id="filter-criterion-1" class="form-select">
-                                    <option value="none">kein Kriterium</option>
-                                    <option value="observer">Beobachter</option>
-                                    <option value="region">Beobachtungsgebiet</option>
+                                    <option value="none">{{ g.i18n.get('filter_dialog.no_criterion') }}</option>
+                                    <option value="observer">{{ g.i18n.get('filter_dialog.observer_code') }}</option>
+                                    <option value="region">{{ g.i18n.get('filter_dialog.region') }}</option>
                                 </select>
                                 <div id="filter-1-input" style="display:none;" class="mt-2">
                                     <select id="filter-1-select" class="form-select"></select>
                                 </div>
                             </div>
                             <div class="filter-group">
-                                <label class="form-label">2. Geben Sie ein weiteres Auswahlkriterium ein</label>
+                                <label class="form-label">2. {{ g.i18n.get('filter_dialog.question_2') }}</label>
                                 <select id="filter-criterion-2" class="form-select">
-                                    <option value="none">kein Kriterium</option>
-                                    <option value="date">Datum</option>
-                                    <option value="month">Monat</option>
-                                    <option value="year">Jahr</option>
-                                    <option value="halo-type">Haloart</option>
+                                    <option value="none">{{ g.i18n.get('filter_dialog.no_criterion') }}</option>
+                                    <option value="date">{{ g.i18n.get('common.day') }}</option>
+                                    <option value="month">{{ g.i18n.get('common.month') }}</option>
+                                    <option value="year">{{ g.i18n.get('common.year') }}</option>
+                                    <option value="halo-type">{{ g.i18n.get('filter_dialog.halo_type') }}</option>
                                 </select>
                                 <div id="filter-2-input" style="display:none;" class="mt-2">
                                     <input type="text" id="filter-2-value" class="form-control" placeholder="">

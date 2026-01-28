@@ -307,7 +307,7 @@ class ObservationForm {
                 <label class="form-label">DD - ${i18nStrings.fields.duration}</label>
                 <select class="form-select form-select-sm" id="form-dd">
                     <option value="-1">${i18nStrings.fields.select}</option>
-                    ${Array.from({length: 100}, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')}</option>`).join('')}
+                    ${Array.from({length: 100}, (_, i) => `<option value="${i}">${i * 10} min</option>`).join('')}
                 </select>
             </div>
             <div class="col-md-3">
@@ -510,7 +510,7 @@ class ObservationForm {
     // Implements forward-only dependencies (no backward/circular dependencies)
     // Trigger fields: O, d, N, KK, g, MM, EE
     // Rule: Fields can only affect subsequent fields, never previous ones
-    manageFieldDependencies(triggerField) {
+    async manageFieldDependencies(triggerField) {
 
         
         // Helper: Enable/disable specific option values
@@ -747,33 +747,38 @@ class ObservationForm {
                 const jj = this.fields.jj.value ? parseInt(this.fields.jj.value) % 100 : null;
                 const mm = this.fields.mm.value ? parseInt(this.fields.mm.value) : null;
                 
+                console.log("🔍 DEBUG: g=0 trigger - kk=", kk, "jj=", jj, "mm=", mm);
+                
                 if (kk) {
                     // Fetch observer data
-                    (async () => {
-                        try {
-                            let url = `/api/observers?kk=${kk}`;
-                            if (jj && mm) {
-                                url += `&jj=${jj}&mm=${mm}`;
-                            }
-                            const resp = await fetch(url);
-                            if (resp.ok) {
-                                const data = await resp.json();
-                                if (data.observer && data.observer.GH) {
-                                    const gg = parseInt(data.observer.GH);  // Parse to int to remove leading zero
-                                    // GG constrained to single value (HBOrt)
-                                    setOptionStates(ggOpts, [gg.toString()]);
-                                    this.fields.gg.value = gg;
-                                    this.fieldConstraints.GG = [gg.toString()];
-                                } else {
-                                    setOptionStates(ggOpts, ['']);
-                                    this.fields.gg.value = '';
-                                    this.fieldConstraints.GG = [''];
-                                }
-                            }
-                        } catch (e) {
-                            console.error('Error fetching GG:', e);
+                    try {
+                        let url = `/api/observers?kk=${kk}`;
+                        if (jj && mm) {
+                            url += `&jj=${jj}&mm=${mm}`;
                         }
-                    })();
+                        console.log("🔍 DEBUG: Fetching GG from:", url);
+                        const resp = await fetch(url);
+                        console.log("🔍 DEBUG: API response status:", resp.status, resp.ok);
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            console.log("🔍 DEBUG: API response data:", data);
+                            if (data.observer && data.observer.GH) {
+                                const gg = parseInt(data.observer.GH);  // Parse to int to remove leading zero
+                                console.log("🔍 DEBUG: Setting GG to:", gg);
+                                // GG constrained to single value (HBOrt)
+                                setOptionStates(ggOpts, [gg.toString()]);
+                                this.fields.gg.value = gg;
+                                this.fieldConstraints.GG = [gg.toString()];
+                            } else {
+                                console.log("🔍 DEBUG: No GH found in response, clearing GG");
+                                setOptionStates(ggOpts, ['']);
+                                this.fields.gg.value = '';
+                                this.fieldConstraints.GG = [''];
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error fetching GG:', e);
+                    }
                 } else {
                     setOptionStates(ggOpts, ['']);
                     this.fields.gg.value = '';
@@ -788,31 +793,29 @@ class ObservationForm {
                 
                 if (kk) {
                     // Fetch observer data
-                    (async () => {
-                        try {
-                            let url = `/api/observers?kk=${kk}`;
-                            if (jj && mm) {
-                                url += `&jj=${jj}&mm=${mm}`;
-                            }
-                            const resp = await fetch(url);
-                            if (resp.ok) {
-                                const data = await resp.json();
-                                if (data.observer && data.observer.GN) {
-                                    const gg = parseInt(data.observer.GN);  // Parse to int to remove leading zero
-                                    // GG constrained to single value (NBOrt)
-                                    setOptionStates(ggOpts, [gg.toString()]);
-                                    this.fields.gg.value = gg;
-                                    this.fieldConstraints.GG = [gg.toString()];
-                                } else {
-                                    setOptionStates(ggOpts, ['']);
-                                    this.fields.gg.value = '';
-                                    this.fieldConstraints.GG = [''];
-                                }
-                            }
-                        } catch (e) {
-                            console.error('Error fetching GG:', e);
+                    try {
+                        let url = `/api/observers?kk=${kk}`;
+                        if (jj && mm) {
+                            url += `&jj=${jj}&mm=${mm}`;
                         }
-                    })();
+                        const resp = await fetch(url);
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            if (data.observer && data.observer.GN) {
+                                const gg = parseInt(data.observer.GN);  // Parse to int to remove leading zero
+                                // GG constrained to single value (NBOrt)
+                                setOptionStates(ggOpts, [gg.toString()]);
+                                this.fields.gg.value = gg;
+                                this.fieldConstraints.GG = [gg.toString()];
+                            } else {
+                                setOptionStates(ggOpts, ['']);
+                                this.fields.gg.value = '';
+                                this.fieldConstraints.GG = [''];
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error fetching GG:', e);
+                    }
                 } else {
                     setOptionStates(ggOpts, ['']);
                     this.fields.gg.value = '';
@@ -1684,7 +1687,13 @@ class ObservationForm {
         // Populate all fields with observation data
         this.fields.kk.value = obs.KK || '';
         this.fields.o.value = obs.O || '';
-        this.fields.jj.value = obs.JJ || '';
+        // Year: CSV stores 0-99, dropdown uses 50-149 (50-99=1950-1999, 0-49=2000-2049)
+        if (obs.JJ !== undefined && obs.JJ !== null && obs.JJ !== '') {
+            const jj = parseInt(obs.JJ);
+            this.fields.jj.value = jj < 50 ? jj + 100 : jj;  // 5 -> 105 (2005), 95 -> 95 (1995)
+        } else {
+            this.fields.jj.value = '';
+        }
         this.fields.mm.value = obs.MM || '';
         this.fields.tt.value = obs.TT || '';
         this.fields.g.value = obs.g !== undefined && obs.g !== null ? obs.g : (obs.G || '');
@@ -1704,21 +1713,13 @@ class ObservationForm {
         this.fields.gg.value = obs.GG || '';
         this.fields.ho.value = obs.HO !== -1 && obs.HO !== 0 && obs.HO !== null ? obs.HO : (obs.HO === 0 ? '0' : '-1');
         this.fields.hu.value = obs.HU !== -1 && obs.HU !== 0 && obs.HU !== null ? obs.HU : (obs.HU === 0 ? '0' : '-1');
+        this.fields.hu.value = obs.HU !== -1 && obs.HU !== 0 && obs.HU !== null ? String(obs.HU).padStart(2, '0') : (obs.HU === 0 ? '00' : '-1');
         this.fields.sectors.value = obs.sectors || '';
         this.fields.remarks.value = obs.remarks || '';
         
-        // Apply initial dependencies based on populated values
-        // Order matters: follow dependency chain O → d → N → ... → KK → g → MM → EE → V
-        // ALWAYS trigger all dependency fields, regardless of their value
-        // The logic handles all possible values including -1, empty, etc.
-        this.manageFieldDependencies('o');
-        this.manageFieldDependencies('d');
-        this.manageFieldDependencies('n');
-        this.manageFieldDependencies('kk');
-        this.manageFieldDependencies('g');
-        this.manageFieldDependencies('mm');
-        this.manageFieldDependencies('ee');
-        this.manageFieldDependencies('v');
+        // When loading existing observations: NO auto-fill, NO validation
+        // Display data EXACTLY as stored in file
+        // Dependencies are only applied when ADDING new observations, not when LOADING existing ones
     }
     
     getFormData() {
@@ -1732,18 +1733,25 @@ class ObservationForm {
             throw new Error('Invalid observer code (KK)');
         }
         
+        // Year: Convert dropdown value (50-149) back to CSV format (0-99)
+        let jj = parseInt(this.fields.jj.value);
+        if (jj >= 100) {
+            jj = jj - 100;  // 105 -> 5 (2005), 149 -> 49 (2049)
+        }
+        // else: 50-99 stays as is (1950-1999)
+        
         return {
             KK: kk,
             O: parseInt(this.fields.o.value),
-            JJ: parseInt(this.fields.jj.value),
+            JJ: jj,
             MM: parseInt(this.fields.mm.value),
             TT: parseInt(this.fields.tt.value),
             g: parseInt(this.fields.g.value),
             GG: parseInt(this.fields.gg.value),
             ZS: this.fields.zs.value ? parseInt(this.fields.zs.value) : 99,
             ZM: this.fields.zm.value ? parseInt(this.fields.zm.value) : 99,
-            DD: this.fields.d.value && this.fields.d.value !== '-1' ? parseInt(this.fields.d.value) : -1,
-            d: this.fields.dd.value && this.fields.dd.value !== '-1' ? parseInt(this.fields.dd.value) : -1,
+            DD: this.fields.dd.value && this.fields.dd.value !== '-1' ? parseInt(this.fields.dd.value) : -1,
+            d: this.fields.d.value && this.fields.d.value !== '-1' ? parseInt(this.fields.d.value) : -1,
             N: this.fields.n.value && this.fields.n.value !== '-1' ? parseInt(this.fields.n.value) : -1,
             C: this.fields.C.value && this.fields.C.value !== '-1' ? parseInt(this.fields.C.value) : -1,
             c: this.fields.c.value && this.fields.c.value !== '-1' ? parseInt(this.fields.c.value) : -1,

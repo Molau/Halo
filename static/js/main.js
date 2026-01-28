@@ -1566,10 +1566,18 @@ function setupLanguageSwitcher() {
     const deBtn = document.getElementById('lang-de');
     const enBtn = document.getElementById('lang-en');
     
-    deBtn.classList.remove('btn-outline-light');
-    deBtn.classList.add('btn-light');
-    enBtn.classList.remove('btn-light');
-    enBtn.classList.add('btn-outline-light');
+    // Set button states based on current language
+    if (currentLanguage === 'de') {
+        deBtn.classList.remove('btn-outline-light');
+        deBtn.classList.add('btn-light');
+        enBtn.classList.remove('btn-light');
+        enBtn.classList.add('btn-outline-light');
+    } else {
+        enBtn.classList.remove('btn-outline-light');
+        enBtn.classList.add('btn-light');
+        deBtn.classList.remove('btn-light');
+        deBtn.classList.add('btn-outline-light');
+    }
     
     if (deBtn) {
         deBtn.addEventListener('click', () => switchLanguage('de'));
@@ -4305,6 +4313,17 @@ async function showNewFileDialog() {
             const result = await response.json();
             if (response.ok && result.success) {
                 modal.hide();
+                
+                // Load the newly created file immediately
+                window.haloData.observations = [];
+                window.haloData.fileName = result.filename;
+                window.haloData.isLoaded = true;
+                window.haloData.isDirty = false;
+                saveHaloDataToSession();
+                
+                // Update file info in header
+                updateFileInfoDisplay(window.haloData.fileName, 0);
+                
                 showMessage(result.message, 'success');
             } else {
                 showErrorDialog(i18nStrings.common.error + ': ' + (result.error));
@@ -5160,20 +5179,14 @@ async function continueLoadFile() {
     let pickerOpened = false;
     window.addEventListener('focus', () => {
         if (pickerOpened) {
-
-            // Clear menu highlights when picker closes (whether file was selected or not)
-            // If a file was selected, this will be overridden by the file load success message
+            // Clear menu highlights when picker closes without selecting a file
             setTimeout(() => {
-                // Only clear if no file was actually loaded (no observations)
-                if (!window.haloData || window.haloData.observations.length === 0) {
-                    clearMenuHighlights();
-                }
+                clearMenuHighlights();
             }, 100);
         }
     }, { once: true });
     
     fileInput.addEventListener('change', async (e) => {
-
         const file = e.target.files[0];
         if (!file) return;
         
@@ -5206,14 +5219,11 @@ async function continueLoadFile() {
             // Upload file to server
             const formData = new FormData();
             formData.append('file', file);
-            
 
             const uploadResponse = await fetch('/api/file/load', {
                 method: 'POST',
                 body: formData
             });
-            
-
             
             if (!uploadResponse.ok) throw new Error('Failed to upload file');
             
@@ -5235,7 +5245,25 @@ async function continueLoadFile() {
             
             // Hide loading modal
             bsModal.hide();
-            setTimeout(() => loadingModal.remove(), 300);
+            
+            // Wait for modal to be fully hidden, then remove backdrop and modal
+            loadingModal.addEventListener('hidden.bs.modal', () => {
+                // Remove backdrop explicitly
+                const backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) {
+                    backdrop.remove();
+                }
+                loadingModal.remove();
+            }, { once: true });
+            
+            // Fallback: force removal after timeout
+            setTimeout(() => {
+                if (document.body.contains(loadingModal)) {
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) backdrop.remove();
+                    loadingModal.remove();
+                }
+            }, 500);
             
             // Show conversion modal if legacy format was converted
             if (uploadResult.converted) {
@@ -5249,7 +5277,10 @@ async function continueLoadFile() {
             showNotification(`<strong>✓</strong> ${window.haloData.observations.length} ${i18nStrings.common.observations} ${i18nStrings.messages.loaded_from} "${file.name}" ${i18nStrings.messages.loaded}`);
         } catch (error) {
             bsModal.hide();
-            setTimeout(() => loadingModal.remove(), 300);showNotification(`<strong>✗</strong> ${i18nStrings.messages.error_loading}: ${error.message}`, 'danger', 5000);
+            setTimeout(() => {
+                loadingModal.remove();
+            }, 300);
+            showNotification(`<strong>✗</strong> ${i18nStrings.messages.error_loading}: ${error.message}`, 'danger', 5000);
         }
     });
     

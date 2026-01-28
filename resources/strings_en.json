@@ -1,8 +1,8 @@
 {
   "app": {
     "title": "HALO Analysis Program",
-    "version": "3.0.2",
-    "version_date": "2026-01-27",
+    "version": "3.0.4",
+    "version_date": "2026-01-28",
     "copyright_years": "1992-2026",
     "welcome_title": "Welcome to HALO Analysis Program",
     "welcome_subtitle": "Software for recording and analyzing halo observations",
@@ -256,8 +256,8 @@
     "table_name": "Name",
     "table_active": "Active",
     "table_since": "Since",
-    "table_primary_site": "Primary Site",
-    "table_secondary_site": "Secondary Site",
+    "table_primary_site": "Primary observing site",
+    "table_secondary_site": "Secondary observing site",
     "table_coordinates": "Coordinates",
     "table_region": "GG",
     "row_range_prefix": "Row",

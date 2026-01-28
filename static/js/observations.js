@@ -860,7 +860,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         const maxPage = Math.ceil(filteredObservations.length / pageSize);
         
         if (pageData.length === 0) {
-            compactTbody.textContent = i18nStrings.messages.no_observations;
+            showWarningModal(i18nStrings.messages.no_observations);
+            compactTbody.innerHTML = '';
             btnExitObservations.style.display = 'block';
             // Hide pagination controls
             btnFirstPage.style.display = 'none';
@@ -897,8 +898,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         btnExitObservations.style.display = 'none';
         
         if (filteredObservations.length === 0) {
-            detailContent.textContent = i18nStrings.messages.no_observations;
-            document.getElementById('detail-counter').textContent = `0 ${i18nStrings.common.of} 0`;
+            showWarningModal(i18nStrings.messages.no_observations);
             return;
         }
         

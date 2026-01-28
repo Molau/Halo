@@ -4010,19 +4010,36 @@ def get_observers() -> Dict[str, Any]:
         try:
             jj = int(jj_param)
             mm = int(mm_param)
+            
+            # Handle century boundary for observation year (same as _parse_seit)
+            # Years 00-49 are treated as 2000-2049, so add 100 to year
+            if jj < 50:
+                jj += 100
+            
             # Calculate seit value for observation date: month + 13 × year
             obs_seit = mm + 13 * jj
             
+            print(f"🔍 DEBUG API: Looking for observer KK={kk_param}, JJ={jj}, MM={mm}, obs_seit={obs_seit}")
+            print(f"🔍 DEBUG API: Total observers loaded: {len(observers)}")
+            
             # Find all records for this observer
             kk_records = [obs for obs in observers if obs[0] == kk_param]
+            print(f"🔍 DEBUG API: Found {len(kk_records)} records for KK={kk_param}")
             
             if kk_records:
                 # Find the latest record where seit <= observation date
                 valid_records = [obs for obs in kk_records if obs[3] and _parse_seit(obs[3]) <= obs_seit]
+                print(f"🔍 DEBUG API: Found {len(valid_records)} valid records (seit <= {obs_seit})")
+                
+                for i, obs in enumerate(kk_records):
+                    parsed_seit = _parse_seit(obs[3]) if obs[3] else None
+                    print(f"🔍 DEBUG API: Record {i+1}: seit={obs[3]}, parsed={parsed_seit}, GH={obs[6]}, GN={obs[14] if len(obs) > 14 else 'N/A'}")
                 
                 if valid_records:
                     # Get the record with the latest seit value
                     latest_record = max(valid_records, key=lambda obs: _parse_seit(obs[3]))
+                    
+                    print(f"🔍 DEBUG API: Latest valid record: seit={latest_record[3]}, GH={latest_record[6]}, GN={latest_record[14] if len(latest_record) > 14 else 'N/A'}")
                     
                     # Return single observer with GH and GN
                     result = {
@@ -4035,9 +4052,11 @@ def get_observers() -> Dict[str, Any]:
                         'GH': latest_record[6],
                         'GN': latest_record[14]
                     }
+                    print(f"🔍 DEBUG API: Returning observer: {result}")
                     return jsonify({'observer': result})
             
             # If no matching record found, return empty
+            print(f"🔍 DEBUG API: No matching observer found - returning null")
             return jsonify({'observer': None})
         except (ValueError, IndexError) as e:
             return jsonify({'error': f'Invalid parameters: {e}'}), 400
