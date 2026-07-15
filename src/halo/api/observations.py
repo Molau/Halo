@@ -28,7 +28,7 @@ import halo.io.observations as obs_logic
 import halo.io.observations_file as obs_file
 import halo.io.observations_db as obs_db
 import halo.io.observers_db as observers_db
-from ._helpers import _check_cloud_write_auth, _int, _obs_to_json, _spaeter
+from ._helpers import _check_cloud_write_auth, _int, _kurzausgabe, _obs_to_json, _spaeter
 from .analysis import _calculate_observation_solar_altitude
 
 
@@ -1529,6 +1529,63 @@ def list_monthly_photo_captions() -> Dict[str, Any]:
             'mm': mm,
             'count': len(entries),
             'entries': entries,
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@api_blueprint.route('/observations/raw', methods=['GET'])
+def list_raw_observations() -> Dict[str, Any]:
+    """Return all observations of one observer/day in the original HALO key format.
+
+    Companion to /observations/photos/monthly-captions. Lets HALOassist extract
+    further details for a specific observation day directly from the raw HALO key
+    records (admin only).
+
+    Query parameters:
+        kk: observer code
+        jj: 4-digit year (e.g. 2026)
+        mm: month (1-12)
+        tt: day (1-31)
+
+    Response:
+        {
+            "kk": 4, "jj": 2026, "mm": 3, "tt": 13, "count": 2,
+            "records": [
+                "04...",   # raw HALO key line
+                "04..."
+            ]
+        }
+    """
+    if not is_cloud_mode():
+        return jsonify({'error': 'cloud_mode_only'}), 403
+
+    if not session.get('authenticated', False):
+        return jsonify({'error': 'not_authenticated'}), 401
+
+    if not session.get('is_admin', False):
+        return jsonify({'error': 'admin_required'}), 403
+
+    kk = _int(request.args, 'kk', -1)
+    jj = _int(request.args, 'jj', -1)
+    mm = _int(request.args, 'mm', -1)
+    tt = _int(request.args, 'tt', -1)
+
+    if kk < 0 or jj < 0 or mm < 1 or mm > 12 or tt < 1 or tt > 31:
+        return jsonify({'error': 'missing_parameters'}), 400
+
+    try:
+        observations = obs_db.load_filtered(kk=kk, jj=jj, mm=mm, tt=tt)
+
+        records = [_kurzausgabe(obs) for obs in observations]
+
+        return jsonify({
+            'kk': kk,
+            'jj': jj_to_full_year(jj),
+            'mm': mm,
+            'tt': tt,
+            'count': len(records),
+            'records': records,
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
