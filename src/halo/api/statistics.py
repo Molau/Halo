@@ -1201,8 +1201,8 @@ def get_monthly_stats() -> Dict[str, Any]:
     # Convert keys to strings for consistency with formatting functions
     normalized_real = {str(day): value * normalization_factor for day, value in activity_data['real'].items()}
     normalized_relative = {str(day): value * normalization_factor for day, value in activity_data['relative'].items()}
-    normalized_total_real = activity_data['total_real'] * normalization_factor
-    normalized_total_relative = activity_data['total_relative'] * normalization_factor
+    normalized_total_real = round(activity_data['total_real'] * normalization_factor, 1)
+    normalized_total_relative = round(activity_data['total_relative'] * normalization_factor, 1)
     
     # Calculate distinct day counts for intro text generation.
     # Winter halo days follow HALO data format density codes:
@@ -1232,6 +1232,31 @@ def get_monthly_stats() -> Dict[str, Any]:
         if d in {4, 5, 6}:
             winter_halo_days.add(tt)
 
+    # Count deduplicated EE appearances separately for sun and moon.
+    # Rule: same observer, same day, same EE counts only once.
+    solar_halo_ee_seen = set()
+    lunar_halo_ee_seen = set()
+
+    for obs in filtered_obs:
+        kk = str(_int(obs, 'KK')).zfill(2)
+        if kk not in observer_data:
+            continue
+
+        tt = _int(obs, 'TT')
+        if tt <= 0:
+            continue
+
+        o = _int(obs, 'O')
+        for individual_ee in resolve_halo_type(_int(obs, 'EE')):
+            key = (tt, kk, individual_ee)
+            if o == 1:
+                solar_halo_ee_seen.add(key)
+            elif o == 2:
+                lunar_halo_ee_seen.add(key)
+
+    solar_halo_ee_count = len(solar_halo_ee_seen)
+    lunar_halo_ee_count = len(lunar_halo_ee_seen)
+
     # Build data structure
     data = {
         'mm': mm_int,
@@ -1240,6 +1265,9 @@ def get_monthly_stats() -> Dict[str, Any]:
         'ee_overview': ee_list,
         'daily_totals': daily_totals,
         'grand_total': grand_total,
+        'solar_halo_ee_count': solar_halo_ee_count,
+        'lunar_halo_ee_count': lunar_halo_ee_count,
+        'total_halo_ee_count': solar_halo_ee_count + lunar_halo_ee_count,
         'rare_halos': rare_halos,
         'activity_real': normalized_real,
         'activity_relative': normalized_relative,
