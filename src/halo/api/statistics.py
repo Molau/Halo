@@ -834,57 +834,78 @@ def get_monthly_stats() -> Dict[str, Any]:
     except ValueError:
         return jsonify({'error': 'Invalid numeric parameters'}), 400
     
-    # Load observations - CLOUD MODE: Filter in SQL, LOCAL MODE: Filter in memory
+    # Load observations. In cloud mode we need the full set because the
+    # long-term comparison is calculated from all years up to the previous one.
     if is_cloud_mode():
-        # Layer 3b: Direct database query with SQL filtering
-        filtered_obs = obs_db.load_filtered(mm=mm_int, jj=jj_int)
+        observations = obs_db.load_all()
         observers = observer_db.load_all()
         active_observers_only = bool(current_app.config.get('ACTIVE_OBSERVERS_ONLY', False))
     else:
-        # Local Mode: Load from memory cache, filter in Python
         observations = current_app.config.get('OBSERVATIONS', [])
         if not observations:
             return jsonify({'error': 'No observations loaded. Please load a file first.'}), 400
-        
-        filtered_obs = [obs for obs in observations 
-                        if _int(obs, 'MM') == mm_int and _int(obs, 'JJ') == jj_int]
         observers = current_app.config.get('OBSERVERS', [])
         active_observers_only = bool(current_app.config.get('ACTIVE_OBSERVERS_ONLY', False))
-    
-    # Exclude photographic observations from monthly statistics.
-    filtered_obs = [obs for obs in filtered_obs if not _is_photographic_observation(obs)]
 
-    # Get all active observers at the end of this month/year (SEIT <= MMJJ)
-    # Build SEIT value for comparison using same formula as _parse_seit: mm + 13 * jj
-    # Handle century boundary: years 00-79 are 2000-2079, must add 100 (same as _parse_seit)
     jj_2digit = jj_int % 100
     jj_adjusted = jj_2digit
     if jj_2digit < (YEAR_MIN - 1900):
         jj_adjusted = jj_2digit + 100
     month_year_value = mm_int + 13 * jj_adjusted
-    
-    # Get unique observers up to this month/year (latest record per KK)
-    # Step 1: Find latest record per KK regardless of aktiv status
-    active_observers = {}
-    for obs_record in observers:
-        kk = obs_record.get('KK', '')
-        seit_str = obs_record.get('seit', '')
-        
-        # Parse seit from "MM/JJ" to integer MMJJ
-        seit = _parse_seit(seit_str) if seit_str else 0
-        
-        # Only consider records that started before or during this month
-        if seit <= month_year_value:
-            # Keep the most recent record for each KK
-            kk_seit_str = active_observers.get(kk, {}).get('seit', '') if kk in active_observers else None
-            if kk not in active_observers or seit > _parse_seit(kk_seit_str if kk_seit_str else ''):
-                active_observers[kk] = obs_record
-    
-    # Step 2: If active_observers_only, exclude observers whose latest record has aktiv != 1
-    # Matches Pascal: Beo^[K].aktiv is checked on the single (latest) record per observer slot
-    if active_observers_only:
-        active_observers = {kk: rec for kk, rec in active_observers.items()
-                           if rec.get('aktiv') in (1, '1')}
+
+    def _build_active_observers_for_month(target_mm: int, target_jj: int):
+        # Build the latest observer record per KK that existed at the end of the month.
+        jj_2digit = target_jj % 100
+        jj_adjusted = jj_2digit
+        if jj_2digit < (YEAR_MIN - 1900):
+            jj_adjusted = jj_2digit + 100
+        month_year_value = target_mm + 13 * jj_adjusted
+
+        active = {}
+        for obs_record in observers:
+            kk = obs_record.get('KK', '')
+            seit_str = obs_record.get('seit', '')
+
+            seit = _parse_seit(seit_str) if seit_str else 0
+            if seit <= month_year_value:
+                kk_seit_str = active.get(kk, {}).get('seit', '') if kk in active else None
+                if kk not in active or seit > _parse_seit(kk_seit_str if kk_seit_str else ''):
+                    active[kk] = obs_record
+
+        if active_observers_only:
+            active = {kk: rec for kk, rec in active.items() if rec.get('aktiv') in (1, '1')}
+
+        return active
+
+    def _calculate_monthly_relative_activity(target_mm: int, target_jj: int):
+        month_obs = [obs for obs in observations
+                     if _int(obs, 'MM') == target_mm and _int(obs, 'JJ') == target_jj]
+        month_obs = [obs for obs in month_obs if not _is_photographic_observation(obs)]
+        if not month_obs:
+            return None
+
+        target_active_observers = _build_active_observers_for_month(target_mm, target_jj)
+        sun_obs = [obs for obs in month_obs if _int(obs, 'O') == 1]
+        activity_data = calculate_halo_activity(
+            observations=sun_obs,
+            observers=target_active_observers,
+            mm=target_mm,
+            jj=target_jj,
+            active_observers_only=active_observers_only
+        )
+
+        days_in_month = get_days_in_month(target_mm, target_jj)
+        normalization_factor = 30.0 / days_in_month
+        return activity_data['total_relative'] * normalization_factor
+
+    # Current month data.
+    filtered_obs = [obs for obs in observations
+                    if _int(obs, 'MM') == mm_int and _int(obs, 'JJ') == jj_int]
+
+    # Exclude photographic observations from monthly statistics.
+    filtered_obs = [obs for obs in filtered_obs if not _is_photographic_observation(obs)]
+
+    active_observers = _build_active_observers_for_month(mm_int, jj_int)
 
     # Step 3: Detect new observers (first ever entry is this month) and
     # departing observers (latest entry is this month and aktiv == 0).
@@ -1235,6 +1256,28 @@ def get_monthly_stats() -> Dict[str, Any]:
         'new_observers': new_observer_list,
         'departing_observers': departing_observer_list,
     }
+
+    historical_relative_values = []
+    if jj_int > 1986:
+        for historical_year in range(1986, jj_int):
+            historical_value = _calculate_monthly_relative_activity(mm_int, historical_year)
+            if historical_value is not None:
+                historical_relative_values.append(historical_value)
+
+    if historical_relative_values:
+        long_term_mean = round(sum(historical_relative_values) / len(historical_relative_values), 1)
+        current_relative = data['activity_totals']['relative']
+        data['long_term_relative_activity'] = {
+            'start_year': 1986,
+            'end_year': jj_int - 1,
+            'years_used': len(historical_relative_values),
+            'mean': long_term_mean,
+            'current': current_relative,
+            'delta': round(current_relative - long_term_mean, 1),
+            'delta_percent': round(((current_relative / long_term_mean) - 1) * 100, 1) if long_term_mean else None,
+        }
+    else:
+        data['long_term_relative_activity'] = None
 
     # Build observer name/site list (sorted by KK) for the observer directory table
     observer_names = []
